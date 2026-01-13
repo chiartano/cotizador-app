@@ -1,0 +1,1535 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cotizador Divisiones</title>
+    <meta name="theme-color" content="#1877f2">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icono.png">
+    <style>
+        :root {
+            --bg-app: #f8f9fa;
+            --bg-panel: #ffffff;
+            --text-primary: #1a202c;
+            --text-secondary: #718096;
+            --accent-blue: #3182ce;
+            --accent-gradient: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            --btn-gradient: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            --btn-shadow: 0 4px 12px rgba(56, 161, 105, 0.3);
+            --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+            --border: #e2e8f0;
+            --danger: #e53e3e;
+            --warning: #ecc94b;
+            --success: #48bb78;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-app);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Header */
+        header {
+            background: var(--accent-gradient);
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(49, 130, 206, 0.25);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.3rem;
+            color: white;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        /* Contenedor Principal */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 15px;
+            padding-bottom: 80px;
+        }
+
+        /* Tarjetas */
+        .card {
+            background: var(--bg-panel);
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: var(--card-shadow);
+            border: none;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            font-weight: 800;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .step-badge {
+            background: var(--accent-blue);
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(49, 130, 206, 0.4);
+        }
+
+        /* Formularios */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        select,
+        input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            font-size: 1rem;
+            background: #edf2f7;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+            color: var(--text-primary);
+        }
+
+        select:focus,
+        input:focus {
+            background: #fff;
+            border-color: var(--accent-blue);
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(49, 130, 206, 0.15);
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .col {
+            flex: 1;
+        }
+
+        /* Botón Principal */
+        .btn-calc {
+            width: 100%;
+            background: var(--btn-gradient);
+            color: white;
+            padding: 16px;
+            border: none;
+            border-radius: 14px;
+            font-size: 1rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            box-shadow: var(--btn-shadow);
+            transition: transform 0.2s;
+        }
+
+        .btn-calc:active {
+            transform: scale(0.98);
+        }
+
+        /* Resultados */
+        #resultado-panel {
+            display: none;
+        }
+
+        .animate-result {
+            animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUpFade {
+            0% {
+                opacity: 0;
+                transform: translateY(40px) scale(0.95);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .price-tag {
+            text-align: center;
+            background: linear-gradient(135deg, #ffffff 0%, #f0fff4 100%);
+            padding: 25px;
+            border-radius: 16px;
+            border: 1px solid #c6f6d5;
+            margin-bottom: 15px;
+        }
+
+        .price-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .price-value {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: #2f855a;
+            margin: 5px 0;
+        }
+
+        .price-sub {
+            font-size: 1rem;
+            color: #555;
+            font-weight: 600;
+        }
+
+        .metric-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: white;
+        }
+
+        .bg-ok {
+            background-color: var(--success);
+        }
+
+        .bg-warn {
+            background-color: var(--warning);
+            color: #333;
+        }
+
+        .bg-bad {
+            background-color: var(--danger);
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 0.95rem;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-val {
+            font-weight: 600;
+        }
+
+        /* Modal Configuración */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: var(--bg-app);
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            background: var(--bg-panel);
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+        }
+
+        /* Estilos Nuevos para Resumen de Pedido */
+        .quote-header {
+            background: var(--accent-gradient);
+            color: white;
+            padding: 15px;
+            font-weight: 800;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .quote-body {
+            padding: 15px;
+            background: #f5f7fa;
+        }
+
+        .quote-footer {
+            background: #fff;
+            padding: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .quote-card-item {
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            border-left: 4px solid var(--accent-blue);
+        }
+
+        .quote-prod-name {
+            font-weight: 700;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+        }
+
+        .quote-details {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        /* Tabs Configuración */
+        .tab-container {
+            display: flex;
+            margin-bottom: 20px;
+            background: #e2e8f0;
+            border-radius: 12px;
+            padding: 5px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: white;
+            color: var(--accent-blue);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>COTIZADOR PRO</h1>
+        <button class="btn-icon" onclick="abrirConfig()">⚙️</button>
+    </header>
+
+    <div class="container" id="main-view">
+
+        <div class="card">
+            <div class="card-title"><span class="step-badge">1</span> Sistema & Vidrio</div>
+            <div class="form-group">
+                <label>Sistema / Producto</label>
+                <select id="producto" onchange="verificarProducto()"></select>
+            </div>
+            <div class="form-group" id="group-espesor">
+                <label>Espesor Vidrio</label>
+                <select id="espesor">
+                    <option value="6mm" selected>6mm Templado</option>
+                    <option value="8mm">8mm Templado</option>
+                    <option value="10mm">10mm Templado</option>
+                </select>
+            </div>
+            <div class="form-group" id="group-espejo-led"
+                style="display:none; align-items: center; margin-top: 10px; background: #e3f2fd; padding: 10px; border-radius: 8px;">
+                <input type="checkbox" id="check-espejo-led" style="width: 20px; height: 20px; margin-right: 10px;">
+                <label for="check-espejo-led"
+                    style="margin: 0; cursor: pointer; color: var(--accent-blue); font-weight: bold;">
+                    ✨ Incluir Luz LED (+<span id="lbl-led-val">$50.000</span>)
+                </label>
+            </div>
+            <div class="form-group" id="group-color-acc">
+                <label>Color Accesorios</label>
+                <select id="color_acc">
+                    <option value="natural">Natural (Plateado)</option>
+                    <option value="negro">Negro (Mate/Semi)</option>
+                    <option value="dorado">Dorado / Especial</option>
+                </select>
+            </div>
+            <div class="form-group" id="group-color-alum" style="display:none;">
+                <label>Color Aluminio</label>
+                <select id="color_alum">
+                    <option value="mate">Natural Mate (Gris)</option>
+                    <option value="blanco">Blanco (Pintura)</option>
+                    <option value="anoloq">Anoloq / Champagne</option>
+                </select>
+            </div>
+            <div class="form-group" style="display: flex; align-items: center; margin-top: 10px;">
+                <input type="checkbox" id="check-sandblasting" style="width: 20px; height: 20px; margin-right: 10px;">
+                <label for="check-sandblasting" style="margin: 0; cursor: pointer;">
+                    Vidrio con Sandblasting
+                </label>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><span class="step-badge">2</span> Dimensiones (cm)</div>
+            <div class="row">
+                <div class="col">
+                    <label>Ancho (cm)</label>
+                    <input type="number" id="ancho" step="1" placeholder="Ej: 120">
+                </div>
+                <div class="col">
+                    <label>Alto (cm)</label>
+                    <input type="number" id="alto" step="1" placeholder="Ej: 210">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title" onclick="toggleEstrategia()"
+                style="cursor: pointer; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span class="step-badge">3</span> Estrategia Comercial
+                </div>
+                <span id="arrow-estrategia" style="font-size: 1.2rem; transition: transform 0.3s;">▼</span>
+            </div>
+            <div id="estrategia-content" style="display: none; margin-top: 15px;">
+                <div class="form-group">
+                    <label>Línea de Precio</label>
+                    <select id="linea">
+                        <option value="controlada">Controlada (Caja Rápida)</option>
+                        <option value="empresa">Empresa (Crecimiento)</option>
+                    </select>
+                </div>
+                <div class="form-group" style="display: flex; align-items: center; margin-bottom: 15px;">
+                    <input type="checkbox" id="check-desmonte" style="width: 20px; height: 20px; margin-right: 10px;">
+                    <label for="check-desmonte" style="margin: 0; cursor: pointer;">
+                        Incluir Desmonte (+<span id="lbl-desmonte-val">$0</span>)
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>Recargo Transporte / Lejanía</label>
+                    <input type="number" id="recargo_transporte" placeholder="Ej: 30000">
+                </div>
+                <div class="form-group">
+                    <label>Extras Accesorios (Bisagras/Soportes)</label>
+                    <input type="number" id="extra_acc" placeholder="$0">
+                </div>
+                <div class="form-group">
+                    <label>Precio Competencia (Opcional)</label>
+                    <input type="number" id="mercado" placeholder="$0">
+                </div>
+                <div class="form-group">
+                    <label>Observaciones (Opcional)</label>
+                    <input type="text" id="observaciones" placeholder="Ej: Corte a falsa escuadra, vidrio opaco...">
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col">
+                <button class="btn-calc" onclick="limpiar()"
+                    style="background: #cbd5e0; color: #4a5568; box-shadow:none;">LIMPIAR</button>
+            </div>
+            <div class="col">
+                <button class="btn-calc" onclick="calcular()">CALCULAR</button>
+            </div>
+        </div>
+
+        <div id="resultado-panel" style="margin-top: 20px;">
+            <div class="card">
+                <div class="price-tag">
+                    <div class="price-label">Precio Neto (Sin IVA)</div>
+                    <div class="price-value" id="res-precio-neto">$0</div>
+                    <div id="res-comparacion" style="font-size: 0.95rem; margin-bottom: 8px; display:none;"></div>
+                    <div class="price-sub" id="res-precio-final">Total con IVA: $0</div>
+                </div>
+
+                <div id="res-margen-container" style="text-align: center; margin-bottom: 15px; display: none;">
+                    <span id="res-badge" class="metric-badge">...</span>
+                    <span style="font-size: 0.9rem; color: #666; margin-left: 10px;">Margen: <b
+                            id="res-margen">0%</b></span>
+                </div>
+
+                <div class="card-title" style="justify-content: space-between;">
+                    Desglose Financiero
+                    <button class="btn-icon" id="btn-toggle-desglose" onclick="toggleDesglose(this)"
+                        style="font-size: 1.2rem; color: var(--text-secondary);" title="Ocultar/Mostrar">🙈</button>
+                </div>
+                <div id="financial-details" style="display: none;">
+                    <div id="desglose-lista">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+                    <div class="detail-row" style="background: #f0f2f5; margin-top: 5px; padding: 10px 5px;">
+                        <span style="color: var(--accent-blue); font-weight: bold;">GANANCIA NETA</span>
+                        <span class="detail-val" style="color: var(--accent-blue);" id="res-ganancia">$0</span>
+                    </div>
+                </div>
+                <div
+                    style="margin-top: 15px; display: flex; align-items: center; justify-content: flex-end; gap: 10px;">
+                    <label style="font-weight:bold; color:var(--text-secondary);">Cantidad:</label>
+                    <input type="number" id="cantidad-item" value="1" min="1"
+                        style="width: 80px; padding: 8px; text-align: center; border: 2px solid var(--accent-blue);">
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button class="btn-calc" onclick="agregarItem()"
+                        style="background: #ecc94b; color: #744210; flex: 1; box-shadow: 0 4px 12px rgba(236, 201, 75, 0.4);">➕
+                        AGREGAR</button>
+                    <button class="btn-calc" onclick="compartir()" style="background: #25D366; flex: 1;">📱
+                        WHATSAPP</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- NUEVO DISEÑO DE RESUMEN -->
+        <div id="quote-summary" class="card"
+            style="display:none; padding: 0; overflow: hidden; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-top: 25px;">
+            <div class="quote-header">
+                <span>📋 RESUMEN DEL PEDIDO</span>
+                <span id="quote-count"
+                    style="background: rgba(255,255,255,0.2); padding: 2px 10px; border-radius: 12px; font-size: 0.9rem;">0</span>
+            </div>
+
+            <div class="quote-body">
+                <div id="quote-items-list"></div>
+            </div>
+
+            <div class="quote-footer">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <label style="color:#555; font-weight: 600; margin:0;">Descuento Global:</label>
+                    <input type="number" id="quote-discount" placeholder="$0" oninput="actualizarTotalCotizacion()"
+                        style="width:120px; padding:8px; text-align:right; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem;">
+                </div>
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; font-size: 1.4rem; font-weight: 900; color: var(--accent-blue); border-top: 1px dashed #ddd; padding-top: 15px;">
+                    <span>TOTAL:</span>
+                    <span id="quote-total">$0</span>
+                </div>
+
+                <button class="btn-calc" onclick="compartirCompleto()"
+                    style="background: #25D366; margin-top: 20px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    <span>📱</span> ENVIAR AL CLIENTE
+                </button>
+
+                <div style="text-align: center; margin-top: 15px;">
+                    <button class="btn-icon" onclick="limpiarCotizacion()"
+                        style="font-size: 0.9rem; color: #c62828; display: flex; align-items: center; justify-content: center; gap: 5px; margin: 0 auto;">
+                        🗑️ Vaciar Carrito
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
+            <div class="card-title">Historial Reciente</div>
+            <div id="historial-list"></div>
+        </div>
+    </div>
+
+    <div id="modal-config" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Precios y Costos</h3>
+                <button class="btn-icon" onclick="cerrarConfig()">✕</button>
+            </div>
+            <div class="container">
+                <p style="font-size:0.8rem; color:#666; margin-bottom:20px;">
+                    Estos valores se guardan automáticamente en tu celular.
+                </p>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <button class="btn-calc" onclick="cerrarConfig()"
+                        style="background: #cbd5e0; color: #4a5568; padding: 12px; font-size: 0.9rem; box-shadow: none; flex: 1;">⬅
+                        VOLVER</button>
+                    <button class="btn-calc" onclick="guardarConfig()"
+                        style="background: var(--accent-blue); padding: 12px; font-size: 0.9rem; flex: 1;">💾
+                        GUARDAR</button>
+                </div>
+                <div id="config-form"></div>
+                <button class="btn-calc" onclick="guardarConfig()" style="background: var(--accent-blue);">GUARDAR
+                    CAMBIOS</button>
+                <button class="btn-calc" onclick="cerrarConfig()"
+                    style="background: #cbd5e0; color: #4a5568; margin-top: 10px; box-shadow: none;">CANCELAR /
+                    VOLVER</button>
+                <button class="btn-calc" onclick="restaurarFabrica()"
+                    style="background: var(--danger); margin-top: 30px; font-size: 0.9rem; opacity: 0.9;">
+                    ⚠️ RESTAURAR VALORES DE FÁBRICA</button>
+                <br><br><br>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. CONFIGURACIÓN Y DATOS (LÓGICA PYTHON TRADUCIDA)
+        // ==========================================
+
+        const DEFAULT_CONFIG = {
+            globales: {
+                precio_vidrio_6mm: 106000.0,
+                precio_vidrio_8mm: 135000.0,
+                precio_vidrio_10mm: 170000.0,
+                colchon_vidrio: 1.05,
+                instalacion_base: 70000.0,
+                transporte: 70000.0,
+                insumos: 15000.0,
+                iva: 0.19,
+                est_controlada: 100000.0,
+                est_empresa: 130000.0,
+                util_controlada: 0.15,
+                util_empresa: 0.20,
+                meta_mensual: 4500000.0,
+                desmonte: 20000.0,
+                extra_color_negro: 50000.0,
+                extra_color_dorado: 200000.0,
+                extra_sandblasting_porc: 0.30,
+                // Variables ESPEJO
+                precio_espejo_m2: 100000.0,
+                extra_espejo_led: 50000.0,
+                instalacion_espejo: 50000.0,
+                transporte_espejo: 40000.0,
+                util_espejo: 0.20,
+                est_espejo: 40000.0, // Aporte estructura específico para espejos
+                // Variables VENTANERIA (Aluminio)
+                precio_vidrio_ventana: 60000.0,
+                // Precios por Metro Lineal de Perfil (Barra)
+                precio_perfil_5020: 28000.0, // Liviano
+                precio_perfil_744: 52000.0,  // Pesado
+                precio_perfil_batiente: 38000.0,
+                // Factores: Cuántos metros de perfil gasta 1 metro de perímetro de ventana
+                factor_corrediza: 3.0, // Marco + Naves + Traslapes + Enganches
+                factor_batiente: 2.8,  // Marco + Nave + Pisavidrios
+                kit_accesorios_ventana: 25000.0,
+                desperdicio_aluminio: 1.10,
+                minimo_ventana: 350000.0, // Precio mínimo de venta (IVA incluido)
+                util_ventana: 0.35,
+                est_ventana: 80000.0, // Aporte estructura específico para ventanas
+                instalacion_ventana: 80000.0,
+                transporte_ventana: 70000.0,
+                extra_alum_blanco_porc: 0.10, // +10%
+                extra_alum_anoloq_porc: 0.20  // +20%
+            },
+            productos: {
+                "División Batiente (Tradicional)": 135000.0,
+                "División Corrediza Económica": 120000.0,
+                "División Corrediza Premium": 220000.0,
+                "División en L (Esquinera)": 240000.0,
+                "Cortaviento / Oficina": 90000.0,
+                "Espejo Flotante": 30000.0,
+                "Ventana 5020 (Corrediza Liviana)": 0,
+                "Ventana 744 (Corrediza Pesada)": 0,
+                "Ventana Batiente (Aluminio)": 0
+            }
+        };
+
+        const LOGICA_ACCESORIOS = {
+            "División Batiente (Tradicional)": "FIJO",
+            "División Corrediza Económica": "FIJO",
+            "División Corrediza Premium": "FIJO",
+            "División en L (Esquinera)": "FIJO",
+            "Cortaviento / Oficina": "ANCHO",
+            "Espejo Flotante": "FIJO",
+            "Ventana 5020 (Corrediza Liviana)": "PARAMETRICO",
+            "Ventana 744 (Corrediza Pesada)": "PARAMETRICO",
+            "Ventana Batiente (Aluminio)": "PARAMETRICO"
+        };
+
+        // Variables para cotización múltiple
+        let quoteItems = [];
+        let lastCalculation = null;
+
+        // Cargar config del localStorage o usar default
+        let currentConfig = JSON.parse(localStorage.getItem('vidrios_config')) || DEFAULT_CONFIG;
+
+        // LIMPIEZA: Eliminar producto obsoleto si existe
+        if (currentConfig.productos["División Corrediza (Acero)"]) {
+            delete currentConfig.productos["División Corrediza (Acero)"];
+        }
+        if (currentConfig.productos["Ventanería (Aprox m2)"]) {
+            delete currentConfig.productos["Ventanería (Aprox m2)"];
+        }
+        if (currentConfig.productos["Ventanería (Aluminio)"]) {
+            delete currentConfig.productos["Ventanería (Aluminio)"];
+        }
+
+        // Migración rápida: Si el espejo costaba 20k (valor viejo), actualizar a 30k
+        if (currentConfig.productos["Espejo Flotante"] === 20000) {
+            currentConfig.productos["Espejo Flotante"] = 30000;
+        }
+
+        // Sincronizar y REORDENAR productos según DEFAULT_CONFIG
+        // Esto asegura que Económica y Premium queden en la posición correcta (2da y 3ra)
+        const newProductosOrder = {};
+        Object.keys(DEFAULT_CONFIG.productos).forEach(k => {
+            newProductosOrder[k] = (currentConfig.productos[k] !== undefined) ? currentConfig.productos[k] : DEFAULT_CONFIG.productos[k];
+        });
+        currentConfig.productos = newProductosOrder;
+
+        Object.keys(DEFAULT_CONFIG.globales).forEach(k => {
+            if (currentConfig.globales[k] === undefined) currentConfig.globales[k] = DEFAULT_CONFIG.globales[k];
+        });
+
+        // ==========================================
+        // 2. INICIALIZACIÓN UI
+        // ==========================================
+        function init() {
+            // Llenar select de productos
+            const selProd = document.getElementById('producto');
+            Object.keys(currentConfig.productos).forEach(p => {
+                let opt = document.createElement('option');
+                opt.value = p;
+                opt.text = p;
+                selProd.appendChild(opt);
+            });
+
+            document.getElementById('lbl-desmonte-val').innerText = fmtMoney(currentConfig.globales.desmonte);
+            document.getElementById('lbl-led-val').innerText = fmtMoney(currentConfig.globales.extra_espejo_led);
+            renderConfigForm();
+            renderHistorial();
+            verificarProducto();
+        }
+
+        function verificarProducto() {
+            const prod = document.getElementById('producto').value;
+            const esEspejo = prod.includes("Espejo");
+            const esVentana = prod.includes("Ventana");
+
+            // Mostrar/Ocultar opción LED y Espesor
+            document.getElementById('group-espejo-led').style.display = esEspejo ? 'flex' : 'none';
+            document.getElementById('group-espesor').style.display = (esEspejo || esVentana) ? 'none' : 'block';
+            document.getElementById('group-color-acc').style.display = (esEspejo || esVentana) ? 'none' : 'block';
+            document.getElementById('group-color-alum').style.display = esVentana ? 'block' : 'none';
+
+            // Si es espejo, desmarcar sandblasting visualmente (opcional)
+            if (esEspejo) document.getElementById('check-sandblasting').checked = false;
+        }
+
+        // Generar formulario de configuración dinámico
+        function renderConfigForm() {
+            const div = document.getElementById('config-form');
+            div.innerHTML = `
+                <div class="tab-container" style="overflow-x: auto; white-space: nowrap; gap: 5px; padding-bottom: 5px;">
+                    <button class="tab-btn active" onclick="switchTab('general')">General</button>
+                    <button class="tab-btn" onclick="switchTab('divisiones')">Divisiones</button>
+                    <button class="tab-btn" onclick="switchTab('espejos')">Espejos</button>
+                    <button class="tab-btn" onclick="switchTab('ventanas')">Ventanería</button>
+                </div>
+                <div id="tab-general" class="tab-content active"></div>
+                <div id="tab-divisiones" class="tab-content"></div>
+                <div id="tab-espejos" class="tab-content"></div>
+                <div id="tab-ventanas" class="tab-content"></div>
+            `;
+
+            // Helpers para filtrar productos
+            const isEspejo = (k) => k.includes('Espejo');
+            const isVentana = (k) => k.includes('Ventana');
+            const isDivision = (k) => !isEspejo(k) && !isVentana(k);
+
+            // --- TAB 1: GENERAL ---
+            const tGen = document.getElementById('tab-general');
+            addHeader(tGen, "Vidrios Templados (m²)");
+            ['precio_vidrio_6mm', 'precio_vidrio_8mm', 'precio_vidrio_10mm', 'colchon_vidrio'].forEach(k => addInputConfig(tGen, k, currentConfig.globales[k], 'globales'));
+
+            addHeader(tGen, "Mano de Obra y Logística");
+            ['instalacion_base', 'transporte', 'insumos', 'desmonte'].forEach(k => addInputConfig(tGen, k, currentConfig.globales[k], 'globales'));
+
+            addHeader(tGen, "Negocio y Metas");
+            ['iva', 'est_controlada', 'est_empresa', 'util_controlada', 'util_empresa', 'meta_mensual'].forEach(k => addInputConfig(tGen, k, currentConfig.globales[k], 'globales'));
+
+            // --- TAB 2: DIVISIONES ---
+            const tDiv = document.getElementById('tab-divisiones');
+            addHeader(tDiv, "Precios Base Productos");
+            Object.keys(currentConfig.productos).filter(isDivision).forEach(k => addInputConfig(tDiv, k, currentConfig.productos[k], 'productos'));
+
+            addHeader(tDiv, "Extras y Acabados");
+            ['extra_color_negro', 'extra_color_dorado', 'extra_sandblasting_porc'].forEach(k => addInputConfig(tDiv, k, currentConfig.globales[k], 'globales'));
+
+            // --- TAB 3: ESPEJOS ---
+            const tEsp = document.getElementById('tab-espejos');
+            addHeader(tEsp, "Precios Base Productos");
+            Object.keys(currentConfig.productos).filter(isEspejo).forEach(k => addInputConfig(tEsp, k, currentConfig.productos[k], 'productos'));
+
+            addHeader(tEsp, "Costos y Variables");
+            ['precio_espejo_m2', 'extra_espejo_led', 'instalacion_espejo', 'transporte_espejo', 'est_espejo', 'util_espejo'].forEach(k => addInputConfig(tEsp, k, currentConfig.globales[k], 'globales'));
+
+            // --- TAB 4: VENTANERÍA ---
+            const tVen = document.getElementById('tab-ventanas');
+            addHeader(tVen, "Precios Base Productos");
+            Object.keys(currentConfig.productos).filter(isVentana).forEach(k => addInputConfig(tVen, k, currentConfig.productos[k], 'productos'));
+
+            addHeader(tVen, "Perfiles y Materiales");
+            ['precio_perfil_5020', 'precio_perfil_744', 'precio_perfil_batiente', 'precio_vidrio_ventana', 'kit_accesorios_ventana'].forEach(k => addInputConfig(tVen, k, currentConfig.globales[k], 'globales'));
+
+            addHeader(tVen, "Factores Técnicos");
+            ['factor_corrediza', 'factor_batiente', 'desperdicio_aluminio', 'extra_alum_blanco_porc', 'extra_alum_anoloq_porc'].forEach(k => addInputConfig(tVen, k, currentConfig.globales[k], 'globales'));
+
+            addHeader(tVen, "Reglas de Negocio");
+            ['minimo_ventana', 'util_ventana', 'est_ventana', 'instalacion_ventana', 'transporte_ventana'].forEach(k => addInputConfig(tVen, k, currentConfig.globales[k], 'globales'));
+        }
+
+        function addHeader(parent, text) {
+            let h = document.createElement('div');
+            h.className = 'card-title';
+            h.innerText = text;
+            h.style.marginTop = '20px';
+            parent.appendChild(h);
+        }
+
+        function addInputConfig(parent, key, val, section) {
+            let group = document.createElement('div');
+            group.className = 'form-group';
+
+            let label = document.createElement('label');
+            // Limpiar nombres de variables para que se vean bonitos
+            label.innerText = key.replace(/_/g, ' ').toUpperCase();
+
+            let inp = document.createElement('input');
+            inp.type = 'number';
+            inp.value = val;
+            inp.id = `cfg_${section}_${key}`;
+
+            group.appendChild(label);
+            group.appendChild(inp);
+            parent.appendChild(group);
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+
+            // Activar botón correspondiente
+            const btns = document.querySelectorAll('.tab-btn');
+            btns.forEach(btn => {
+                if (btn.getAttribute('onclick').includes(tabName)) btn.classList.add('active');
+            });
+        }
+
+        // ==========================================
+        // 3. LÓGICA DE NEGOCIO (EL CEREBRO)
+        // ==========================================
+        function calcular() {
+            // Inputs
+            let ancho = parseFloat(document.getElementById('ancho').value);
+            let alto = parseFloat(document.getElementById('alto').value);
+
+            if (!ancho || !alto) {
+                alert("Por favor ingresa Ancho y Alto en centímetros");
+                return;
+            }
+
+            // Validación: Si escriben valores muy pequeños (ej: 1.2), probablemente pensaron en metros
+            if (ancho < 10 || alto < 10) {
+                if (!confirm(`Las dimensiones ingresadas (${ancho}cm x ${alto}cm) parecen muy pequeñas. ¿Estás seguro que son CENTÍMETROS y no metros?`)) return;
+            }
+
+            // Convertir CM a Metros para el cálculo interno
+            ancho = ancho / 100;
+            alto = alto / 100;
+
+            const prodNombre = document.getElementById('producto').value;
+            const espesor = document.getElementById('espesor').value;
+            const linea = document.getElementById('linea').value; // controlada / empresa
+            const mercado = parseFloat(document.getElementById('mercado').value) || 0;
+            const colorAcc = document.getElementById('color_acc').value;
+            const colorAlum = document.getElementById('color_alum').value;
+            const tieneDesmonte = document.getElementById('check-desmonte').checked;
+            const tieneSandblasting = document.getElementById('check-sandblasting').checked;
+            const tieneLed = document.getElementById('check-espejo-led').checked;
+            const recargoTransporte = parseFloat(document.getElementById('recargo_transporte').value) || 0;
+            const extraAcc = parseFloat(document.getElementById('extra_acc').value) || 0;
+            const observaciones = document.getElementById('observaciones').value;
+
+            const cfg = currentConfig.globales;
+            const area = ancho * alto;
+            const esEspejo = prodNombre.includes("Espejo");
+            const esVentana = prodNombre.includes("Ventana");
+
+            // 1. Costo Vidrio
+            let costoVidrioBase = 0;
+
+            if (esEspejo) {
+                // Lógica ESPEJO
+                costoVidrioBase = cfg.precio_espejo_m2;
+            } else if (esVentana) {
+                // Lógica VENTANA (Vidrio más delgado generalmente)
+                costoVidrioBase = cfg.precio_vidrio_ventana;
+            } else {
+                // Lógica VIDRIO TEMPLADO
+                if (espesor === '6mm') costoVidrioBase = cfg.precio_vidrio_6mm;
+                else if (espesor === '10mm') costoVidrioBase = cfg.precio_vidrio_10mm;
+                else costoVidrioBase = cfg.precio_vidrio_8mm; // 8mm default
+
+                // Aumento por Sandblasting (Porcentaje sobre el costo del vidrio)
+                if (tieneSandblasting) {
+                    costoVidrioBase = costoVidrioBase * (1 + cfg.extra_sandblasting_porc);
+                }
+            }
+
+            // Aplica desperdicio (colchon) tanto a vidrio como a espejo
+            const costoVidrioTotal = area * costoVidrioBase * cfg.colchon_vidrio;
+
+            // 2. Accesorios
+            let costoAluminio = 0;
+            let costoLed = 0;
+            let baseAcc = currentConfig.productos[prodNombre];
+
+            // Ajuste por Color
+            if (!esEspejo && !esVentana) {
+                if (colorAcc === 'negro') baseAcc += cfg.extra_color_negro;
+                if (colorAcc === 'dorado') baseAcc += cfg.extra_color_dorado;
+            }
+
+            const logica = LOGICA_ACCESORIOS[prodNombre] || "FIJO";
+            let costoAcc = baseAcc;
+
+            if (logica === "ANCHO") costoAcc = baseAcc * ancho;
+            if (logica === "AREA") costoAcc = baseAcc * area;
+
+            // Lógica VENTANERÍA (Aluminio + Accesorios)
+            if (esVentana) {
+                const perimetro = (ancho + alto) * 2;
+                let precioPerfil = 0;
+                let factorConsumo = 0;
+
+                if (prodNombre.includes("5020")) {
+                    precioPerfil = cfg.precio_perfil_5020;
+                    factorConsumo = cfg.factor_corrediza;
+                } else if (prodNombre.includes("744")) {
+                    precioPerfil = cfg.precio_perfil_744;
+                    factorConsumo = cfg.factor_corrediza;
+                } else if (prodNombre.includes("Batiente")) {
+                    precioPerfil = cfg.precio_perfil_batiente;
+                    factorConsumo = cfg.factor_batiente;
+                }
+
+                // Factor por Color
+                let factorColor = 1.0;
+                if (colorAlum === 'blanco') factorColor = 1 + cfg.extra_alum_blanco_porc;
+                if (colorAlum === 'anoloq') factorColor = 1 + cfg.extra_alum_anoloq_porc;
+
+                // FÓRMULA REALISTA: Perímetro * Factor (Geometría interna) * Precio ML * Desperdicio * Factor Color
+                costoAluminio = perimetro * factorConsumo * precioPerfil * cfg.desperdicio_aluminio * factorColor;
+                costoAcc = cfg.kit_accesorios_ventana;
+            }
+
+            // Recargo Accesorios por medida grande (>150cm) SOLO CORREDIZAS
+            const esCorrediza = prodNombre.toLowerCase().includes('corrediza');
+            if (esCorrediza && ancho > 1.5) {
+                costoAcc += 50000.0;
+            }
+
+            // Extra LED para Espejo
+            if (esEspejo && tieneLed) {
+                costoLed = cfg.extra_espejo_led;
+            }
+
+            // Sumar extras manuales (bisagras, soportes, etc)
+            costoAcc += extraAcc;
+
+            // 3. Otros Costos Directos
+            const costoDesmonte = tieneDesmonte ? cfg.desmonte : 0;
+
+            let costoInstalacion = 0;
+            let costoTransporte = 0;
+
+            if (esEspejo) {
+                costoInstalacion = cfg.instalacion_espejo;
+                costoTransporte = cfg.transporte_espejo;
+            } else if (esVentana) {
+                costoInstalacion = cfg.instalacion_ventana;
+                costoTransporte = cfg.transporte_ventana;
+            } else {
+                costoInstalacion = cfg.instalacion_base;
+                costoTransporte = cfg.transporte;
+                // Ajuste: Si el ancho es mayor a 150cm (1.5m), la instalación sube a 100.000
+                if (ancho > 1.5) {
+                    costoInstalacion = Math.max(costoInstalacion, 100000.0);
+                }
+            }
+
+            const costoInsumos = cfg.insumos;
+            const otros = costoInstalacion + costoTransporte + costoInsumos + costoDesmonte;
+            const costoDirecto = costoVidrioTotal + costoAcc + costoAluminio + costoLed + otros;
+
+            // 4. Estructura y Utilidad
+            let est = 0;
+            let utilPorcentaje = 0;
+
+            if (esEspejo) {
+                // Espejo tiene su propia utilidad y usa estructura empresa (o la que definas)
+                est = cfg.est_espejo;
+                utilPorcentaje = cfg.util_espejo;
+            } else if (esVentana) {
+                est = cfg.est_ventana; // Ventana usa estructura específica
+                utilPorcentaje = cfg.util_ventana;
+            } else if (linea === 'controlada') {
+                est = cfg.est_controlada;
+                utilPorcentaje = cfg.util_controlada;
+            } else {
+                est = cfg.est_empresa;
+                utilPorcentaje = cfg.util_empresa;
+            }
+
+            const totalCostos = costoDirecto + est;
+
+            // FÓRMULA CLAVE: Margen sobre Venta
+            let precioSinIva = totalCostos / (1 - utilPorcentaje);
+            let precioFinal = precioSinIva * (1 + cfg.iva);
+
+            // REGLA DE NEGOCIO: Mínimo Ventana
+            if (esVentana && precioFinal < cfg.minimo_ventana) {
+                precioFinal = cfg.minimo_ventana;
+                precioSinIva = precioFinal / (1 + cfg.iva);
+            }
+
+            const ganancia = precioSinIva - totalCostos;
+
+            // Margen Real
+            const margen = (ganancia / precioSinIva) * 100;
+
+            // Guardar cálculo actual para agregar a lista
+            lastCalculation = {
+                producto: prodNombre,
+                medidas: `${Math.round(ancho * 100)}x${Math.round(alto * 100)}`,
+                vidrio: esEspejo ? 'Espejo' : (esVentana ? 'Vidrio Ventana' : espesor),
+                sandblasting: tieneSandblasting,
+                color: esVentana ? colorAlum : colorAcc,
+                precio: precioSinIva,
+                observaciones: observaciones,
+                // Datos crudos para edición
+                raw: {
+                    ancho: Math.round(ancho * 100),
+                    alto: Math.round(alto * 100),
+                    producto: prodNombre,
+                    espesor: espesor,
+                    linea: linea,
+                    mercado: mercado,
+                    color_acc: colorAcc,
+                    color_alum: colorAlum,
+                    desmonte: tieneDesmonte,
+                    led: tieneLed,
+                    sandblasting: tieneSandblasting,
+                    recargo: recargoTransporte,
+                    extra: extraAcc,
+                    observaciones: observaciones
+                }
+            };
+
+            // Guardar en Historial
+            guardarHistorial({
+                producto: prodNombre,
+                medidas: `${Math.round(ancho * 100)}x${Math.round(alto * 100)}`,
+                precio: precioFinal,
+                fecha: new Date()
+            });
+
+            const detalles = {
+                vidrio: costoVidrioTotal,
+                aluminio: costoAluminio,
+                accesorios: costoAcc,
+                led: costoLed,
+                instalacion: costoInstalacion,
+                transporte: costoTransporte,
+                insumos: costoInsumos,
+                desmonte: costoDesmonte,
+                estructura: est,
+                ganancia: ganancia,
+                espesorLabel: esEspejo ? 'Espejo' : (esVentana ? 'Vidrio' : espesor)
+            };
+
+            mostrarResultados(precioFinal, precioSinIva, detalles, margen, mercado);
+        }
+
+        function mostrarResultados(final, neto, d, mar, mercado) {
+            document.getElementById('res-precio-neto').innerText = fmtMoney(neto);
+            document.getElementById('res-precio-final').innerText = "Total con IVA: " + fmtMoney(final);
+
+            // Resetear vista a oculto por privacidad cada vez que se calcula
+            document.getElementById('financial-details').style.display = 'none';
+            document.getElementById('res-margen-container').style.display = 'none';
+            document.getElementById('btn-toggle-desglose').innerText = '🙈';
+
+            const lista = document.getElementById('desglose-lista');
+            lista.innerHTML = '';
+
+            const addRow = (label, val, isBold = false) => {
+                if (val <= 0) return;
+                const row = document.createElement('div');
+                row.className = 'detail-row';
+                row.innerHTML = `<span>${label}</span> <span class="detail-val" style="${isBold ? 'font-weight:bold' : ''}">${fmtMoney(val)}</span>`;
+                lista.appendChild(row);
+            };
+
+            addRow(`Material: ${d.espesorLabel}`, d.vidrio);
+            if (d.aluminio > 0) addRow("Perfilería Aluminio", d.aluminio);
+            if (d.accesorios > 0) addRow("Accesorios / Kit", d.accesorios);
+            if (d.led > 0) addRow("Sistema LED", d.led);
+
+            addRow("Instalación", d.instalacion);
+            addRow("Transporte", d.transporte);
+            if (d.desmonte > 0) addRow("Desmonte", d.desmonte);
+            addRow("Insumos (Silicona/Tornillos)", d.insumos);
+
+            addRow("Aporte Estructura (Fijo)", d.estructura);
+
+            document.getElementById('res-ganancia').innerText = fmtMoney(d.ganancia);
+            document.getElementById('res-margen').innerText = mar.toFixed(1) + "%";
+
+            // Lógica de Comparación con Competencia
+            const divComp = document.getElementById('res-comparacion');
+            if (mercado > 0) {
+                const diff = final - mercado;
+                const diffPorc = (diff / mercado) * 100;
+                let msg = "", color = "";
+
+                if (diff > 0) {
+                    msg = `⚠️ $${diff.toLocaleString('es-CO', { maximumFractionDigits: 0 })} (+${diffPorc.toFixed(1)}%) vs Mercado`;
+                    color = "#c62828"; // Rojo
+                } else {
+                    msg = `✅ Ahorro: $${Math.abs(diff).toLocaleString('es-CO', { maximumFractionDigits: 0 })} (-${Math.abs(diffPorc).toFixed(1)}%) vs Mercado`;
+                    color = "#2e7d32"; // Verde
+                }
+                divComp.innerHTML = `<span style="color:${color}; font-weight:700;">${msg}</span>`;
+                divComp.style.display = 'block';
+            } else {
+                divComp.style.display = 'none';
+            }
+
+            // Semáforo
+            const badge = document.getElementById('res-badge');
+            badge.className = 'metric-badge';
+            if (mar >= 18) {
+                badge.innerText = "RENTABLE";
+                badge.classList.add('bg-ok');
+            } else if (mar >= 12) {
+                badge.innerText = "ACEPTABLE";
+                badge.classList.add('bg-warn');
+            } else {
+                badge.innerText = "RIESGO";
+                badge.classList.add('bg-bad');
+            }
+
+            const panel = document.getElementById('resultado-panel');
+
+            // Reiniciar animación para que se ejecute siempre
+            panel.classList.remove('animate-result');
+            void panel.offsetWidth; // Forzar reflow del navegador
+            panel.classList.add('animate-result');
+
+            panel.style.display = 'block';
+            // Scroll suave al resultado
+            panel.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function compartir() {
+            const prod = document.getElementById('producto').value;
+            const ancho = document.getElementById('ancho').value;
+            const alto = document.getElementById('alto').value;
+            const esp = document.getElementById('espesor').value;
+            const color = document.getElementById('color_acc').value;
+            const colorAlum = document.getElementById('color_alum').value;
+            const tieneSandblasting = document.getElementById('check-sandblasting').checked;
+            const tieneLed = document.getElementById('check-espejo-led').checked;
+            const neto = document.getElementById('res-precio-neto').innerText;
+            const total = document.getElementById('res-precio-final').innerText.replace('Total con IVA: ', '');
+
+            // Lógica de Garantía (12 meses para económica, 18 para el resto)
+            const esEconomica = prod.toLowerCase().includes('económica') || prod.toLowerCase().includes('economica');
+            const garantia = esEconomica ? "12 meses" : "18 meses";
+
+            let txtVidrio = esp;
+            if (prod.includes("Espejo")) {
+                txtVidrio = "Espejo 4mm/5mm";
+                if (tieneLed) txtVidrio += " + LUZ LED ✨";
+            } else if (prod.includes("Ventana")) {
+                txtVidrio = "Vidrio Claro";
+                // Ventana no lleva sandblasting por defecto en este texto simple
+            } else if (tieneSandblasting) {
+                txtVidrio += " + SANDBLASTING";
+            }
+
+            // Usamos códigos Unicode para los emojis para evitar errores de codificación (rombos negros)
+            let texto = `*COTIZACIÓN* \uD83D\uDCC4
+----------------------------
+\uD83D\uDD39 *Sistema:* ${prod}
+\uD83D\uDD39 *Medidas:* ${ancho} x ${alto} cm
+\uD83D\uDD39 *Vidrio:* ${txtVidrio}`;
+
+            if (!prod.includes("Espejo") && !prod.includes("Ventana")) {
+                texto += `\n\uD83D\uDD39 *Acabado:* ${color.toUpperCase()}`;
+            }
+            if (prod.includes("Ventana")) {
+                texto += `\n\uD83D\uDD39 *Color Aluminio:* ${colorAlum.toUpperCase()}`;
+            }
+
+            texto += `\n\n\u2705 *INCLUYE:*
+Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, transporte, instalación y garantía escrita por ${garantia}.
+
+\uD83D\uDCB0 *Precio Neto:* ${neto}
+----------------------------`;
+
+            // Copiar al portapapeles y abrir WhatsApp
+            navigator.clipboard.writeText(texto).catch(err => console.error('Error al copiar', err));
+            window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+        }
+
+        function fmtMoney(num) {
+            return "$" + num.toLocaleString('es-CO', { maximumFractionDigits: 0 });
+        }
+
+        // ==========================================
+        // 4. FUNCIONES DEL SISTEMA
+        // ==========================================
+        function limpiar() {
+            lastCalculation = null;
+            document.getElementById('ancho').value = '';
+            document.getElementById('alto').value = '';
+            document.getElementById('mercado').value = '';
+            document.getElementById('recargo_transporte').value = '';
+            document.getElementById('extra_acc').value = '';
+            document.getElementById('observaciones').value = '';
+            if (document.getElementById('cantidad-item')) document.getElementById('cantidad-item').value = '1';
+            document.getElementById('producto').selectedIndex = 0;
+            document.getElementById('espesor').value = '8mm';
+            document.getElementById('linea').selectedIndex = 0;
+            document.getElementById('color_acc').selectedIndex = 0;
+            document.getElementById('color_alum').selectedIndex = 0;
+            document.getElementById('check-desmonte').checked = false;
+            document.getElementById('check-sandblasting').checked = false;
+            document.getElementById('check-espejo-led').checked = false;
+            document.getElementById('resultado-panel').style.display = 'none';
+            verificarProducto();
+
+            document.getElementById('estrategia-content').style.display = 'none';
+            document.getElementById('arrow-estrategia').style.transform = 'rotate(0deg)';
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function guardarHistorial(item) {
+            let historial = JSON.parse(localStorage.getItem('vidrios_historial')) || [];
+
+            // Formato de fecha corto
+            const fechaStr = item.fecha.toLocaleString('es-CO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+            item.fechaStr = fechaStr;
+
+            // Agregar al inicio
+            historial.unshift(item);
+
+            // Mantener solo 5
+            if (historial.length > 5) historial.pop();
+
+            localStorage.setItem('vidrios_historial', JSON.stringify(historial));
+            renderHistorial();
+        }
+
+        function renderHistorial() {
+            const list = document.getElementById('historial-list');
+            const historial = JSON.parse(localStorage.getItem('vidrios_historial')) || [];
+
+            list.innerHTML = historial.length ? '' : '<div style="color:#999; font-size:0.9rem; text-align:center; padding:10px;">Sin historial reciente</div>';
+
+            historial.forEach(h => {
+                const row = document.createElement('div');
+                row.className = 'detail-row';
+                row.innerHTML = `
+                    <div style="font-size:0.85rem; color:#333;"><b>${h.producto}</b><br><span style="color:#666; font-size:0.75rem;">${h.medidas} cm | ${h.fechaStr}</span></div>
+                    <div style="font-weight:bold; color:var(--accent-blue);">${fmtMoney(h.precio)}</div>
+                `;
+                list.appendChild(row);
+            });
+        }
+
+        function abrirConfig() { document.getElementById('modal-config').style.display = 'block'; }
+        function cerrarConfig() { document.getElementById('modal-config').style.display = 'none'; }
+
+        function guardarConfig() {
+            // Leer inputs y actualizar currentConfig
+            for (const [key] of Object.entries(currentConfig.globales)) {
+                let val = parseFloat(document.getElementById(`cfg_globales_${key}`).value);
+                if (!isNaN(val)) currentConfig.globales[key] = val;
+            }
+            for (const [key] of Object.entries(currentConfig.productos)) {
+                let val = parseFloat(document.getElementById(`cfg_productos_${key}`).value);
+                if (!isNaN(val)) currentConfig.productos[key] = val;
+            }
+
+            localStorage.setItem('vidrios_config', JSON.stringify(currentConfig));
+            alert("Configuración guardada en este dispositivo.");
+            cerrarConfig();
+            document.getElementById('lbl-desmonte-val').innerText = fmtMoney(currentConfig.globales.desmonte);
+            // Recargar para aplicar cambios en selects si hubo cambios
+            location.reload();
+        }
+
+        function toggleEstrategia() {
+            const content = document.getElementById('estrategia-content');
+            const arrow = document.getElementById('arrow-estrategia');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                arrow.style.transform = 'rotate(180deg)';
+            } else {
+                content.style.display = 'none';
+                arrow.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        function toggleDesglose(btn) {
+            const details = document.getElementById('financial-details');
+            const margin = document.getElementById('res-margen-container');
+            if (details.style.display === 'none') {
+                details.style.display = 'block';
+                margin.style.display = 'block';
+                btn.innerText = '👁️';
+            } else {
+                details.style.display = 'none';
+                margin.style.display = 'none';
+                btn.innerText = '🙈';
+            }
+        }
+
+        function restaurarFabrica() {
+            if (confirm('¿Estás seguro de restaurar TODOS los valores a la configuración original de fábrica? Se perderán tus precios personalizados.')) {
+                localStorage.removeItem('vidrios_config');
+                alert("Configuración restaurada. La aplicación se reiniciará.");
+                location.reload();
+            }
+        }
+
+        // ==========================================
+        // 5. FUNCIONES DE COTIZACIÓN MÚLTIPLE
+        // ==========================================
+        function agregarItem() {
+            if (!lastCalculation) return;
+
+            const qty = parseInt(document.getElementById('cantidad-item').value) || 1;
+            let itemToAdd = { ...lastCalculation };
+            itemToAdd.cantidad = qty;
+            itemToAdd.precioUnitario = itemToAdd.precio;
+            itemToAdd.precio = itemToAdd.precio * qty;
+
+            quoteItems.push(itemToAdd);
+            renderQuote();
+
+            // Limpiar formulario automáticamente para el siguiente item
+            limpiar();
+        }
+
+        function renderQuote() {
+            const container = document.getElementById('quote-summary');
+            const list = document.getElementById('quote-items-list');
+            const count = document.getElementById('quote-count');
+            const totalLbl = document.getElementById('quote-total');
+
+            if (quoteItems.length === 0) {
+                container.style.display = 'none';
+                document.getElementById('quote-discount').value = '';
+                return;
+            }
+
+            container.style.display = 'block';
+            list.innerHTML = '';
+
+            quoteItems.forEach((item, index) => {
+                const row = document.createElement('div');
+                row.className = 'quote-card-item';
+
+                let qtyBadge = item.cantidad > 1 ? `<span style="background:#e3f2fd; color:#1565c0; padding:2px 6px; border-radius:4px; font-size:0.8em; margin-left:5px;">x${item.cantidad}</span>` : '';
+                let obsHtml = item.observaciones ? `<div style="color:#d32f2f; font-style:italic; margin-top:4px;">📝 ${item.observaciones}</div>` : '';
+                let ledHtml = (item.raw && item.raw.led) ? `<span style="color:#fbc02d; font-weight:bold; margin-left:5px;">+ LED ✨</span>` : '';
+
+                row.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div class="quote-prod-name">${index + 1}. ${item.producto} ${qtyBadge}</div>
+                        <div style="font-weight:bold; color:var(--accent-blue); font-size:1.1rem;">${fmtMoney(item.precio)}</div>
+                    </div>
+                    <div class="quote-details">
+                        📏 ${item.medidas} cm | 💎 ${item.vidrio} ${item.sandblasting ? '+ Sand' : ''} ${ledHtml} | 🎨 ${item.color}
+                        ${obsHtml}
+                    </div>
+                    <div style="text-align:right; margin-top:8px; padding-top:8px; border-top:1px dashed #eee;">
+                        <button onclick="editarItem(${index})" style="background:none; border:none; cursor:pointer; margin-right:15px; color:#666;">
+                            ✏️ Editar
+                        </button>
+                        <button onclick="borrarItem(${index})" style="background:none; border:none; cursor:pointer; color:#c62828;">
+                            🗑️ Borrar
+                        </button>
+                    </div>
+                `;
+                list.appendChild(row);
+            });
+
+            count.innerText = quoteItems.length;
+            actualizarTotalCotizacion();
+        }
+
+        function actualizarTotalCotizacion() {
+            let total = quoteItems.reduce((sum, item) => sum + item.precio, 0);
+            let discount = parseFloat(document.getElementById('quote-discount').value) || 0;
+            let final = total - discount;
+            document.getElementById('quote-total').innerText = fmtMoney(final);
+        }
+
+        function borrarItem(index) {
+            quoteItems.splice(index, 1);
+            renderQuote();
+        }
+
+        function editarItem(index) {
+            const item = quoteItems[index];
+            if (!item || !item.raw) return;
+
+            // Restaurar valores en el formulario
+            document.getElementById('producto').value = item.raw.producto;
+            document.getElementById('ancho').value = item.raw.ancho;
+            document.getElementById('alto').value = item.raw.alto;
+            document.getElementById('espesor').value = item.raw.espesor;
+            document.getElementById('color_acc').value = item.raw.color_acc;
+            document.getElementById('linea').value = item.raw.linea;
+            if (item.raw.color_alum) document.getElementById('color_alum').value = item.raw.color_alum;
+            document.getElementById('mercado').value = item.raw.mercado || '';
+            document.getElementById('recargo_transporte').value = item.raw.recargo || '';
+            document.getElementById('extra_acc').value = item.raw.extra || '';
+            document.getElementById('observaciones').value = item.raw.observaciones || '';
+            document.getElementById('check-desmonte').checked = item.raw.desmonte;
+            document.getElementById('check-sandblasting').checked = item.raw.sandblasting;
+            document.getElementById('check-espejo-led').checked = item.raw.led || false;
+            verificarProducto();
+
+            document.getElementById('estrategia-content').style.display = 'block';
+            document.getElementById('arrow-estrategia').style.transform = 'rotate(180deg)';
+
+            // Borrar de la lista, recalcular y subir para editar
+            borrarItem(index);
+            calcular();
+            if (item.cantidad) {
+                document.getElementById('cantidad-item').value = item.cantidad;
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function limpiarCotizacion() {
+            if (confirm('¿Borrar toda la lista de cotización?')) {
+                quoteItems = [];
+                renderQuote();
+            }
+        }
+
+        function compartirCompleto() {
+            if (quoteItems.length === 0) return;
+
+            let total = quoteItems.reduce((sum, item) => sum + item.precio, 0);
+            let discount = parseFloat(document.getElementById('quote-discount').value) || 0;
+            let final = total - discount;
+            let texto = `*PRESUPUESTO FORMAL* 📋\n----------------------------\n`;
+
+            quoteItems.forEach((item, index) => {
+                texto += `*${index + 1}. ${item.producto}*`;
+                if (item.cantidad > 1) texto += ` (x${item.cantidad})`;
+                texto += `\n`;
+                texto += `   📏 ${item.medidas} cm\n`;
+
+                let detallesVidrio = item.vidrio;
+                if (item.sandblasting) detallesVidrio += " + Sand";
+                if (item.raw && item.raw.led) detallesVidrio += " + LED ✨";
+                texto += `   💎 ${detallesVidrio}\n`;
+                if (!item.producto.includes("Espejo")) {
+                    texto += `   🎨 ${item.color.toUpperCase()}\n`;
+                }
+                if (item.observaciones) {
+                    texto += `   📝 Nota: ${item.observaciones}\n`;
+                }
+                if (item.cantidad > 1) {
+                    texto += `   💲 ${fmtMoney(item.precioUnitario)} x ${item.cantidad} = ${fmtMoney(item.precio)}\n\n`;
+                } else {
+                    texto += `   💲 ${fmtMoney(item.precio)}\n\n`;
+                }
+            });
+
+            texto += `----------------------------\n`;
+            if (discount > 0) {
+                texto += `💰 *Subtotal:* ${fmtMoney(total)}\n`;
+                texto += `📉 *Descuento:* -${fmtMoney(discount)}\n`;
+            }
+            texto += `💰 *TOTAL NETO: ${fmtMoney(final)}*\n`;
+            texto += `✅ Incluye transporte e instalación.\n`;
+            texto += `📅 Validez: 15 días.`;
+
+            navigator.clipboard.writeText(texto).catch(err => console.error('Error al copiar', err));
+            window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+        }
+
+        // Iniciar
+        init();
+
+    </script>
+</body>
+
+</html>
