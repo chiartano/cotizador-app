@@ -380,6 +380,23 @@
             }
         }
     </style>
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#3182ce">
+<link rel="apple-touch-icon" href="icon.png">
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('App registrada', reg))
+        .catch(err => console.log('Error registro', err));
+    });
+  }
+</script>
+    
 </head>
 
 <body>
@@ -1531,5 +1548,6 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
 
     </script>
 </body>
+
 
 </html>
