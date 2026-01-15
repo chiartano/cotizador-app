@@ -380,23 +380,6 @@
             }
         }
     </style>
-<link rel="manifest" href="manifest.json">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#3182ce">
-<link rel="apple-touch-icon" href="icon.png">
-
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js')
-        .then(reg => console.log('App registrada', reg))
-        .catch(err => console.log('Error registro', err));
-    });
-  }
-</script>
-    
 </head>
 
 <body>
@@ -413,6 +396,24 @@
             <div class="form-group">
                 <label>Sistema / Producto</label>
                 <select id="producto" onchange="verificarProducto()"></select>
+            </div>
+            
+            <div class="row" id="group-ventana-specs" style="display:none; background-color: #f0f4f8; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #d1d5db;">
+                <div class="col">
+                    <label style="color:#2c5282;">Sistema Alum.</label>
+                    <select id="win-sistema">
+                        <option value="5020">5020 (Económica)</option>
+                        <option value="744">744 (Tradicional)</option>
+                        <option value="8025">8025 (Pesada)</option>
+                    </select>
+                </div>
+                <div class="col">
+                    <label style="color:#2c5282;">Diseño</label>
+                    <select id="win-naves">
+                        <option value="2">2 Naves (XO)</option>
+                        <option value="3">3 Naves (OXO)</option>
+                    </select>
+                </div>
             </div>
             <div class="form-group" id="group-espesor">
                 <label>Espesor Vidrio</label>
@@ -458,8 +459,12 @@
             <div class="card-title"><span class="step-badge">2</span> Dimensiones (cm)</div>
             <div class="row">
                 <div class="col">
-                    <label>Ancho (cm)</label>
+                    <label id="lbl-ancho">Ancho (cm)</label>
                     <input type="number" id="ancho" step="1" placeholder="Ej: 120">
+                </div>
+                <div class="col" id="col-ancho2" style="display:none;">
+                    <label>Lado 2 (cm)</label>
+                    <input type="number" id="ancho2" step="1" placeholder="Ej: 80">
                 </div>
                 <div class="col">
                     <label>Alto (cm)</label>
@@ -499,6 +504,10 @@
                     <input type="number" id="extra_acc" placeholder="$0">
                 </div>
                 <div class="form-group">
+                    <label>Descuento Adicional</label>
+                    <input type="number" id="descuento_adicional" placeholder="$0">
+                </div>
+                <div class="form-group">
                     <label>Precio Competencia (Opcional)</label>
                     <input type="number" id="mercado" placeholder="$0">
                 </div>
@@ -532,6 +541,23 @@
                     <span id="res-badge" class="metric-badge">...</span>
                     <span style="font-size: 0.9rem; color: #666; margin-left: 10px;">Margen: <b
                             id="res-margen">0%</b></span>
+                </div>
+
+                <div id="tabla-cortes-container" style="display:none; margin-bottom:20px; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
+                    <div style="background:#e2e8f0; padding:8px 12px; font-weight:bold; color:#4a5568; font-size:0.9rem;">
+                        🛠️ Despiece de Material (Ventana)
+                    </div>
+                    <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                        <thead style="background:#f7fafc; border-bottom:2px solid #cbd5e0;">
+                            <tr>
+                                <th style="text-align:left; padding:8px;">Ref.</th>
+                                <th style="text-align:center; padding:8px;">Cant.</th>
+                                <th style="text-align:left; padding:8px;">Medida</th>
+                                <th style="text-align:right; padding:8px;">Costo</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-cortes-body"></tbody>
+                    </table>
                 </div>
 
                 <div class="card-title" style="justify-content: space-between;">
@@ -642,6 +668,30 @@
     </div>
 
     <script>
+
+        // --- DATOS NUEVOS PARA VENTANAS (PEGAR AL INICIO DEL SCRIPT) ---
+        const DB_ALU = {
+            '5020': { cabezal: 56121, sillar: 63393, jamba: 56496, enganche: 51566, traslape: 36735, horizontal: 62119 },
+            '744': { cabezal: 64443, sillar: 65443, jamba: 65424, enganche: 75056, traslape: 75807, horizSup: 51356, horizInf: 80409 },
+            '8025': { cabezal: 119464, sillar: 116207, jamba: 118477, enganche: 115169, traslape: 110908, horizSup: 91566, horizInf: 144259 }
+        };
+        
+        // Configuración específica para ventanas (independiente de la config general para no dañar nada)
+        const CONF_WIN = {
+            inflacion: 1.10,      
+            mermaBaja: 1.15,      // 15% (Obras grandes)
+            mermaAlta: 1.40,      // 40% (Obras pequeñas)
+            umbralOptimo: 2.8,    // Metros para considerar media tira
+            accesorios: 0.15,
+            accMinimo: 25000,
+            moFija: 45000,
+            moVarM2: 28000,
+            insumosFijos: 12000,
+            utilidad: 1.30,
+            dificultad: { '5020': 1.0, '744': 1.1, '8025': 1.5 }
+        };
+        // -----------------------------------------------------------
+
         // ==========================================
         // 1. CONFIGURACIÓN Y DATOS (LÓGICA PYTHON TRADUCIDA)
         // ==========================================
@@ -653,6 +703,7 @@
                 precio_vidrio_10mm: 170000.0,
                 colchon_vidrio: 1.05,
                 instalacion_base: 70000.0,
+                instalacion_L: 100000.0,
                 transporte: 70000.0,
                 insumos: 15000.0,
                 iva: 0.19,
@@ -673,29 +724,14 @@
                 util_espejo: 0.20,
                 est_espejo: 40000.0, // Aporte estructura específico para espejos
                 // Variables VENTANERIA (Aluminio)
-                precio_vidrio_ventana: 60000.0,
-                // Precios por Metro Lineal de Perfil (Barra)
-                precio_perfil_5020: 28000.0, // Liviano
-                precio_perfil_744: 52000.0,  // Pesado
-                precio_perfil_batiente: 38000.0,
-                // Factores: Cuántos metros de perfil gasta 1 metro de perímetro de ventana
-                factor_corrediza: 3.0, // Marco + Naves + Traslapes + Enganches
-                factor_batiente: 2.8,  // Marco + Nave + Pisavidrios
-                kit_accesorios_ventana: 25000.0,
-                desperdicio_aluminio: 1.10,
-                minimo_ventana: 350000.0, // Precio mínimo de venta (IVA incluido)
-                util_ventana: 0.35,
-                est_ventana: 80000.0, // Aporte estructura específico para ventanas
-                instalacion_ventana: 80000.0,
-                transporte_ventana: 70000.0,
-                extra_alum_blanco_porc: 0.10, // +10%
-                extra_alum_anoloq_porc: 0.20  // +20%
+                precio_vidrio_ventana: 60000.0
             },
             productos: {
                 "División Batiente (Tradicional)": 135000.0,
                 "División Corrediza Económica": 120000.0,
                 "División Corrediza Premium": 220000.0,
-                "División en L (Esquinera)": 240000.0,
+                "División de baño L - Corrediza": 235000.0,
+                "División de baño L - Batiente": 335000.0,
                 "Cortaviento / Oficina": 90000.0,
                 "Espejo Flotante": 30000.0,
                 "Ventana 5020 (Corrediza Liviana)": 0,
@@ -708,12 +744,10 @@
             "División Batiente (Tradicional)": "FIJO",
             "División Corrediza Económica": "FIJO",
             "División Corrediza Premium": "FIJO",
-            "División en L (Esquinera)": "FIJO",
+            "División de baño L - Corrediza": "FIJO",
+            "División de baño L - Batiente": "FIJO",
             "Cortaviento / Oficina": "ANCHO",
             "Espejo Flotante": "FIJO",
-            "Ventana 5020 (Corrediza Liviana)": "PARAMETRICO",
-            "Ventana 744 (Corrediza Pesada)": "PARAMETRICO",
-            "Ventana Batiente (Aluminio)": "PARAMETRICO"
         };
 
         // Variables para cotización múltiple
@@ -733,10 +767,17 @@
         if (currentConfig.productos["Ventanería (Aluminio)"]) {
             delete currentConfig.productos["Ventanería (Aluminio)"];
         }
+        if (currentConfig.productos["División en L (Esquinera)"]) {
+            delete currentConfig.productos["División en L (Esquinera)"];
+        }
 
         // Migración rápida: Si el espejo costaba 20k (valor viejo), actualizar a 30k
         if (currentConfig.productos["Espejo Flotante"] === 20000) {
             currentConfig.productos["Espejo Flotante"] = 30000;
+        }
+        // Corrección: Si la instalación base aparece en 80000 (posible error de caché), restaurar a 70000
+        if (currentConfig.globales && currentConfig.globales.instalacion_base === 80000) {
+            currentConfig.globales.instalacion_base = 70000;
         }
 
         // Sincronizar y REORDENAR productos según DEFAULT_CONFIG
@@ -775,12 +816,21 @@
             const prod = document.getElementById('producto').value;
             const esEspejo = prod.includes("Espejo");
             const esVentana = prod.includes("Ventana");
+            const esLEspecial = prod.includes("División de baño L -");
+
+            // --- NUEVO: MOSTRAR CONTROLES VENTANA ---
+            const grupoVentana = document.getElementById('group-ventana-specs');
+            if (grupoVentana) grupoVentana.style.display = esVentana ? 'flex' : 'none';
+            // ----------------------------------------
 
             // Mostrar/Ocultar opción LED y Espesor
             document.getElementById('group-espejo-led').style.display = esEspejo ? 'flex' : 'none';
             document.getElementById('group-espesor').style.display = (esEspejo || esVentana) ? 'none' : 'block';
             document.getElementById('group-color-acc').style.display = (esEspejo || esVentana) ? 'none' : 'block';
             document.getElementById('group-color-alum').style.display = esVentana ? 'block' : 'none';
+            
+            document.getElementById('col-ancho2').style.display = esLEspecial ? 'block' : 'none';
+            document.getElementById('lbl-ancho').innerText = esLEspecial ? "Lado 1 (cm)" : "Ancho (cm)";
 
             // Si es espejo, desmarcar sandblasting visualmente (opcional)
             if (esEspejo) document.getElementById('check-sandblasting').checked = false;
@@ -813,7 +863,7 @@
             ['precio_vidrio_6mm', 'precio_vidrio_8mm', 'precio_vidrio_10mm', 'colchon_vidrio'].forEach(k => addInputConfig(tGen, k, currentConfig.globales[k], 'globales'));
 
             addHeader(tGen, "Mano de Obra y Logística");
-            ['instalacion_base', 'transporte', 'insumos', 'desmonte'].forEach(k => addInputConfig(tGen, k, currentConfig.globales[k], 'globales'));
+            ['instalacion_base', 'instalacion_L', 'transporte', 'insumos', 'desmonte'].forEach(k => addInputConfig(tGen, k, currentConfig.globales[k], 'globales'));
 
             addHeader(tGen, "Negocio y Metas");
             ['iva', 'est_controlada', 'est_empresa', 'util_controlada', 'util_empresa', 'meta_mensual'].forEach(k => addInputConfig(tGen, k, currentConfig.globales[k], 'globales'));
@@ -834,19 +884,10 @@
             addHeader(tEsp, "Costos y Variables");
             ['precio_espejo_m2', 'extra_espejo_led', 'instalacion_espejo', 'transporte_espejo', 'est_espejo', 'util_espejo'].forEach(k => addInputConfig(tEsp, k, currentConfig.globales[k], 'globales'));
 
-            // --- TAB 4: VENTANERÍA ---
+            // --- TAB 4: VENTANERÍA (Simplificado) ---
             const tVen = document.getElementById('tab-ventanas');
-            addHeader(tVen, "Precios Base Productos");
-            Object.keys(currentConfig.productos).filter(isVentana).forEach(k => addInputConfig(tVen, k, currentConfig.productos[k], 'productos'));
-
-            addHeader(tVen, "Perfiles y Materiales");
-            ['precio_perfil_5020', 'precio_perfil_744', 'precio_perfil_batiente', 'precio_vidrio_ventana', 'kit_accesorios_ventana'].forEach(k => addInputConfig(tVen, k, currentConfig.globales[k], 'globales'));
-
-            addHeader(tVen, "Factores Técnicos");
-            ['factor_corrediza', 'factor_batiente', 'desperdicio_aluminio', 'extra_alum_blanco_porc', 'extra_alum_anoloq_porc'].forEach(k => addInputConfig(tVen, k, currentConfig.globales[k], 'globales'));
-
-            addHeader(tVen, "Reglas de Negocio");
-            ['minimo_ventana', 'util_ventana', 'est_ventana', 'instalacion_ventana', 'transporte_ventana'].forEach(k => addInputConfig(tVen, k, currentConfig.globales[k], 'globales'));
+            addHeader(tVen, "Vidrio Ventana");
+            ['precio_vidrio_ventana'].forEach(k => addInputConfig(tVen, k, currentConfig.globales[k], 'globales'));
         }
 
         function addHeader(parent, text) {
@@ -892,8 +933,23 @@
         // 3. LÓGICA DE NEGOCIO (EL CEREBRO)
         // ==========================================
         function calcular() {
+
+            // --- MODIFICACIÓN 1: DETECTAR SI ES VENTANA Y DESVIAR ---
+            const prodNombreCheck = document.getElementById('producto').value;
+            if (prodNombreCheck.includes("Ventana") || prodNombreCheck.includes("Ventanería")) {
+                // Si es ventana, usamos la lógica nueva y TERMINAMOS aquí.
+                calcularVentanaAvanzada();
+                return; 
+            }
+            
+            // Si NO es ventana, ocultamos la tabla de cortes por si estaba abierta
+            const tablaContainer = document.getElementById('tabla-cortes-container');
+            if(tablaContainer) tablaContainer.style.display = 'none';
+            // ---------------------------------------------------------
+            
             // Inputs
             let ancho = parseFloat(document.getElementById('ancho').value);
+            let ancho2 = parseFloat(document.getElementById('ancho2').value) || 0;
             let alto = parseFloat(document.getElementById('alto').value);
 
             if (!ancho || !alto) {
@@ -908,6 +964,7 @@
 
             // Convertir CM a Metros para el cálculo interno
             ancho = ancho / 100;
+            ancho2 = ancho2 / 100;
             alto = alto / 100;
 
             const prodNombre = document.getElementById('producto').value;
@@ -921,12 +978,17 @@
             const tieneLed = document.getElementById('check-espejo-led').checked;
             const recargoTransporte = parseFloat(document.getElementById('recargo_transporte').value) || 0;
             const extraAcc = parseFloat(document.getElementById('extra_acc').value) || 0;
+            const descuentoAdicional = parseFloat(document.getElementById('descuento_adicional').value) || 0;
             const observaciones = document.getElementById('observaciones').value;
 
             const cfg = currentConfig.globales;
-            const area = ancho * alto;
+            
+            const esLEspecial = prodNombre.includes("División de baño L -");
+            let anchoCalculo = ancho;
+            if (esLEspecial) anchoCalculo += ancho2;
+
+            const area = anchoCalculo * alto;
             const esEspejo = prodNombre.includes("Espejo");
-            const esVentana = prodNombre.includes("Ventana");
 
             // 1. Costo Vidrio
             let costoVidrioBase = 0;
@@ -934,9 +996,6 @@
             if (esEspejo) {
                 // Lógica ESPEJO
                 costoVidrioBase = cfg.precio_espejo_m2;
-            } else if (esVentana) {
-                // Lógica VENTANA (Vidrio más delgado generalmente)
-                costoVidrioBase = cfg.precio_vidrio_ventana;
             } else {
                 // Lógica VIDRIO TEMPLADO
                 if (espesor === '6mm') costoVidrioBase = cfg.precio_vidrio_6mm;
@@ -958,7 +1017,7 @@
             let baseAcc = currentConfig.productos[prodNombre];
 
             // Ajuste por Color
-            if (!esEspejo && !esVentana) {
+            if (!esEspejo) {
                 if (colorAcc === 'negro') baseAcc += cfg.extra_color_negro;
                 if (colorAcc === 'dorado') baseAcc += cfg.extra_color_dorado;
             }
@@ -968,33 +1027,6 @@
 
             if (logica === "ANCHO") costoAcc = baseAcc * ancho;
             if (logica === "AREA") costoAcc = baseAcc * area;
-
-            // Lógica VENTANERÍA (Aluminio + Accesorios)
-            if (esVentana) {
-                const perimetro = (ancho + alto) * 2;
-                let precioPerfil = 0;
-                let factorConsumo = 0;
-
-                if (prodNombre.includes("5020")) {
-                    precioPerfil = cfg.precio_perfil_5020;
-                    factorConsumo = cfg.factor_corrediza;
-                } else if (prodNombre.includes("744")) {
-                    precioPerfil = cfg.precio_perfil_744;
-                    factorConsumo = cfg.factor_corrediza;
-                } else if (prodNombre.includes("Batiente")) {
-                    precioPerfil = cfg.precio_perfil_batiente;
-                    factorConsumo = cfg.factor_batiente;
-                }
-
-                // Factor por Color
-                let factorColor = 1.0;
-                if (colorAlum === 'blanco') factorColor = 1 + cfg.extra_alum_blanco_porc;
-                if (colorAlum === 'anoloq') factorColor = 1 + cfg.extra_alum_anoloq_porc;
-
-                // FÓRMULA REALISTA: Perímetro * Factor (Geometría interna) * Precio ML * Desperdicio * Factor Color
-                costoAluminio = perimetro * factorConsumo * precioPerfil * cfg.desperdicio_aluminio * factorColor;
-                costoAcc = cfg.kit_accesorios_ventana;
-            }
 
             // Recargo Accesorios por medida grande (>150cm) SOLO CORREDIZAS
             const esCorrediza = prodNombre.toLowerCase().includes('corrediza');
@@ -1019,9 +1051,9 @@
             if (esEspejo) {
                 costoInstalacion = cfg.instalacion_espejo;
                 costoTransporte = cfg.transporte_espejo;
-            } else if (esVentana) {
-                costoInstalacion = cfg.instalacion_ventana;
-                costoTransporte = cfg.transporte_ventana;
+            } else if (esLEspecial) {
+                costoInstalacion = cfg.instalacion_L;
+                costoTransporte = cfg.transporte;
             } else {
                 costoInstalacion = cfg.instalacion_base;
                 costoTransporte = cfg.transporte;
@@ -1043,9 +1075,6 @@
                 // Espejo tiene su propia utilidad y usa estructura empresa (o la que definas)
                 est = cfg.est_espejo;
                 utilPorcentaje = cfg.util_espejo;
-            } else if (esVentana) {
-                est = cfg.est_ventana; // Ventana usa estructura específica
-                utilPorcentaje = cfg.util_ventana;
             } else if (linea === 'controlada') {
                 est = cfg.est_controlada;
                 utilPorcentaje = cfg.util_controlada;
@@ -1060,9 +1089,9 @@
             let precioSinIva = totalCostos / (1 - utilPorcentaje);
             let precioFinal = precioSinIva * (1 + cfg.iva);
 
-            // REGLA DE NEGOCIO: Mínimo Ventana
-            if (esVentana && precioFinal < cfg.minimo_ventana) {
-                precioFinal = cfg.minimo_ventana;
+            // Descuento Adicional
+            if (descuentoAdicional > 0) {
+                precioFinal -= descuentoAdicional;
                 precioSinIva = precioFinal / (1 + cfg.iva);
             }
 
@@ -1071,30 +1100,35 @@
             // Margen Real
             const margen = (ganancia / precioSinIva) * 100;
 
+            const medidasStr = esLEspecial ? 
+                `L(${Math.round(ancho * 100)}+${Math.round(ancho2 * 100)})x${Math.round(alto * 100)}` : 
+                `${Math.round(ancho * 100)}x${Math.round(alto * 100)}`;
+
             // Guardar cálculo actual para agregar a lista
             lastCalculation = {
                 producto: prodNombre,
-                medidas: `${Math.round(ancho * 100)}x${Math.round(alto * 100)}`,
-                vidrio: esEspejo ? 'Espejo' : (esVentana ? 'Vidrio Ventana' : espesor),
+                medidas: medidasStr,
+                vidrio: esEspejo ? 'Espejo' : espesor,
                 sandblasting: tieneSandblasting,
-                color: esVentana ? colorAlum : colorAcc,
+                color: colorAcc,
                 precio: precioSinIva,
                 observaciones: observaciones,
                 // Datos crudos para edición
                 raw: {
                     ancho: Math.round(ancho * 100),
+                    ancho2: Math.round(ancho2 * 100),
                     alto: Math.round(alto * 100),
                     producto: prodNombre,
                     espesor: espesor,
                     linea: linea,
                     mercado: mercado,
                     color_acc: colorAcc,
-                    color_alum: colorAlum,
                     desmonte: tieneDesmonte,
                     led: tieneLed,
                     sandblasting: tieneSandblasting,
                     recargo: recargoTransporte,
                     extra: extraAcc,
+                    descuento: descuentoAdicional,
                     observaciones: observaciones
                 }
             };
@@ -1102,7 +1136,7 @@
             // Guardar en Historial
             guardarHistorial({
                 producto: prodNombre,
-                medidas: `${Math.round(ancho * 100)}x${Math.round(alto * 100)}`,
+                medidas: medidasStr,
                 precio: precioFinal,
                 fecha: new Date()
             });
@@ -1118,7 +1152,8 @@
                 desmonte: costoDesmonte,
                 estructura: est,
                 ganancia: ganancia,
-                espesorLabel: esEspejo ? 'Espejo' : (esVentana ? 'Vidrio' : espesor)
+                descuento: descuentoAdicional,
+                espesorLabel: esEspejo ? 'Espejo' : espesor
             };
 
             mostrarResultados(precioFinal, precioSinIva, detalles, margen, mercado);
@@ -1155,6 +1190,13 @@
             addRow("Insumos (Silicona/Tornillos)", d.insumos);
 
             addRow("Aporte Estructura (Fijo)", d.estructura);
+
+            if (d.descuento > 0) {
+                const row = document.createElement('div');
+                row.className = 'detail-row';
+                row.innerHTML = `<span style="color:#c62828;">Descuento Adicional</span> <span class="detail-val" style="color:#c62828;">-${fmtMoney(d.descuento)}</span>`;
+                lista.appendChild(row);
+            }
 
             document.getElementById('res-ganancia').innerText = fmtMoney(d.ganancia);
             document.getElementById('res-margen').innerText = mar.toFixed(1) + "%";
@@ -1208,6 +1250,7 @@
         function compartir() {
             const prod = document.getElementById('producto').value;
             const ancho = document.getElementById('ancho').value;
+            const ancho2 = document.getElementById('ancho2').value;
             const alto = document.getElementById('alto').value;
             const esp = document.getElementById('espesor').value;
             const color = document.getElementById('color_acc').value;
@@ -1232,11 +1275,16 @@
                 txtVidrio += " + SANDBLASTING";
             }
 
+            let medidasTxt = `${ancho} x ${alto} cm`;
+            if (prod.includes("División de baño L -")) {
+                medidasTxt = `L(${ancho} + ${ancho2}) x ${alto} cm`;
+            }
+
             // Usamos códigos Unicode para los emojis para evitar errores de codificación (rombos negros)
             let texto = `*COTIZACIÓN* \uD83D\uDCC4
 ----------------------------
 \uD83D\uDD39 *Sistema:* ${prod}
-\uD83D\uDD39 *Medidas:* ${ancho} x ${alto} cm
+\uD83D\uDD39 *Medidas:* ${medidasTxt}
 \uD83D\uDD39 *Vidrio:* ${txtVidrio}`;
 
             if (!prod.includes("Espejo") && !prod.includes("Ventana")) {
@@ -1267,10 +1315,12 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
         function limpiar() {
             lastCalculation = null;
             document.getElementById('ancho').value = '';
+            document.getElementById('ancho2').value = '';
             document.getElementById('alto').value = '';
             document.getElementById('mercado').value = '';
             document.getElementById('recargo_transporte').value = '';
             document.getElementById('extra_acc').value = '';
+            document.getElementById('descuento_adicional').value = '';
             document.getElementById('observaciones').value = '';
             if (document.getElementById('cantidad-item')) document.getElementById('cantidad-item').value = '1';
             document.getElementById('producto').selectedIndex = 0;
@@ -1466,6 +1516,7 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
             // Restaurar valores en el formulario
             document.getElementById('producto').value = item.raw.producto;
             document.getElementById('ancho').value = item.raw.ancho;
+            if (item.raw.ancho2) document.getElementById('ancho2').value = item.raw.ancho2;
             document.getElementById('alto').value = item.raw.alto;
             document.getElementById('espesor').value = item.raw.espesor;
             document.getElementById('color_acc').value = item.raw.color_acc;
@@ -1474,6 +1525,7 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
             document.getElementById('mercado').value = item.raw.mercado || '';
             document.getElementById('recargo_transporte').value = item.raw.recargo || '';
             document.getElementById('extra_acc').value = item.raw.extra || '';
+            document.getElementById('descuento_adicional').value = item.raw.descuento || '';
             document.getElementById('observaciones').value = item.raw.observaciones || '';
             document.getElementById('check-desmonte').checked = item.raw.desmonte;
             document.getElementById('check-sandblasting').checked = item.raw.sandblasting;
@@ -1542,12 +1594,157 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
             navigator.clipboard.writeText(texto).catch(err => console.error('Error al copiar', err));
             window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
         }
+        
+        // ==========================================
+        // NUEVA FUNCIÓN ESPECIALIZADA PARA VENTANAS
+        // ==========================================
+        function calcularVentanaAvanzada() {
+            // 1. Obtener inputs
+            const w = parseFloat(document.getElementById('ancho').value);
+            const h = parseFloat(document.getElementById('alto').value);
+            const sys = document.getElementById('win-sistema').value;
+            const nav = parseInt(document.getElementById('win-naves').value);
+            const vidType = document.getElementById('espesor').value; // Usamos el select global
+            
+            // 2. Definir recortes y geometría
+            let hVert, wNave, wVid, hVid;
+            if (sys === '8025') {
+                hVert = h - 6; wNave = (nav === 2) ? (w/2)-8 : (w/3)-2; 
+                wVid = wNave - 8; hVid = hVert - 8;
+            } else {
+                hVert = h - 4.5; wNave = (nav === 2) ? (w/2)-6.5 : (w/3); 
+                wVid = wNave + 3; hVid = hVert - 5;
+            }
+
+            // 3. Calcular Aluminio (Lógica de Merma Dinámica)
+            let listaCortes = [];
+            let acumuladoPorRef = {};
+            const preciosAlu = DB_ALU[sys];
+
+            const registrar = (ref, largo, cantidad) => {
+                const mts = (largo * cantidad) / 100;
+                if (!acumuladoPorRef[ref]) acumuladoPorRef[ref] = 0;
+                acumuladoPorRef[ref] += mts;
+                listaCortes.push({ ref: ref.toUpperCase(), cant: cantidad, med: largo.toFixed(1), rawMetros: mts, refKey: ref });
+            };
+
+            // Definir cortes según sistema
+            if (sys === '5020') {
+                registrar('cabezal', w, 1); registrar('sillar', w, 1); registrar('jamba', hVert, 2);
+                registrar('enganche', hVert, (nav===2 ? 2 : 4)); registrar('horizontal', wNave, nav * 2);
+            } else {
+                registrar('cabezal', w, 1); registrar('sillar', w, 1); registrar('jamba', hVert, 2);
+                registrar('enganche', hVert, (nav===2?1:2)); registrar('traslape', hVert, (nav===2?1:2));
+                registrar('horizSup', wNave, nav); registrar('horizInf', wNave, nav);
+            }
+
+            // Aplicar precios y mermas
+            let totalMetrosProyecto = Object.values(acumuladoPorRef).reduce((a,b)=>a+b, 0);
+            let esProyectoGrande = totalMetrosProyecto > 10.0;
+            let totalAlu = 0;
+            let esMermaAlta = false;
+
+            listaCortes.forEach(c => {
+                const factor = (esProyectoGrande || acumuladoPorRef[c.refKey] >= CONF_WIN.umbralOptimo) ? CONF_WIN.mermaBaja : CONF_WIN.mermaAlta;
+                if(factor === CONF_WIN.mermaAlta) esMermaAlta = true;
+                
+                const precioTira = preciosAlu[c.refKey] * CONF_WIN.inflacion;
+                c.costoFinal = (precioTira/6) * c.rawMetros * factor;
+                totalAlu += c.costoFinal;
+            });
+
+            // 4. Calcular Vidrio (Precio base * 1.2 merma)
+            // Nota: Usamos un precio base promedio si no está en config, o leemos de config global si existe
+            let precioVidrioBase = 45000; // Precio base seguridad ventana
+            if (currentConfig.globales.precio_vidrio_ventana) precioVidrioBase = currentConfig.globales.precio_vidrio_ventana;
+            
+            const areaVidrioM2 = ((wVid * hVid)/10000) * nav;
+            const totalVid = areaVidrioM2 * precioVidrioBase * 1.20;
+
+            // 5. Accesorios y MO
+            const costoMateriales = totalAlu + totalVid;
+            const totalAcc = Math.max(costoMateriales * CONF_WIN.accesorios, CONF_WIN.accMinimo);
+            
+            const areaTotal = (w * h) / 10000;
+            const diff = CONF_WIN.dificultad[sys];
+            const costoMO = (CONF_WIN.moFija * diff) + (areaTotal * CONF_WIN.moVarM2 * diff);
+            const costoInsumos = CONF_WIN.insumosFijos;
+
+            // 6. Totales
+            const costoPrimo = costoMateriales + totalAcc + costoMO + costoInsumos;
+            const precioVenta = costoPrimo * CONF_WIN.utilidad;
+            const precioFinalIVA = precioVenta * (1 + currentConfig.globales.iva); // Usar IVA global
+
+            // 7. Preparar datos para mostrar
+            const nombreProd = `Ventana ${sys} (${nav} Naves)`;
+            
+            // Actualizar Variable Global lastCalculation
+            lastCalculation = {
+                producto: nombreProd,
+                medidas: `${w}x${h}`,
+                vidrio: vidType,
+                precio: precioFinalIVA,
+                precioUnitario: precioFinalIVA,
+                esVentana: true, // Bandera importante
+                listaCortes: listaCortes, // Guardamos la lista para imprimirla si se quiere
+                raw: { // Datos para editar luego
+                    ancho: w, alto: h, producto: document.getElementById('producto').value,
+                    espesor: vidType, linea: 'empresa', sistema: sys, naves: nav
+                }
+            };
+
+            // Guardar Historial
+            guardarHistorial({ producto: nombreProd, medidas: `${w}x${h}`, precio: precioFinalIVA, fecha: new Date() });
+
+            // 8. Renderizar en Pantalla (Reusamos tu función mostrarResultados)
+            const detalles = {
+                vidrio: totalVid,
+                aluminio: totalAlu, // Usamos el campo aluminio
+                accesorios: totalAcc,
+                instalacion: 0, // Ventana simple no incluye instalacion por defecto aqui, o puedes ponerle valor
+                transporte: 0,
+                insumos: costoInsumos + costoMO, // Agrupamos MO e insumos para mostrar
+                estructura: 0,
+                ganancia: costoPrimo * (CONF_WIN.utilidad - 1)
+            };
+            
+            // Calcular margen real
+            const margen = ((precioVenta - costoPrimo) / precioVenta) * 100;
+
+            // Mostrar Resultados
+            mostrarResultados(precioFinalIVA, precioVenta, detalles, margen, 0);
+
+            // 9. RENDERIZAR TABLA DE CORTES (Exclusivo Ventana)
+            const tbody = document.getElementById('tabla-cortes-body');
+            tbody.innerHTML = '';
+            listaCortes.forEach(item => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="padding:6px; border-bottom:1px solid #eee;">${item.ref}</td>
+                        <td style="text-align:center; padding:6px; border-bottom:1px solid #eee;">${item.cant}</td>
+                        <td style="padding:6px; border-bottom:1px solid #eee;">${item.med}</td>
+                        <td style="text-align:right; padding:6px; border-bottom:1px solid #eee;">${fmtMoney(item.costoFinal)}</td>
+                    </tr>`;
+            });
+            // Agregar Vidrio a la tabla
+            tbody.innerHTML += `
+                    <tr style="background-color:#f0fff4;">
+                        <td style="padding:6px; font-weight:bold;">VIDRIO</td>
+                        <td style="text-align:center;">${nav}</td>
+                        <td>${wVid.toFixed(1)} x ${hVid.toFixed(1)}</td>
+                        <td style="text-align:right;">${fmtMoney(totalVid)}</td>
+                    </tr>`;
+            
+            document.getElementById('tabla-cortes-container').style.display = 'block';
+            document.getElementById('res-badge').innerText = esMermaAlta ? "MERMA ALTA (PEQ)" : "OPTIMIZADO";
+            if(esMermaAlta) document.getElementById('res-badge').className = "metric-badge bg-warn";
+            else document.getElementById('res-badge').className = "metric-badge bg-ok";
+        }
 
         // Iniciar
         init();
 
     </script>
 </body>
-
 
 </html>
