@@ -669,6 +669,32 @@
 
     <script>
 
+        const APP_VERSION = "2.1"; // CAMBIA ESTE NÚMERO CADA VEZ QUE HAGAS UN CAMBIO IMPORTANTE
+
+        function checkVersion() {
+            const savedVersion = localStorage.getItem('app_version');
+            
+            // Si la versión guardada es diferente a la actual
+            if (savedVersion !== APP_VERSION) {
+                console.log("Nueva versión detectada. Actualizando configuración...");
+                                
+                // 1. Cargar config vieja
+                let oldConfig = JSON.parse(localStorage.getItem('vidrios_config')) || {};
+                
+                // 2. Si existe config vieja, intentamos preservarla pero la nueva estructura manda
+                if(oldConfig.globales) {
+                    alert(`App actualizada a la versión ${APP_VERSION}. Revise la configuración.`);
+                }
+                
+                // 3. Guardar nueva versión
+                localStorage.setItem('app_version', APP_VERSION);
+                
+                // Opcional: Forzar recarga limpia si hay cambios críticos
+                // window.location.reload(true);
+            }
+        }
+
+
         // --- DATOS NUEVOS PARA VENTANAS (PEGAR AL INICIO DEL SCRIPT) ---
         const DB_ALU = {
             '5020': { cabezal: 56121, sillar: 63393, jamba: 56496, enganche: 51566, traslape: 36735, horizontal: 62119 },
@@ -796,6 +822,7 @@
         // 2. INICIALIZACIÓN UI
         // ==========================================
         function init() {
+            checkVersion();
             // Llenar select de productos
             const selProd = document.getElementById('producto');
             Object.keys(currentConfig.productos).forEach(p => {
