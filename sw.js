@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cotizador-v1';
+const CACHE_NAME = 'cotizador-v2';
 const urlsToCache = [
   './',
   './index.html',
