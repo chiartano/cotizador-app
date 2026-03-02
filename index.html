@@ -669,7 +669,7 @@
 
     <script>
 
-        const APP_VERSION = "2.2"; // CAMBIA ESTE NÚMERO CADA VEZ QUE HAGAS UN CAMBIO IMPORTANTE
+        const APP_VERSION = "2.1"; // CAMBIA ESTE NÚMERO CADA VEZ QUE HAGAS UN CAMBIO IMPORTANTE
 
         function checkVersion() {
             const savedVersion = localStorage.getItem('app_version');
@@ -754,7 +754,7 @@
             },
             productos: {
                 "División Batiente (Tradicional)": 135000.0,
-                "División Corrediza Económica": 120000.0,
+                "División Corrediza Clásica": 120000.0,
                 "División Corrediza Premium": 220000.0,
                 "División de baño L - Corrediza": 235000.0,
                 "División de baño L - Batiente": 335000.0,
@@ -768,7 +768,7 @@
 
         const LOGICA_ACCESORIOS = {
             "División Batiente (Tradicional)": "FIJO",
-            "División Corrediza Económica": "FIJO",
+            "División Corrediza Clásica": "FIJO",
             "División Corrediza Premium": "FIJO",
             "División de baño L - Corrediza": "FIJO",
             "División de baño L - Batiente": "FIJO",
@@ -1287,9 +1287,9 @@
             const neto = document.getElementById('res-precio-neto').innerText;
             const total = document.getElementById('res-precio-final').innerText.replace('Total con IVA: ', '');
 
-            // Lógica de Garantía (12 meses para económica, 18 para el resto)
-            const esEconomica = prod.toLowerCase().includes('económica') || prod.toLowerCase().includes('economica');
-            const garantia = esEconomica ? "12 meses" : "18 meses";
+            // Lógica de Garantía (12 meses para clásica, 18 para el resto)
+            const esClasica = prod.toLowerCase().includes('clásica') || prod.toLowerCase().includes('clasica');
+            const garantia = esClasica ? "12 meses" : "18 meses";
 
             let txtVidrio = esp;
             if (prod.includes("Espejo")) {
@@ -1775,4 +1775,3 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
 </body>
 
 </html>
-
