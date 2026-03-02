@@ -669,7 +669,7 @@
 
     <script>
 
-        const APP_VERSION = "2.3"; // CAMBIA ESTE NÚMERO CADA VEZ QUE HAGAS UN CAMBIO IMPORTANTE
+        const APP_VERSION = "2.4"; // CAMBIA ESTE NÚMERO CADA VEZ QUE HAGAS UN CAMBIO IMPORTANTE
 
         function checkVersion() {
             const savedVersion = localStorage.getItem('app_version');
@@ -1584,7 +1584,7 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
             let total = quoteItems.reduce((sum, item) => sum + item.precio, 0);
             let discount = parseFloat(document.getElementById('quote-discount').value) || 0;
             let final = total - discount;
-            let texto = `*PRESUPUESTO FORMAL* 📋\n----------------------------\n`;
+            let texto = `*PRESUPUESTO* 📋\n----------------------------\n`;
 
             quoteItems.forEach((item, index) => {
                 texto += `*${index + 1}. ${item.producto}*`;
@@ -1775,4 +1775,5 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
 </body>
 
 </html>
+
 
