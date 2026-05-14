@@ -379,6 +379,421 @@
                 transform: translateY(0);
             }
         }
+
+        /* ====================== */
+        /* MÓDULO ALUMINIO        */
+        /* ====================== */
+        :root {
+            --alu-primary: #d97706;
+            --alu-primary-dark: #b45309;
+            --alu-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            --alu-bg-soft: #fffbeb;
+            --alu-border: #fde68a;
+        }
+        #alu-view { display: none; }
+        #alu-view.active { display: block; animation: fadeIn 0.3s; }
+
+        .alu-header {
+            background: var(--alu-gradient);
+            padding: 18px 20px;
+            box-shadow: 0 4px 16px rgba(217,119,6,0.3);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        .alu-header h1 {
+            font-size: 1.15rem;
+            color: white;
+            margin: 0;
+            font-weight: 800;
+        }
+        .alu-card {
+            background: white;
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 14px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            border: 1px solid #f3f4f6;
+        }
+        .alu-card-title {
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: var(--alu-primary-dark);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .alu-step-num {
+            background: var(--alu-primary);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+        .alu-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .alu-chip {
+            padding: 10px 12px;
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #4b5563;
+            transition: all 0.15s;
+            flex: 1 1 auto;
+            text-align: center;
+            min-width: 70px;
+        }
+        .alu-chip:hover { border-color: var(--alu-primary); }
+        .alu-chip.selected {
+            background: var(--alu-bg-soft);
+            border-color: var(--alu-primary);
+            color: var(--alu-primary-dark);
+            box-shadow: 0 2px 6px rgba(217,119,6,0.2);
+        }
+        .alu-chip-sub {
+            display: block;
+            font-size: 0.68rem;
+            color: #9ca3af;
+            margin-top: 2px;
+            font-weight: 500;
+        }
+        .alu-chip.selected .alu-chip-sub { color: var(--alu-primary); }
+
+        .alu-input-row {
+            display: flex;
+            gap: 10px;
+        }
+        .alu-input-row > div { flex: 1; }
+        .alu-input-row label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #6b7280;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+        .alu-input-row input {
+            width: 100%;
+            padding: 14px 12px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            text-align: center;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            background: #f9fafb;
+            color: #1f2937;
+            box-sizing: border-box;
+        }
+        .alu-input-row input:focus {
+            outline: none;
+            border-color: var(--alu-primary);
+            background: white;
+        }
+
+        .alu-toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #f9fafb;
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+        .alu-toggle-row input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--alu-primary);
+            cursor: pointer;
+        }
+        .alu-toggle-row label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #374151;
+            cursor: pointer;
+            flex: 1;
+            margin: 0;
+        }
+
+        .alu-btn-calc {
+            width: 100%;
+            background: var(--alu-gradient);
+            color: white;
+            border: none;
+            padding: 18px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(217,119,6,0.35);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 8px;
+        }
+        .alu-btn-calc:active { transform: scale(0.98); }
+
+        .alu-result-price {
+            text-align: center;
+            padding: 20px 16px;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-radius: 14px;
+            border: 2px solid var(--alu-primary);
+        }
+        .alu-result-price .price-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--alu-primary-dark);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .alu-result-price .price-big {
+            font-size: 2.4rem;
+            font-weight: 900;
+            color: var(--alu-primary-dark);
+            margin: 6px 0;
+            line-height: 1;
+        }
+        .alu-result-price .price-sub {
+            font-size: 0.9rem;
+            color: #78350f;
+            font-weight: 600;
+        }
+
+        .alu-section-bar {
+            background: #fef3c7;
+            color: #92400e;
+            font-weight: 700;
+            font-size: 0.82rem;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-top: 14px;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .alu-section-bar.vid { background: #dbeafe; color: #1e40af; }
+        .alu-section-bar.acc { background: #dcfce7; color: #166534; }
+        .alu-section-bar.mo  { background: #f3e8ff; color: #6b21a8; }
+
+        .alu-row-item {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            padding: 6px 8px;
+            font-size: 0.83rem;
+            border-bottom: 1px solid #f3f4f6;
+            gap: 6px;
+        }
+        .alu-row-item .ref-name { color: #1f2937; font-weight: 600; }
+        .alu-row-item .ref-desc { color: #6b7280; font-size: 0.74rem; }
+        .alu-row-item .ref-detail { color: #9ca3af; font-size: 0.74rem; }
+        .alu-row-item .ref-cost { color: #1f2937; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+
+        .alu-summary-line {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 0.92rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .alu-summary-line span:first-child { color: #6b7280; }
+        .alu-summary-line span:last-child { font-weight: 700; color: #1f2937; }
+        .alu-summary-line.total { background: #fef3c7; padding: 10px; border-radius: 6px; margin-top: 8px; border: none; }
+        .alu-summary-line.total span { color: #92400e; font-weight: 800; font-size: 1.05rem; }
+
+        .alu-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .alu-badge.ok    { background: #dcfce7; color: #166534; }
+        .alu-badge.warn  { background: #fef3c7; color: #92400e; }
+        .alu-badge.info  { background: #dbeafe; color: #1e40af; }
+
+        .alu-btn-secondary {
+            width: 100%;
+            background: white;
+            color: var(--alu-primary-dark);
+            border: 2px solid var(--alu-primary);
+            padding: 12px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        .alu-btn-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .alu-btn-row > button { flex: 1; }
+        .alu-btn-wa {
+            background: #25d366;
+            color: white;
+            border: none;
+            padding: 12px;
+            font-weight: 700;
+            border-radius: 10px;
+            font-size: 0.92rem;
+            cursor: pointer;
+        }
+        .alu-btn-add {
+            background: #fbbf24;
+            color: #78350f;
+            border: none;
+            padding: 12px;
+            font-weight: 700;
+            border-radius: 10px;
+            font-size: 0.92rem;
+            cursor: pointer;
+        }
+
+        /* Modal de config aluminio */
+        #alu-modal-config { display: none; }
+        #alu-modal-config.show {
+            display: block;
+            position: fixed;
+            inset: 0;
+            background: #f8f9fa;
+            z-index: 200;
+            overflow-y: auto;
+        }
+        .alu-cfg-tabs {
+            display: flex;
+            gap: 4px;
+            background: #e5e7eb;
+            padding: 4px;
+            border-radius: 10px;
+            margin-bottom: 14px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .alu-cfg-tab {
+            flex: 1;
+            min-width: 90px;
+            padding: 10px 8px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.82rem;
+            color: #6b7280;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .alu-cfg-tab.active {
+            background: white;
+            color: var(--alu-primary-dark);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .alu-cfg-content { display: none; }
+        .alu-cfg-content.active { display: block; }
+
+        .alu-edit-row {
+            display: grid;
+            grid-template-columns: 1fr 110px;
+            gap: 8px;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .alu-edit-row label {
+            font-size: 0.85rem;
+            color: #374151;
+            margin: 0;
+        }
+        .alu-edit-row .ref-tag {
+            display: block;
+            font-size: 0.7rem;
+            color: var(--alu-primary-dark);
+            font-weight: 700;
+        }
+        .alu-edit-row input {
+            width: 100%;
+            padding: 8px;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 0.88rem;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            box-sizing: border-box;
+        }
+        .alu-edit-row input:focus { outline: none; border-color: var(--alu-primary); }
+
+        .alu-cfg-section-title {
+            font-size: 0.9rem;
+            font-weight: 800;
+            color: #92400e;
+            background: #fef3c7;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin: 12px 0 6px;
+        }
+        .alu-color-tabs {
+            display: flex;
+            overflow-x: auto;
+            gap: 4px;
+            padding-bottom: 4px;
+            margin-bottom: 8px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .alu-color-tab {
+            white-space: nowrap;
+            padding: 6px 10px;
+            border-radius: 6px;
+            background: #f3f4f6;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1.5px solid transparent;
+            color: #6b7280;
+        }
+        .alu-color-tab.active {
+            background: white;
+            border-color: var(--alu-primary);
+            color: var(--alu-primary-dark);
+        }
+        .alu-btn-mainview {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        .alu-quick-info {
+            background: #fff7ed;
+            border-left: 4px solid var(--alu-primary);
+            padding: 10px;
+            font-size: 0.78rem;
+            color: #78350f;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            line-height: 1.45;
+        }
     </style>
 </head>
 
@@ -386,7 +801,13 @@
 
     <header>
         <h1>COTIZADOR PRO</h1>
-        <button class="btn-icon" onclick="abrirConfig()">⚙️</button>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <button class="btn-icon" onclick="abrirVistaAluminio()"
+                style="background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%); color:white; padding:8px 14px; border-radius:8px; font-size:0.82rem; font-weight:800; box-shadow:0 2px 8px rgba(217,119,6,0.4);">
+                🪟 ALUMINIO
+            </button>
+            <button class="btn-icon" onclick="abrirConfig()">⚙️</button>
+        </div>
     </header>
 
     <div class="container" id="main-view">
@@ -398,23 +819,6 @@
                 <select id="producto" onchange="verificarProducto()"></select>
             </div>
             
-            <div class="row" id="group-ventana-specs" style="display:none; background-color: #f0f4f8; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #d1d5db;">
-                <div class="col">
-                    <label style="color:#2c5282;">Sistema Alum.</label>
-                    <select id="win-sistema">
-                        <option value="5020">5020 (Económica)</option>
-                        <option value="744">744 (Tradicional)</option>
-                        <option value="8025">8025 (Pesada)</option>
-                    </select>
-                </div>
-                <div class="col">
-                    <label style="color:#2c5282;">Diseño</label>
-                    <select id="win-naves">
-                        <option value="2">2 Naves (XO)</option>
-                        <option value="3">3 Naves (OXO)</option>
-                    </select>
-                </div>
-            </div>
             <div class="form-group" id="group-espesor">
                 <label>Espesor Vidrio</label>
                 <select id="espesor">
@@ -437,14 +841,6 @@
                     <option value="natural">Natural (Plateado)</option>
                     <option value="negro">Negro (Mate/Semi)</option>
                     <option value="dorado">Dorado / Especial</option>
-                </select>
-            </div>
-            <div class="form-group" id="group-color-alum" style="display:none;">
-                <label>Color Aluminio</label>
-                <select id="color_alum">
-                    <option value="mate">Natural Mate (Gris)</option>
-                    <option value="blanco">Blanco (Pintura)</option>
-                    <option value="anoloq">Anoloq / Champagne</option>
                 </select>
             </div>
             <div class="form-group" style="display: flex; align-items: center; margin-top: 10px;">
@@ -543,23 +939,6 @@
                             id="res-margen">0%</b></span>
                 </div>
 
-                <div id="tabla-cortes-container" style="display:none; margin-bottom:20px; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
-                    <div style="background:#e2e8f0; padding:8px 12px; font-weight:bold; color:#4a5568; font-size:0.9rem;">
-                        🛠️ Despiece de Material (Ventana)
-                    </div>
-                    <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
-                        <thead style="background:#f7fafc; border-bottom:2px solid #cbd5e0;">
-                            <tr>
-                                <th style="text-align:left; padding:8px;">Ref.</th>
-                                <th style="text-align:center; padding:8px;">Cant.</th>
-                                <th style="text-align:left; padding:8px;">Medida</th>
-                                <th style="text-align:right; padding:8px;">Costo</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabla-cortes-body"></tbody>
-                    </table>
-                </div>
-
                 <div class="card-title" style="justify-content: space-between;">
                     Desglose Financiero
                     <button class="btn-icon" id="btn-toggle-desglose" onclick="toggleDesglose(this)"
@@ -635,6 +1014,212 @@
         </div>
     </div>
 
+    <!-- ====================================================== -->
+    <!-- VISTA INDEPENDIENTE: COTIZADOR DE ALUMINIO              -->
+    <!-- ====================================================== -->
+    <div id="alu-view">
+        <div class="alu-header">
+            <button class="alu-btn-mainview" onclick="cerrarVistaAluminio()">← Volver</button>
+            <h1>🪟 Cotizador Aluminio</h1>
+            <button class="alu-btn-mainview" onclick="alu_abrirConfig()">⚙️ Precios</button>
+        </div>
+
+        <div class="container" style="padding-top:12px;">
+
+            <!-- 1. SISTEMA -->
+            <div class="alu-card">
+                <div class="alu-card-title"><span class="alu-step-num">1</span>SISTEMA</div>
+                <div class="alu-chips" id="alu-sistema-chips"></div>
+            </div>
+
+            <!-- 2. DISEÑO -->
+            <div class="alu-card">
+                <div class="alu-card-title"><span class="alu-step-num">2</span>DISEÑO</div>
+                <div class="alu-chips" id="alu-config-chips"></div>
+            </div>
+
+            <!-- 3. MEDIDAS -->
+            <div class="alu-card">
+                <div class="alu-card-title"><span class="alu-step-num">3</span>MEDIDAS (cm)</div>
+                <div class="alu-input-row">
+                    <div>
+                        <label>Ancho</label>
+                        <input type="number" id="alu-ancho" placeholder="120" inputmode="numeric">
+                    </div>
+                    <div>
+                        <label>Alto</label>
+                        <input type="number" id="alu-alto" placeholder="100" inputmode="numeric">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. VIDRIO -->
+            <div class="alu-card">
+                <div class="alu-card-title"><span class="alu-step-num">4</span>TIPO DE VIDRIO</div>
+                <div class="alu-chips" id="alu-vidrio-chips"></div>
+            </div>
+
+            <!-- 5. COLOR -->
+            <div class="alu-card">
+                <div class="alu-card-title"><span class="alu-step-num">5</span>COLOR DEL ALUMINIO</div>
+                <div class="alu-chips" id="alu-color-chips"></div>
+            </div>
+
+            <!-- 6. EXTRAS -->
+            <div class="alu-card">
+                <div class="alu-card-title"><span class="alu-step-num">6</span>EXTRAS Y SERVICIOS</div>
+                <div class="alu-toggle-row">
+                    <input type="checkbox" id="alu-extra-cf">
+                    <label for="alu-extra-cf">Cuerpo fijo adicional (lateral / superior)</label>
+                </div>
+                <div id="alu-cf-medidas" style="display:none; padding:8px; background:#f9fafb; border-radius:6px; margin-bottom:8px;">
+                    <div class="alu-input-row">
+                        <div>
+                            <label style="font-size:0.7rem;">Ancho CF (cm)</label>
+                            <input type="number" id="alu-cf-ancho" placeholder="60" inputmode="numeric">
+                        </div>
+                        <div>
+                            <label style="font-size:0.7rem;">Alto CF (cm)</label>
+                            <input type="number" id="alu-cf-alto" placeholder="100" inputmode="numeric">
+                        </div>
+                    </div>
+                </div>
+                <div class="alu-toggle-row">
+                    <input type="checkbox" id="alu-extra-alfajia">
+                    <label for="alu-extra-alfajia">Alfajía / poyo reforzado</label>
+                </div>
+                <div class="alu-toggle-row">
+                    <input type="checkbox" id="alu-extra-mosquitero">
+                    <label for="alu-extra-mosquitero">Mosquitero (1 nave)</label>
+                </div>
+                <div style="margin-top:10px;">
+                    <label style="font-size:0.75rem; font-weight:700; color:#6b7280; text-transform:uppercase;">Instalación</label>
+                    <div class="alu-chips" id="alu-instal-chips" style="margin-top:6px;"></div>
+                </div>
+                <div style="margin-top:10px;">
+                    <label style="font-size:0.75rem; font-weight:700; color:#6b7280; text-transform:uppercase;">Transporte / Lejanía</label>
+                    <input type="number" id="alu-transporte" placeholder="0"
+                        style="width:100%; padding:10px; border:2px solid #e5e7eb; border-radius:8px; font-size:0.95rem; box-sizing:border-box; margin-top:4px;">
+                </div>
+                <div style="margin-top:10px;">
+                    <label style="font-size:0.75rem; font-weight:700; color:#6b7280; text-transform:uppercase;">Descuento (opcional)</label>
+                    <input type="number" id="alu-descuento" placeholder="0"
+                        style="width:100%; padding:10px; border:2px solid #e5e7eb; border-radius:8px; font-size:0.95rem; box-sizing:border-box; margin-top:4px;">
+                </div>
+            </div>
+
+            <!-- BOTÓN CALCULAR -->
+            <button class="alu-btn-calc" onclick="alu_calcular()">CALCULAR PRECIO</button>
+
+            <!-- RESULTADO (oculto inicialmente) -->
+            <div id="alu-result" style="display:none; margin-top:18px;">
+                <div class="alu-card">
+                    <div class="alu-result-price">
+                        <div class="price-label">Precio Final c/IVA</div>
+                        <div class="price-big" id="alu-precio-iva">$0</div>
+                        <div class="price-sub">Sin IVA: <span id="alu-precio-neto">$0</span></div>
+                        <div style="margin-top:8px;">
+                            <span id="alu-badge-merma" class="alu-badge ok">Optimizado</span>
+                            <span id="alu-badge-margen" class="alu-badge info" style="margin-left:4px;">Margen 35%</span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:14px;">
+                        <button class="alu-btn-secondary" onclick="alu_toggleDespiece(this)">
+                            📋 Ver despiece detallado ▼
+                        </button>
+                        <div id="alu-despiece" style="display:none; margin-top:10px;">
+                            <!-- Aluminio -->
+                            <div class="alu-section-bar">
+                                🔩 PERFILERÍA ALUMINIO
+                                <span id="alu-total-perfil">$0</span>
+                            </div>
+                            <div id="alu-list-perfiles"></div>
+
+                            <!-- Vidrios -->
+                            <div class="alu-section-bar vid">
+                                💎 VIDRIOS
+                                <span id="alu-total-vidrios">$0</span>
+                            </div>
+                            <div id="alu-list-vidrios"></div>
+
+                            <!-- Accesorios -->
+                            <div class="alu-section-bar acc">
+                                🔧 ACCESORIOS Y HERRAJES
+                                <span id="alu-total-accesorios">$0</span>
+                            </div>
+                            <div id="alu-list-accesorios"></div>
+
+                            <!-- Mano de obra -->
+                            <div class="alu-section-bar mo">
+                                🛠️ MANO DE OBRA, INSUMOS Y SERVICIOS
+                                <span id="alu-total-mo">$0</span>
+                            </div>
+                            <div id="alu-list-mo"></div>
+
+                            <!-- Resumen -->
+                            <div style="margin-top:14px; padding:10px; background:#f9fafb; border-radius:8px;">
+                                <div class="alu-summary-line"><span>Costo total (sin utilidad)</span><span id="alu-sum-costo">$0</span></div>
+                                <div class="alu-summary-line"><span>Utilidad (<span id="alu-sum-util-pct">35%</span>)</span><span id="alu-sum-util">$0</span></div>
+                                <div class="alu-summary-line"><span>Precio venta sin IVA</span><span id="alu-sum-neto">$0</span></div>
+                                <div class="alu-summary-line"><span>IVA (<span id="alu-sum-iva-pct">19%</span>)</span><span id="alu-sum-iva">$0</span></div>
+                                <div class="alu-summary-line total"><span>TOTAL CON IVA</span><span id="alu-sum-final">$0</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:14px; display:flex; align-items:center; justify-content:flex-end; gap:10px;">
+                        <label style="font-weight:bold; color:var(--text-secondary);">Cantidad:</label>
+                        <input type="number" id="alu-cantidad" value="1" min="1"
+                            style="width:80px; padding:8px; text-align:center; border:2px solid var(--alu-primary); border-radius:6px;">
+                    </div>
+
+                    <div class="alu-btn-row">
+                        <button class="alu-btn-add" onclick="alu_agregarACotizacion()">➕ AGREGAR</button>
+                        <button class="alu-btn-wa" onclick="alu_compartirWA()">📱 WHATSAPP</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================== -->
+    <!-- MODAL DE CONFIGURACIÓN DEL MÓDULO ALUMINIO              -->
+    <!-- ====================================================== -->
+    <div id="alu-modal-config">
+        <div class="alu-header">
+            <button class="alu-btn-mainview" onclick="alu_cerrarConfig()">← Volver</button>
+            <h1>⚙️ Precios Aluminio</h1>
+            <button class="alu-btn-mainview" onclick="alu_guardarConfigEditada()">💾 Guardar</button>
+        </div>
+        <div class="container" style="padding-top:12px;">
+            <div class="alu-quick-info">
+                💡 Aquí editas <b>todos los precios y parámetros</b> usados en el cotizador de aluminio. Los cambios se guardan en este dispositivo. Puedes restaurar valores de fábrica con el botón al final.
+            </div>
+
+            <div class="alu-cfg-tabs">
+                <button class="alu-cfg-tab active" onclick="alu_cfgSwitchTab(this,'perfiles')">Perfiles</button>
+                <button class="alu-cfg-tab" onclick="alu_cfgSwitchTab(this,'accesorios')">Accesorios</button>
+                <button class="alu-cfg-tab" onclick="alu_cfgSwitchTab(this,'vidrios')">Vidrios</button>
+                <button class="alu-cfg-tab" onclick="alu_cfgSwitchTab(this,'formula')">Fórmula</button>
+            </div>
+
+            <div id="alu-cfg-tab-perfiles" class="alu-cfg-content active"></div>
+            <div id="alu-cfg-tab-accesorios" class="alu-cfg-content"></div>
+            <div id="alu-cfg-tab-vidrios" class="alu-cfg-content"></div>
+            <div id="alu-cfg-tab-formula" class="alu-cfg-content"></div>
+
+            <button class="alu-btn-calc" onclick="alu_guardarConfigEditada()" style="margin-top:18px;">
+                💾 GUARDAR CAMBIOS
+            </button>
+            <button class="alu-btn-secondary" onclick="alu_restaurarFabrica()"
+                style="border-color:#dc2626; color:#dc2626; margin-top:8px;">
+                ⚠️ RESTAURAR VALORES DE FÁBRICA
+            </button>
+            <div style="height:60px;"></div>
+        </div>
+    </div>
+
     <div id="modal-config" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -669,7 +1254,7 @@
 
     <script>
 
-        const APP_VERSION = "2.4"; // CAMBIA ESTE NÚMERO CADA VEZ QUE HAGAS UN CAMBIO IMPORTANTE
+        const APP_VERSION = "3.1"; // v3.1: Módulo Aluminio separado. Ventanas/puertas ya no aparecen en cotizador principal.
 
         function checkVersion() {
             const savedVersion = localStorage.getItem('app_version');
@@ -695,28 +1280,7 @@
         }
 
 
-        // --- DATOS NUEVOS PARA VENTANAS (PEGAR AL INICIO DEL SCRIPT) ---
-        const DB_ALU = {
-            '5020': { cabezal: 56121, sillar: 63393, jamba: 56496, enganche: 51566, traslape: 36735, horizontal: 62119 },
-            '744': { cabezal: 64443, sillar: 65443, jamba: 65424, enganche: 75056, traslape: 75807, horizSup: 51356, horizInf: 80409 },
-            '8025': { cabezal: 119464, sillar: 116207, jamba: 118477, enganche: 115169, traslape: 110908, horizSup: 91566, horizInf: 144259 }
-        };
-        
-        // Configuración específica para ventanas (independiente de la config general para no dañar nada)
-        const CONF_WIN = {
-            inflacion: 1.10,      
-            mermaBaja: 1.15,      // 15% (Obras grandes)
-            mermaAlta: 1.40,      // 40% (Obras pequeñas)
-            umbralOptimo: 2.8,    // Metros para considerar media tira
-            accesorios: 0.15,
-            accMinimo: 25000,
-            moFija: 45000,
-            moVarM2: 28000,
-            insumosFijos: 12000,
-            utilidad: 1.30,
-            dificultad: { '5020': 1.0, '744': 1.1, '8025': 1.5 }
-        };
-        // -----------------------------------------------------------
+        // (La lógica de aluminio/ventanas se movió al módulo independiente al final del script)
 
         // ==========================================
         // 1. CONFIGURACIÓN Y DATOS (LÓGICA PYTHON TRADUCIDA)
@@ -748,9 +1312,7 @@
                 instalacion_espejo: 50000.0,
                 transporte_espejo: 40000.0,
                 util_espejo: 0.20,
-                est_espejo: 40000.0, // Aporte estructura específico para espejos
-                // Variables VENTANERIA (Aluminio)
-                precio_vidrio_ventana: 60000.0
+                est_espejo: 40000.0 // Aporte estructura específico para espejos
             },
             productos: {
                 "División Batiente (Tradicional)": 135000.0,
@@ -759,10 +1321,7 @@
                 "División de baño L - Corrediza": 235000.0,
                 "División de baño L - Batiente": 335000.0,
                 "Cortaviento / Oficina": 90000.0,
-                "Espejo Flotante": 30000.0,
-                "Ventana 5020 (Corrediza Liviana)": 0,
-                "Ventana 744 (Corrediza Pesada)": 0,
-                "Ventana Batiente (Aluminio)": 0
+                "Espejo Flotante": 30000.0
             }
         };
 
@@ -783,7 +1342,7 @@
         // Cargar config del localStorage o usar default
         let currentConfig = JSON.parse(localStorage.getItem('vidrios_config')) || DEFAULT_CONFIG;
 
-        // LIMPIEZA: Eliminar producto obsoleto si existe
+        // LIMPIEZA: Eliminar productos obsoletos si existen
         if (currentConfig.productos["División Corrediza (Acero)"]) {
             delete currentConfig.productos["División Corrediza (Acero)"];
         }
@@ -796,6 +1355,22 @@
         if (currentConfig.productos["División en L (Esquinera)"]) {
             delete currentConfig.productos["División en L (Esquinera)"];
         }
+        // v3.0+: Ventanas y puertas se cotizan ahora en el módulo separado de Aluminio.
+        // Limpiamos cualquier referencia antigua del listado del cotizador principal.
+        [
+            "Ventana 5020 (Corrediza Liviana)",
+            "Ventana 744 (Corrediza Pesada)",
+            "Ventana 744 (Corrediza Tradicional)",
+            "Ventana Batiente (Aluminio)",
+            "Ventana 3831 (Abatible / Proyectante)",
+            "Ventana 3831 (Fija / Cuerpo Fijo)",
+            "Puerta 8025 (Corrediza Aluminio)",
+            "Ventana Abatible VC3831",
+            "Ventana Fija VC3831 (Cuerpo Fijo)",
+            "Ventana Corrediza VC5020 (Liviana)",
+            "Ventana Corrediza PC744 (Tradicional)",
+            "Puerta Corrediza VC8025 (Pesada)"
+        ].forEach(k => { if (currentConfig.productos[k] !== undefined) delete currentConfig.productos[k]; });
 
         // Migración rápida: Si el espejo costaba 20k (valor viejo), actualizar a 30k
         if (currentConfig.productos["Espejo Flotante"] === 20000) {
@@ -842,20 +1417,13 @@
         function verificarProducto() {
             const prod = document.getElementById('producto').value;
             const esEspejo = prod.includes("Espejo");
-            const esVentana = prod.includes("Ventana");
             const esLEspecial = prod.includes("División de baño L -");
 
-            // --- NUEVO: MOSTRAR CONTROLES VENTANA ---
-            const grupoVentana = document.getElementById('group-ventana-specs');
-            if (grupoVentana) grupoVentana.style.display = esVentana ? 'flex' : 'none';
-            // ----------------------------------------
-
-            // Mostrar/Ocultar opción LED y Espesor
+            // Mostrar/Ocultar opción LED y Espesor según el producto
             document.getElementById('group-espejo-led').style.display = esEspejo ? 'flex' : 'none';
-            document.getElementById('group-espesor').style.display = (esEspejo || esVentana) ? 'none' : 'block';
-            document.getElementById('group-color-acc').style.display = (esEspejo || esVentana) ? 'none' : 'block';
-            document.getElementById('group-color-alum').style.display = esVentana ? 'block' : 'none';
-            
+            document.getElementById('group-espesor').style.display = esEspejo ? 'none' : 'block';
+            document.getElementById('group-color-acc').style.display = esEspejo ? 'none' : 'block';
+
             document.getElementById('col-ancho2').style.display = esLEspecial ? 'block' : 'none';
             document.getElementById('lbl-ancho').innerText = esLEspecial ? "Lado 1 (cm)" : "Ancho (cm)";
 
@@ -871,18 +1439,15 @@
                     <button class="tab-btn active" onclick="switchTab('general')">General</button>
                     <button class="tab-btn" onclick="switchTab('divisiones')">Divisiones</button>
                     <button class="tab-btn" onclick="switchTab('espejos')">Espejos</button>
-                    <button class="tab-btn" onclick="switchTab('ventanas')">Ventanería</button>
                 </div>
                 <div id="tab-general" class="tab-content active"></div>
                 <div id="tab-divisiones" class="tab-content"></div>
                 <div id="tab-espejos" class="tab-content"></div>
-                <div id="tab-ventanas" class="tab-content"></div>
             `;
 
-            // Helpers para filtrar productos
+            // Helpers para filtrar productos (las ventanas/puertas ya no aparecen aquí)
             const isEspejo = (k) => k.includes('Espejo');
-            const isVentana = (k) => k.includes('Ventana');
-            const isDivision = (k) => !isEspejo(k) && !isVentana(k);
+            const isDivision = (k) => !isEspejo(k);
 
             // --- TAB 1: GENERAL ---
             const tGen = document.getElementById('tab-general');
@@ -910,11 +1475,6 @@
 
             addHeader(tEsp, "Costos y Variables");
             ['precio_espejo_m2', 'extra_espejo_led', 'instalacion_espejo', 'transporte_espejo', 'est_espejo', 'util_espejo'].forEach(k => addInputConfig(tEsp, k, currentConfig.globales[k], 'globales'));
-
-            // --- TAB 4: VENTANERÍA (Simplificado) ---
-            const tVen = document.getElementById('tab-ventanas');
-            addHeader(tVen, "Vidrio Ventana");
-            ['precio_vidrio_ventana'].forEach(k => addInputConfig(tVen, k, currentConfig.globales[k], 'globales'));
         }
 
         function addHeader(parent, text) {
@@ -960,20 +1520,6 @@
         // 3. LÓGICA DE NEGOCIO (EL CEREBRO)
         // ==========================================
         function calcular() {
-
-            // --- MODIFICACIÓN 1: DETECTAR SI ES VENTANA Y DESVIAR ---
-            const prodNombreCheck = document.getElementById('producto').value;
-            if (prodNombreCheck.includes("Ventana") || prodNombreCheck.includes("Ventanería")) {
-                // Si es ventana, usamos la lógica nueva y TERMINAMOS aquí.
-                calcularVentanaAvanzada();
-                return; 
-            }
-            
-            // Si NO es ventana, ocultamos la tabla de cortes por si estaba abierta
-            const tablaContainer = document.getElementById('tabla-cortes-container');
-            if(tablaContainer) tablaContainer.style.display = 'none';
-            // ---------------------------------------------------------
-            
             // Inputs
             let ancho = parseFloat(document.getElementById('ancho').value);
             let ancho2 = parseFloat(document.getElementById('ancho2').value) || 0;
@@ -999,7 +1545,6 @@
             const linea = document.getElementById('linea').value; // controlada / empresa
             const mercado = parseFloat(document.getElementById('mercado').value) || 0;
             const colorAcc = document.getElementById('color_acc').value;
-            const colorAlum = document.getElementById('color_alum').value;
             const tieneDesmonte = document.getElementById('check-desmonte').checked;
             const tieneSandblasting = document.getElementById('check-sandblasting').checked;
             const tieneLed = document.getElementById('check-espejo-led').checked;
@@ -1281,7 +1826,6 @@
             const alto = document.getElementById('alto').value;
             const esp = document.getElementById('espesor').value;
             const color = document.getElementById('color_acc').value;
-            const colorAlum = document.getElementById('color_alum').value;
             const tieneSandblasting = document.getElementById('check-sandblasting').checked;
             const tieneLed = document.getElementById('check-espejo-led').checked;
             const neto = document.getElementById('res-precio-neto').innerText;
@@ -1295,9 +1839,6 @@
             if (prod.includes("Espejo")) {
                 txtVidrio = "Espejo 4mm/5mm";
                 if (tieneLed) txtVidrio += " + LUZ LED ✨";
-            } else if (prod.includes("Ventana")) {
-                txtVidrio = "Vidrio Claro";
-                // Ventana no lleva sandblasting por defecto en este texto simple
             } else if (tieneSandblasting) {
                 txtVidrio += " + SANDBLASTING";
             }
@@ -1314,11 +1855,8 @@
 \uD83D\uDD39 *Medidas:* ${medidasTxt}
 \uD83D\uDD39 *Vidrio:* ${txtVidrio}`;
 
-            if (!prod.includes("Espejo") && !prod.includes("Ventana")) {
+            if (!prod.includes("Espejo")) {
                 texto += `\n\uD83D\uDD39 *Acabado:* ${color.toUpperCase()}`;
-            }
-            if (prod.includes("Ventana")) {
-                texto += `\n\uD83D\uDD39 *Color Aluminio:* ${colorAlum.toUpperCase()}`;
             }
 
             texto += `\n\n\u2705 *INCLUYE:*
@@ -1354,7 +1892,6 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
             document.getElementById('espesor').value = '8mm';
             document.getElementById('linea').selectedIndex = 0;
             document.getElementById('color_acc').selectedIndex = 0;
-            document.getElementById('color_alum').selectedIndex = 0;
             document.getElementById('check-desmonte').checked = false;
             document.getElementById('check-sandblasting').checked = false;
             document.getElementById('check-espejo-led').checked = false;
@@ -1548,7 +2085,6 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
             document.getElementById('espesor').value = item.raw.espesor;
             document.getElementById('color_acc').value = item.raw.color_acc;
             document.getElementById('linea').value = item.raw.linea;
-            if (item.raw.color_alum) document.getElementById('color_alum').value = item.raw.color_alum;
             document.getElementById('mercado').value = item.raw.mercado || '';
             document.getElementById('recargo_transporte').value = item.raw.recargo || '';
             document.getElementById('extra_acc').value = item.raw.extra || '';
@@ -1622,158 +2158,910 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
             window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
         }
         
-        // ==========================================
-        // NUEVA FUNCIÓN ESPECIALIZADA PARA VENTANAS
-        // ==========================================
-        function calcularVentanaAvanzada() {
-            // 1. Obtener inputs
-            const w = parseFloat(document.getElementById('ancho').value);
-            const h = parseFloat(document.getElementById('alto').value);
-            const sys = document.getElementById('win-sistema').value;
-            const nav = parseInt(document.getElementById('win-naves').value);
-            const vidType = document.getElementById('espesor').value; // Usamos el select global
-            
-            // 2. Definir recortes y geometría
-            let hVert, wNave, wVid, hVid;
-            if (sys === '8025') {
-                hVert = h - 6; wNave = (nav === 2) ? (w/2)-8 : (w/3)-2; 
-                wVid = wNave - 8; hVid = hVert - 8;
-            } else {
-                hVert = h - 4.5; wNave = (nav === 2) ? (w/2)-6.5 : (w/3); 
-                wVid = wNave + 3; hVid = hVert - 5;
-            }
-
-            // 3. Calcular Aluminio (Lógica de Merma Dinámica)
-            let listaCortes = [];
-            let acumuladoPorRef = {};
-            const preciosAlu = DB_ALU[sys];
-
-            const registrar = (ref, largo, cantidad) => {
-                const mts = (largo * cantidad) / 100;
-                if (!acumuladoPorRef[ref]) acumuladoPorRef[ref] = 0;
-                acumuladoPorRef[ref] += mts;
-                listaCortes.push({ ref: ref.toUpperCase(), cant: cantidad, med: largo.toFixed(1), rawMetros: mts, refKey: ref });
-            };
-
-            // Definir cortes según sistema
-            if (sys === '5020') {
-                registrar('cabezal', w, 1); registrar('sillar', w, 1); registrar('jamba', hVert, 2);
-                registrar('enganche', hVert, (nav===2 ? 2 : 4)); registrar('horizontal', wNave, nav * 2);
-            } else {
-                registrar('cabezal', w, 1); registrar('sillar', w, 1); registrar('jamba', hVert, 2);
-                registrar('enganche', hVert, (nav===2?1:2)); registrar('traslape', hVert, (nav===2?1:2));
-                registrar('horizSup', wNave, nav); registrar('horizInf', wNave, nav);
-            }
-
-            // Aplicar precios y mermas
-            let totalMetrosProyecto = Object.values(acumuladoPorRef).reduce((a,b)=>a+b, 0);
-            let esProyectoGrande = totalMetrosProyecto > 10.0;
-            let totalAlu = 0;
-            let esMermaAlta = false;
-
-            listaCortes.forEach(c => {
-                const factor = (esProyectoGrande || acumuladoPorRef[c.refKey] >= CONF_WIN.umbralOptimo) ? CONF_WIN.mermaBaja : CONF_WIN.mermaAlta;
-                if(factor === CONF_WIN.mermaAlta) esMermaAlta = true;
-                
-                const precioTira = preciosAlu[c.refKey] * CONF_WIN.inflacion;
-                c.costoFinal = (precioTira/6) * c.rawMetros * factor;
-                totalAlu += c.costoFinal;
-            });
-
-            // 4. Calcular Vidrio (Precio base * 1.2 merma)
-            // Nota: Usamos un precio base promedio si no está en config, o leemos de config global si existe
-            let precioVidrioBase = 45000; // Precio base seguridad ventana
-            if (currentConfig.globales.precio_vidrio_ventana) precioVidrioBase = currentConfig.globales.precio_vidrio_ventana;
-            
-            const areaVidrioM2 = ((wVid * hVid)/10000) * nav;
-            const totalVid = areaVidrioM2 * precioVidrioBase * 1.20;
-
-            // 5. Accesorios y MO
-            const costoMateriales = totalAlu + totalVid;
-            const totalAcc = Math.max(costoMateriales * CONF_WIN.accesorios, CONF_WIN.accMinimo);
-            
-            const areaTotal = (w * h) / 10000;
-            const diff = CONF_WIN.dificultad[sys];
-            const costoMO = (CONF_WIN.moFija * diff) + (areaTotal * CONF_WIN.moVarM2 * diff);
-            const costoInsumos = CONF_WIN.insumosFijos;
-
-            // 6. Totales
-            const costoPrimo = costoMateriales + totalAcc + costoMO + costoInsumos;
-            const precioVenta = costoPrimo * CONF_WIN.utilidad;
-            const precioFinalIVA = precioVenta * (1 + currentConfig.globales.iva); // Usar IVA global
-
-            // 7. Preparar datos para mostrar
-            const nombreProd = `Ventana ${sys} (${nav} Naves)`;
-            
-            // Actualizar Variable Global lastCalculation
-            lastCalculation = {
-                producto: nombreProd,
-                medidas: `${w}x${h}`,
-                vidrio: vidType,
-                precio: precioFinalIVA,
-                precioUnitario: precioFinalIVA,
-                esVentana: true, // Bandera importante
-                listaCortes: listaCortes, // Guardamos la lista para imprimirla si se quiere
-                raw: { // Datos para editar luego
-                    ancho: w, alto: h, producto: document.getElementById('producto').value,
-                    espesor: vidType, linea: 'empresa', sistema: sys, naves: nav
-                }
-            };
-
-            // Guardar Historial
-            guardarHistorial({ producto: nombreProd, medidas: `${w}x${h}`, precio: precioFinalIVA, fecha: new Date() });
-
-            // 8. Renderizar en Pantalla (Reusamos tu función mostrarResultados)
-            const detalles = {
-                vidrio: totalVid,
-                aluminio: totalAlu, // Usamos el campo aluminio
-                accesorios: totalAcc,
-                instalacion: 0, // Ventana simple no incluye instalacion por defecto aqui, o puedes ponerle valor
-                transporte: 0,
-                insumos: costoInsumos + costoMO, // Agrupamos MO e insumos para mostrar
-                estructura: 0,
-                ganancia: costoPrimo * (CONF_WIN.utilidad - 1)
-            };
-            
-            // Calcular margen real
-            const margen = ((precioVenta - costoPrimo) / precioVenta) * 100;
-
-            // Mostrar Resultados
-            mostrarResultados(precioFinalIVA, precioVenta, detalles, margen, 0);
-
-            // 9. RENDERIZAR TABLA DE CORTES (Exclusivo Ventana)
-            const tbody = document.getElementById('tabla-cortes-body');
-            tbody.innerHTML = '';
-            listaCortes.forEach(item => {
-                tbody.innerHTML += `
-                    <tr>
-                        <td style="padding:6px; border-bottom:1px solid #eee;">${item.ref}</td>
-                        <td style="text-align:center; padding:6px; border-bottom:1px solid #eee;">${item.cant}</td>
-                        <td style="padding:6px; border-bottom:1px solid #eee;">${item.med}</td>
-                        <td style="text-align:right; padding:6px; border-bottom:1px solid #eee;">${fmtMoney(item.costoFinal)}</td>
-                    </tr>`;
-            });
-            // Agregar Vidrio a la tabla
-            tbody.innerHTML += `
-                    <tr style="background-color:#f0fff4;">
-                        <td style="padding:6px; font-weight:bold;">VIDRIO</td>
-                        <td style="text-align:center;">${nav}</td>
-                        <td>${wVid.toFixed(1)} x ${hVid.toFixed(1)}</td>
-                        <td style="text-align:right;">${fmtMoney(totalVid)}</td>
-                    </tr>`;
-            
-            document.getElementById('tabla-cortes-container').style.display = 'block';
-            document.getElementById('res-badge').innerText = esMermaAlta ? "MERMA ALTA (PEQ)" : "OPTIMIZADO";
-            if(esMermaAlta) document.getElementById('res-badge').className = "metric-badge bg-warn";
-            else document.getElementById('res-badge').className = "metric-badge bg-ok";
-        }
 
         // Iniciar
         init();
+
+        // =================================================================
+        // =================================================================
+        // ============= MÓDULO INDEPENDIENTE: ALUMINIO ====================
+        // =================================================================
+        // =================================================================
+        // Todo el código de aluminio está prefijado con `alu_` o `ALU_`
+        // para no chocar con el resto de la app. Tiene su propio storage,
+        // su propia config, su propio motor de cálculo y su propia UI.
+        // =================================================================
+
+        const ALU_STORAGE_KEY = 'alu_config_v1';
+
+        // ---------- DEFAULTS DE FÁBRICA ----------
+        // Estos son los valores iniciales. Se sobreescriben por lo guardado
+        // en localStorage. El usuario puede editarlos desde el modal de
+        // configuración o restaurar fábrica.
+        const ALU_DEFAULTS = {
+            // Orden columnas de color (idéntico al PDF VIALCOR):
+            // [crudo, natural, champana, anolock, demas, maderato, blanco_negro]
+            sistemas: {
+                '3831': {
+                    nombre: 'VC3831 Abatible',
+                    tipoLabel: 'Abatible',
+                    icono: '🪟',
+                    perfiles: {
+                        cabezalSillar: { ref:'ALN173', desc:'Cabezal/Sillar (Marco Liso)', precios:[50485,58252,58252,63106,63106,68843,105963] },
+                        jamba:         { ref:'ALN174', desc:'Jamba (Autorroscante)',       precios:[56190,64834,64834,70237,70237,76622,111795] },
+                        marcoHoja:     { ref:'ALN176', desc:'Marco Hoja (Z)',              precios:[77757,89719,89719,97196,97196,106032,135314] },
+                        pisavidrio:    { ref:'ALN177', desc:'Pisavidrio',                  precios:[31882,36787,36787,39852,39852,43475,59564] },
+                        divisor:       { ref:'ALN292', desc:'Divisor entre hojas',         precios:[96671,111543,111543,120839,120839,131824,163591] },
+                        adaptador:     { ref:'ALN175', desc:'Adaptador Cuerpo Fijo',       precios:[40510,46743,46743,50638,50638,55241,78298] }
+                    }
+                },
+                '5020': {
+                    nombre: 'VC5020 Corrediza Liviana',
+                    tipoLabel: 'Corrediza',
+                    icono: '🔀',
+                    perfiles: {
+                        cabezal:  { ref:'ALN144', desc:'Cabezal',          precios:[48638,56121,56121,60798,60798,66325,112169] },
+                        sillar:   { ref:'ALN194', desc:'Sillar',           precios:[54941,63393,63393,68676,68676,74919,117547] },
+                        jamba:    { ref:'ALN193', desc:'Jamba',            precios:[48963,56496,56496,61203,61203,66767,113459] },
+                        enganche: { ref:'ALN147', desc:'Enganche',         precios:[44691,51566,51566,55863,55863,60942,95477] },
+                        traslape: { ref:'ALN192', desc:'Traslape',         precios:[31837,36735,36735,39796,39796,43414,78225] },
+                        horizSup: { ref:'ALN349', desc:'Horizontal Sup.',  precios:[53836,62119,62119,67296,67296,73413,101696] },
+                        horizInf: { ref:'ALN349', desc:'Horizontal Inf.',  precios:[53836,62119,62119,67296,67296,73413,101696] }
+                    }
+                },
+                '744': {
+                    nombre: 'PC744 Corrediza Tradicional',
+                    tipoLabel: 'Corrediza Pesada',
+                    icono: '🔀',
+                    perfiles: {
+                        cabezal:  { ref:'ALN392', desc:'Cabezal',              precios:[55851,64443,64443,69813,69813,76160,124154] },
+                        sillar:   { ref:'ALN387', desc:'Sillar',               precios:[56718,65443,65443,70897,70897,77342,122481] },
+                        jamba:    { ref:'ALN393', desc:'Jamba',                precios:[56701,65424,65424,70876,70876,77320,125736] },
+                        enganche: { ref:'ALN391', desc:'Enganche',             precios:[65049,75056,75056,81311,81311,88703,128752] },
+                        traslape: { ref:'ALN388', desc:'Traslape',             precios:[65699,75807,75807,82124,82124,89590,128631] },
+                        horizSup: { ref:'ALN389', desc:'Horizontal Superior',  precios:[44509,51356,51356,55636,55636,60693,95437] },
+                        horizInf: { ref:'ALN390', desc:'Horizontal Inferior',  precios:[69688,80409,80409,87110,87110,95029,126531] },
+                        adaptador:{ ref:'ALN403', desc:'Adaptador Cuerpo Fijo',precios:[30210,34858,34858,37763,37763,41196,74267] }
+                    }
+                },
+                '8025': {
+                    nombre: 'VC8025 Puerta Corrediza',
+                    tipoLabel: 'Puerta',
+                    icono: '🚪',
+                    perfiles: {
+                        cabezal:  { ref:'ALN151', desc:'Cabezal',              precios:[103536,119464,119464,129420,129420,141185,184255] },
+                        sillar:   { ref:'ALN150', desc:'Sillar',               precios:[100713,116207,116207,125891,125891,137336,170121] },
+                        jamba:    { ref:'ALN841', desc:'Jamba',                precios:[102680,118477,118477,128350,128350,140019,178564] },
+                        enganche: { ref:'ALN191', desc:'Enganche',             precios:[99813,115169,115169,124766,124766,136108,170856] },
+                        traslape: { ref:'ALN190', desc:'Traslape',             precios:[96120,110908,110908,120150,120150,131073,162259] },
+                        horizSup: { ref:'ALN156', desc:'Horizontal Superior',  precios:[79357,91566,91566,99196,99196,108214,145339] },
+                        horizInf: { ref:'ALN157', desc:'Horizontal Inferior',  precios:[125024,144259,144259,156280,156280,170488,194623] },
+                        adaptador:{ ref:'ALN158', desc:'Adaptador Cuerpo Fijo',precios:[38545,44475,44475,48181,48181,52561,80387] }
+                    }
+                }
+            },
+            // Accesorios por sistema (precios editables del mercado colombiano 2025)
+            accesorios: {
+                '3831': {
+                    bisagra:     { desc:'Bisagras de presión', porHoja:2, precio:18000 },
+                    cremona:     { desc:'Cremona / manija',     porHoja:1, precio:45000 },
+                    felpaMl:     { desc:'Felpa perimetral (por metro)', porMetro:true, precio:4500 },
+                    tornilleria: { desc:'Tornillería + escuadras (fijo)', fijo:true, precio:18000 },
+                    mosquitero:  { desc:'Kit mosquitero (1 nave)', opcional:'mosquitero', precio:75000 },
+                    alfajia:     { desc:'Alfajía 8cm (por metro lineal de ancho)', opcional:'alfajia', porAncho:true, precio:18000 }
+                },
+                '5020': {
+                    rodachina:   { desc:'Rodachinas',           porMovil:2, precio:8500 },
+                    cerradura:   { desc:'Cerradura central',    fijo:true,  precio:22000 },
+                    felpaMl:     { desc:'Felpa pelo+nylon (por metro)', porMetro:true, precio:3800 },
+                    tornilleria: { desc:'Tornillería + escuadras', fijo:true, precio:15000 },
+                    mosquitero:  { desc:'Kit mosquitero (1 nave)', opcional:'mosquitero', precio:65000 },
+                    alfajia:     { desc:'Alfajía 8cm (por metro)', opcional:'alfajia', porAncho:true, precio:16000 }
+                },
+                '744': {
+                    rodachina:   { desc:'Rodachinas reforzadas', porMovil:2, precio:14500 },
+                    cerradura:   { desc:'Cerradura central',     fijo:true,  precio:35000 },
+                    felpaMl:     { desc:'Felpa pelo+nylon (por metro)', porMetro:true, precio:4500 },
+                    tornilleria: { desc:'Tornillería + escuadras', fijo:true, precio:20000 },
+                    mosquitero:  { desc:'Kit mosquitero (1 nave)', opcional:'mosquitero', precio:75000 },
+                    alfajia:     { desc:'Alfajía 8cm (por metro)', opcional:'alfajia', porAncho:true, precio:18000 }
+                },
+                '8025': {
+                    rodachina:   { desc:'Rodachinas puerta (par)', porMovil:2, precio:38000 },
+                    cerradura:   { desc:'Cerradura puerta corrediza', fijo:true, precio:85000 },
+                    manija:      { desc:'Manija gancho (par)',     porMovil:1, precio:28000 },
+                    felpaMl:     { desc:'Felpa puerta (por metro)',porMetro:true, precio:6500 },
+                    tornilleria: { desc:'Tornillería + escuadras', fijo:true, precio:30000 }
+                }
+            },
+            // Vidrios disponibles ($/m²)
+            vidrios: {
+                '4mm':  { label:'4mm Crudo (económico)',  precio:28000 },
+                '5mm':  { label:'5mm Crudo',              precio:35000 },
+                '6mm':  { label:'6mm Templado',           precio:106000 },
+                '8mm':  { label:'8mm Templado',           precio:135000 },
+                '10mm': { label:'10mm Templado',          precio:170000 },
+                '4+4':  { label:'4+4 Laminado',           precio:155000 },
+                '5+5':  { label:'5+5 Laminado',           precio:175000 }
+            },
+            // Parámetros del cálculo (todos editables)
+            formula: {
+                inflacion: 10,        // % sobre lista
+                mermaBaja: 10,        // % en obras grandes
+                mermaAlta: 35,        // % en piezas pequeñas
+                umbralOptimo: 3.0,    // metros para usar merma baja
+                umbralProyectoGrande: 12.0, // metros totales para considerar obra grande
+                largoTira: 600,       // cm (6m)
+                mermaVidrio: 15,      // %
+                accImprevistos: 8,    // % extra sobre accesorios
+                moFija: 55000,        // $ MO base por ventana
+                moPorM2: 35000,       // $ MO por m²
+                insumosFijos: 18000,  // $ silicona, tornillos extra
+                instBasicaFija: 45000,
+                instBasicaPorM2: 15000,
+                instAlturaFija: 75000,
+                instAlturaPorM2: 25000,
+                utilidad: 35,         // % sobre costo primo
+                iva: 19               // %
+            },
+            // Dificultad de armado por sistema (multiplicador de MO)
+            dificultad: {
+                '3831': 1.15, '5020': 1.00, '744': 1.10, '8025': 1.55
+            },
+            // Configuraciones de diseño por sistema
+            configsValidas: {
+                '3831': ['1H','2H','CF'],
+                '5020': ['2N','3N','4N','CF'],
+                '744':  ['2N','3N','4N','CF'],
+                '8025': ['2N','3N','4N']
+            }
+        };
+
+        const ALU_COLOR_LABELS = {
+            'crudo':'Crudo','natural':'Natural Mate','champana':'Champaña',
+            'anolock':'Anolock','demas':'Demás Acabados','maderato':'Maderato',
+            'blanco_negro':'Blanco / Negro'
+        };
+        const ALU_COLOR_IDX = {
+            'crudo':0,'natural':1,'champana':2,'anolock':3,'demas':4,'maderato':5,'blanco_negro':6
+        };
+        const ALU_CONFIG_LABELS = {
+            '1H':{label:'1 Hoja',sub:'Abatible simple'},
+            '2H':{label:'2 Hojas',sub:'Abatible doble'},
+            '2N':{label:'2 Naves',sub:'XO (1 fija, 1 móvil)'},
+            '3N':{label:'3 Naves',sub:'OXO (3 paños)'},
+            '4N':{label:'4 Naves',sub:'OOXX (4 paños)'},
+            'CF':{label:'Cuerpo Fijo',sub:'Sin movimiento'}
+        };
+
+        // ---------- ESTADO RUNTIME ----------
+        let aluConfig = null;       // config activa (defaults + overrides del user)
+        let aluState = {            // estado actual del cotizador
+            sistema: '5020',
+            config:  '2N',
+            vidrio:  '6mm',
+            color:   'natural',
+            instalacion: 'basica'
+        };
+        let aluLastCalc = null;     // resultado del último cálculo
+
+        // ---------- PERSISTENCIA ----------
+        function alu_loadConfig() {
+            const saved = localStorage.getItem(ALU_STORAGE_KEY);
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    aluConfig = alu_mergeDefaults(parsed);
+                } catch(e) {
+                    console.warn('Config aluminio corrupta, restaurando defaults');
+                    aluConfig = JSON.parse(JSON.stringify(ALU_DEFAULTS));
+                }
+            } else {
+                aluConfig = JSON.parse(JSON.stringify(ALU_DEFAULTS));
+            }
+        }
+        function alu_saveConfig() {
+            localStorage.setItem(ALU_STORAGE_KEY, JSON.stringify(aluConfig));
+        }
+        function alu_mergeDefaults(saved) {
+            // Si añadimos campos nuevos en defaults, los completamos sin perder lo guardado
+            const result = JSON.parse(JSON.stringify(ALU_DEFAULTS));
+            const merge = (target, src) => {
+                for (const k in src) {
+                    if (src[k] && typeof src[k]==='object' && !Array.isArray(src[k])) {
+                        if (!target[k]) target[k] = {};
+                        merge(target[k], src[k]);
+                    } else {
+                        target[k] = src[k];
+                    }
+                }
+            };
+            merge(result, saved);
+            return result;
+        }
+        function alu_restaurarFabrica() {
+            if (!confirm('Esto restaurará TODOS los precios y parámetros de aluminio a los valores de fábrica. ¿Continuar?')) return;
+            localStorage.removeItem(ALU_STORAGE_KEY);
+            aluConfig = JSON.parse(JSON.stringify(ALU_DEFAULTS));
+            alu_renderConfigUI();
+            alert('Valores restaurados.');
+        }
+
+        // ---------- NAVEGACIÓN ENTRE VISTAS ----------
+        function abrirVistaAluminio() {
+            if (!aluConfig) alu_loadConfig();
+            document.getElementById('main-view').style.display = 'none';
+            document.querySelector('header').style.display = 'none';
+            document.getElementById('alu-view').classList.add('active');
+            alu_renderUI();
+            window.scrollTo({top:0, behavior:'instant'});
+        }
+        function cerrarVistaAluminio() {
+            document.getElementById('alu-view').classList.remove('active');
+            document.getElementById('main-view').style.display = 'block';
+            document.querySelector('header').style.display = 'flex';
+            window.scrollTo({top:0, behavior:'instant'});
+        }
+        function alu_abrirConfig() {
+            alu_renderConfigUI();
+            document.getElementById('alu-modal-config').classList.add('show');
+            window.scrollTo({top:0});
+        }
+        function alu_cerrarConfig() {
+            document.getElementById('alu-modal-config').classList.remove('show');
+        }
+
+        // ---------- RENDER UI PRINCIPAL ----------
+        function alu_renderUI() {
+            // 1. Sistemas
+            const cs = document.getElementById('alu-sistema-chips');
+            cs.innerHTML = '';
+            Object.keys(aluConfig.sistemas).forEach(k => {
+                const s = aluConfig.sistemas[k];
+                const sel = (k === aluState.sistema) ? 'selected' : '';
+                cs.innerHTML += `<div class="alu-chip ${sel}" onclick="alu_setSistema('${k}')">
+                    ${s.icono} <b>${k}</b>
+                    <span class="alu-chip-sub">${s.tipoLabel}</span>
+                </div>`;
+            });
+
+            // 2. Diseño (depende del sistema)
+            const cc = document.getElementById('alu-config-chips');
+            cc.innerHTML = '';
+            const validas = aluConfig.configsValidas[aluState.sistema] || [];
+            if (!validas.includes(aluState.config)) aluState.config = validas[0];
+            validas.forEach(c => {
+                const lbl = ALU_CONFIG_LABELS[c];
+                const sel = (c === aluState.config) ? 'selected' : '';
+                cc.innerHTML += `<div class="alu-chip ${sel}" onclick="alu_setConfig('${c}')">
+                    <b>${lbl.label}</b>
+                    <span class="alu-chip-sub">${lbl.sub}</span>
+                </div>`;
+            });
+
+            // 4. Vidrios
+            const cv = document.getElementById('alu-vidrio-chips');
+            cv.innerHTML = '';
+            Object.keys(aluConfig.vidrios).forEach(k => {
+                const v = aluConfig.vidrios[k];
+                const sel = (k === aluState.vidrio) ? 'selected' : '';
+                cv.innerHTML += `<div class="alu-chip ${sel}" onclick="alu_setVidrio('${k}')" style="flex:1 1 47%;">
+                    <b>${k}</b>
+                    <span class="alu-chip-sub">${v.label.replace(k,'').trim()}</span>
+                </div>`;
+            });
+
+            // 5. Colores
+            const ck = document.getElementById('alu-color-chips');
+            ck.innerHTML = '';
+            Object.keys(ALU_COLOR_LABELS).forEach(k => {
+                const sel = (k === aluState.color) ? 'selected' : '';
+                ck.innerHTML += `<div class="alu-chip ${sel}" onclick="alu_setColor('${k}')" style="flex:1 1 30%;">
+                    <b style="font-size:0.82rem;">${ALU_COLOR_LABELS[k]}</b>
+                </div>`;
+            });
+
+            // 6. Instalación
+            const ci = document.getElementById('alu-instal-chips');
+            ci.innerHTML = '';
+            [
+                {k:'ninguna', l:'Sin instalación'},
+                {k:'basica',  l:'Básica 1er piso'},
+                {k:'altura',  l:'Con altura/andamio'}
+            ].forEach(opt => {
+                const sel = (opt.k === aluState.instalacion) ? 'selected' : '';
+                ci.innerHTML += `<div class="alu-chip ${sel}" onclick="alu_setInstalacion('${opt.k}')" style="flex:1 1 30%;">
+                    <b style="font-size:0.82rem;">${opt.l}</b>
+                </div>`;
+            });
+
+            // Listener cuerpo fijo
+            const cfChk = document.getElementById('alu-extra-cf');
+            cfChk.onchange = () => {
+                document.getElementById('alu-cf-medidas').style.display = cfChk.checked ? 'block' : 'none';
+            };
+        }
+
+        // Setters (chips clickeables)
+        function alu_setSistema(s) { aluState.sistema = s; alu_renderUI(); }
+        function alu_setConfig(c)  { aluState.config = c;  alu_renderUI(); }
+        function alu_setVidrio(v)  { aluState.vidrio = v;  alu_renderUI(); }
+        function alu_setColor(c)   { aluState.color = c;   alu_renderUI(); }
+        function alu_setInstalacion(i) { aluState.instalacion = i; alu_renderUI(); }
+
+        function alu_toggleDespiece(btn) {
+            const d = document.getElementById('alu-despiece');
+            const v = d.style.display === 'none';
+            d.style.display = v ? 'block' : 'none';
+            btn.innerHTML = v ? '📋 Ocultar despiece ▲' : '📋 Ver despiece detallado ▼';
+        }
+
+        function alu_fmt(num) {
+            return "$" + Math.round(num).toLocaleString('es-CO');
+        }
+
+        // =================================================================
+        // MOTOR DE CÁLCULO PRINCIPAL
+        // =================================================================
+        function alu_calcular() {
+            // ---- 1. INPUTS ----
+            const w = parseFloat(document.getElementById('alu-ancho').value);
+            const h = parseFloat(document.getElementById('alu-alto').value);
+            if (!w || !h) { alert('Ingresa Ancho y Alto en centímetros'); return; }
+            if (w < 10 || h < 10) {
+                if (!confirm(`Las medidas (${w}×${h} cm) parecen pequeñas. ¿Continuar?`)) return;
+            }
+
+            const sys = aluState.sistema;
+            const cfg = aluState.config;
+            const vid = aluState.vidrio;
+            const col = aluState.color;
+            const tipoInst = aluState.instalacion;
+            const colorIdx = ALU_COLOR_IDX[col];
+
+            const incluirCF = document.getElementById('alu-extra-cf').checked;
+            const incluirAlfajia = document.getElementById('alu-extra-alfajia').checked;
+            const incluirMosq = document.getElementById('alu-extra-mosquitero').checked;
+            const cfAncho = incluirCF ? (parseFloat(document.getElementById('alu-cf-ancho').value)||0) : 0;
+            const cfAlto  = incluirCF ? (parseFloat(document.getElementById('alu-cf-alto').value)||0)  : 0;
+            const transporte = parseFloat(document.getElementById('alu-transporte').value) || 0;
+            const descuento = parseFloat(document.getElementById('alu-descuento').value) || 0;
+
+            const sysData = aluConfig.sistemas[sys];
+            const F = aluConfig.formula;
+            const inflacion = 1 + (F.inflacion/100);
+            const mermaBaja = 1 + (F.mermaBaja/100);
+            const mermaAlta = 1 + (F.mermaAlta/100);
+            const mermaVid  = 1 + (F.mermaVidrio/100);
+
+            // ---- 2. DETERMINAR NAVES / HOJAS / MÓVILES ----
+            let numNaves, numMoviles, numHojas;
+            switch(cfg) {
+                case '1H': numNaves=1; numMoviles=1; numHojas=1; break;
+                case '2H': numNaves=2; numMoviles=2; numHojas=2; break;
+                case '2N': numNaves=2; numMoviles=1; numHojas=0; break;
+                case '3N': numNaves=3; numMoviles=2; numHojas=0; break;
+                case '4N': numNaves=4; numMoviles=2; numHojas=0; break;
+                case 'CF': numNaves=0; numMoviles=0; numHojas=0; break;
+                default:   numNaves=2; numMoviles=1; numHojas=0;
+            }
+
+            // ---- 3. ACUMULADOR DE CORTES ----
+            const cortes = [];
+            const acumPorRef = {};
+            function reg(refKey, perfil, largoCm, cantidad) {
+                if (cantidad<=0 || largoCm<=0) return;
+                const mts = (largoCm * cantidad) / 100;
+                if (!acumPorRef[refKey]) acumPorRef[refKey] = { mts:0, perfil };
+                acumPorRef[refKey].mts += mts;
+                cortes.push({ refKey, ref:perfil.ref, desc:perfil.desc, cant:cantidad, med:largoCm, mts });
+            }
+
+            // ---- 4. DESPIECE POR SISTEMA ----
+            const vidrios = [];
+
+            if (sys === '3831') {
+                // Marco perimetral
+                reg('cabezalSillar', sysData.perfiles.cabezalSillar, w, 2);
+                reg('jamba',         sysData.perfiles.jamba,         h, 2);
+                if (cfg === 'CF') {
+                    const wVid = w - 5, hVid = h - 5;
+                    reg('pisavidrio', sysData.perfiles.pisavidrio, wVid, 2);
+                    reg('pisavidrio', sysData.perfiles.pisavidrio, hVid, 2);
+                    vidrios.push({ w_cm: wVid-0.5, h_cm: hVid-0.5, label:'Vidrio cuerpo fijo' });
+                } else {
+                    const wHoja = (numHojas === 2) ? (w-8)/2 : (w-5);
+                    const hHoja = h - 5;
+                    reg('marcoHoja',  sysData.perfiles.marcoHoja,  hHoja, 2*numHojas);
+                    reg('marcoHoja',  sysData.perfiles.marcoHoja,  wHoja, 2*numHojas);
+                    reg('pisavidrio', sysData.perfiles.pisavidrio, wHoja-3, 2*numHojas);
+                    reg('pisavidrio', sysData.perfiles.pisavidrio, hHoja-3, 2*numHojas);
+                    if (numHojas === 2) reg('divisor', sysData.perfiles.divisor, h, 1);
+                    for (let i=0; i<numHojas; i++) {
+                        vidrios.push({ w_cm: wHoja-3, h_cm: hHoja-3, label:`Hoja ${i+1}` });
+                    }
+                }
+            } else {
+                // Sistemas corredizos (5020, 744, 8025)
+                const p = sysData.perfiles;
+                reg('cabezal', p.cabezal, w, 1);
+                reg('sillar',  p.sillar,  w, 1);
+                reg('jamba',   p.jamba,   h, 2);
+                if (cfg === 'CF') {
+                    const wVid = w-4, hVid = h-4;
+                    vidrios.push({ w_cm: wVid, h_cm: hVid, label:'Vidrio cuerpo fijo' });
+                } else {
+                    const hNave = h - (sys==='8025' ? 6 : 4.5);
+                    const wNave = (w - 4) / numNaves;
+                    reg('enganche', p.enganche, hNave, numNaves);
+                    reg('traslape', p.traslape, hNave, numNaves);
+                    reg('horizSup', p.horizSup, wNave, numNaves);
+                    reg('horizInf', p.horizInf, wNave, numNaves);
+                    for (let i=0; i<numNaves; i++) {
+                        vidrios.push({ w_cm: wNave-2, h_cm: hNave-4, label:`Nave ${i+1}` });
+                    }
+                }
+            }
+
+            // Cuerpo fijo extra
+            if (incluirCF && cfAncho > 0 && cfAlto > 0) {
+                if (sys === '3831') {
+                    reg('cabezalSillar', sysData.perfiles.cabezalSillar, cfAncho, 2);
+                    reg('jamba',         sysData.perfiles.jamba,         cfAlto,  2);
+                    reg('pisavidrio',    sysData.perfiles.pisavidrio, cfAncho-5, 2);
+                    reg('pisavidrio',    sysData.perfiles.pisavidrio, cfAlto-5,  2);
+                } else {
+                    reg('cabezal', sysData.perfiles.cabezal, cfAncho, 1);
+                    reg('sillar',  sysData.perfiles.sillar,  cfAncho, 1);
+                    reg('jamba',   sysData.perfiles.jamba,   cfAlto,  1);
+                    if (sysData.perfiles.adaptador) {
+                        reg('adaptador', sysData.perfiles.adaptador, cfAlto, 1);
+                    }
+                }
+                vidrios.push({ w_cm: cfAncho-5, h_cm: cfAlto-5, label:'Cuerpo fijo extra' });
+            }
+
+            // ---- 5. COSTO ALUMINIO (con lógica de merma) ----
+            const totalMetros = Object.values(acumPorRef).reduce((a,b)=>a+b.mts, 0);
+            const esProyectoGrande = totalMetros > F.umbralProyectoGrande;
+            let totalAlu = 0;
+            let mermaAltaUsada = false;
+
+            cortes.forEach(c => {
+                const acumRef = acumPorRef[c.refKey].mts;
+                const usarBaja = esProyectoGrande || acumRef >= F.umbralOptimo;
+                const factor = usarBaja ? mermaBaja : mermaAlta;
+                if (!usarBaja) mermaAltaUsada = true;
+                const precioTira = acumPorRef[c.refKey].perfil.precios[colorIdx] * inflacion;
+                c.precioTira = precioTira;
+                c.factorMerma = factor;
+                c.costo = (precioTira / (F.largoTira/100)) * c.mts * factor;
+                totalAlu += c.costo;
+            });
+
+            // ---- 6. COSTO VIDRIO ----
+            const precioVidM2 = (aluConfig.vidrios[vid] || {}).precio || 60000;
+            let totalVid = 0;
+            vidrios.forEach(v => {
+                v.area = (v.w_cm * v.h_cm) / 10000;
+                v.costo = v.area * precioVidM2 * mermaVid;
+                totalVid += v.costo;
+            });
+
+            // ---- 7. ACCESORIOS ----
+            const accSys = aluConfig.accesorios[sys] || {};
+            let totalAcc = 0;
+            const detalleAcc = [];
+            const perimetroM = (2*(w+h)) / 100;
+            const optMosq = incluirMosq;
+            const optAlf  = incluirAlfajia;
+
+            Object.keys(accSys).forEach(k => {
+                const a = accSys[k];
+                let cant = 0, costo = 0, cantLabel = '';
+                if (a.opcional === 'mosquitero' && !optMosq) return;
+                if (a.opcional === 'alfajia'    && !optAlf)  return;
+
+                if (a.porHoja) {
+                    cant = a.porHoja * Math.max(1, numHojas || numMoviles);
+                    costo = cant * a.precio;
+                    cantLabel = `x${cant}`;
+                } else if (a.porMovil) {
+                    cant = a.porMovil * numMoviles;
+                    if (cant<=0) return;
+                    costo = cant * a.precio;
+                    cantLabel = `x${cant}`;
+                } else if (a.porMetro) {
+                    cant = perimetroM * Math.max(1, numMoviles);
+                    costo = cant * a.precio;
+                    cantLabel = `${cant.toFixed(1)} m`;
+                } else if (a.porAncho) {
+                    cant = w / 100;
+                    costo = cant * a.precio;
+                    cantLabel = `${cant.toFixed(2)} m`;
+                } else if (a.fijo) {
+                    cant = 1;
+                    costo = a.precio;
+                    cantLabel = 'fijo';
+                }
+                if (costo > 0) {
+                    totalAcc += costo;
+                    detalleAcc.push({ desc:a.desc, cantLabel, costo });
+                }
+            });
+            const accImprevistos = totalAcc * (F.accImprevistos/100);
+            totalAcc += accImprevistos;
+            if (accImprevistos > 0) {
+                detalleAcc.push({ desc:`Imprevistos (${F.accImprevistos}%)`, cantLabel:'', costo:accImprevistos });
+            }
+
+            // ---- 8. MANO DE OBRA E INSUMOS ----
+            const areaM2 = (w * h) / 10000;
+            const dif = aluConfig.dificultad[sys] || 1.0;
+            const factorHojas = 1 + Math.max(0, numMoviles - 1) * 0.15;
+            const costoMO = (F.moFija * dif * factorHojas) + (areaM2 * F.moPorM2 * dif);
+            const costoInsumos = F.insumosFijos;
+
+            // ---- 9. INSTALACIÓN ----
+            let costoInst = 0;
+            if (tipoInst === 'basica') costoInst = F.instBasicaFija + (areaM2 * F.instBasicaPorM2);
+            else if (tipoInst === 'altura') costoInst = F.instAlturaFija + (areaM2 * F.instAlturaPorM2);
+
+            // ---- 10. TOTALES ----
+            const costoMateriales = totalAlu + totalVid;
+            const costoPrimo = costoMateriales + totalAcc + costoMO + costoInsumos + costoInst + transporte;
+            const utilidad = costoPrimo * (F.utilidad/100);
+            const precioVenta = costoPrimo + utilidad - descuento;
+            const ivaMonto = precioVenta * (F.iva/100);
+            const precioFinal = precioVenta + ivaMonto;
+            const margen = (utilidad / (costoPrimo + utilidad)) * 100;
+
+            // ---- 11. GUARDAR Y RENDERIZAR ----
+            aluLastCalc = {
+                sys, cfg, vid, col, tipoInst, w, h, numNaves, numMoviles, numHojas,
+                cortes, vidrios, detalleAcc,
+                totalAlu, totalVid, totalAcc, costoMO, costoInsumos, costoInst, transporte,
+                costoPrimo, utilidad, precioVenta, ivaMonto, precioFinal, margen,
+                mermaAltaUsada, descuento, totalMetros,
+                incluirCF, cfAncho, cfAlto, incluirAlfajia, incluirMosq
+            };
+
+            alu_renderResult(aluLastCalc);
+        }
+
+        // =================================================================
+        // RENDER DE RESULTADOS
+        // =================================================================
+        function alu_renderResult(r) {
+            document.getElementById('alu-result').style.display = 'block';
+            document.getElementById('alu-precio-iva').innerText = alu_fmt(r.precioFinal);
+            document.getElementById('alu-precio-neto').innerText = alu_fmt(r.precioVenta);
+
+            // Badges
+            const bM = document.getElementById('alu-badge-merma');
+            if (r.mermaAltaUsada) { bM.className = 'alu-badge warn'; bM.innerText = 'Merma alta (piezas pequeñas)'; }
+            else { bM.className = 'alu-badge ok'; bM.innerText = 'Despiece optimizado'; }
+
+            const bMg = document.getElementById('alu-badge-margen');
+            bMg.innerText = `Margen ${r.margen.toFixed(1)}%`;
+
+            // Despiece aluminio
+            const lP = document.getElementById('alu-list-perfiles');
+            lP.innerHTML = '';
+            r.cortes.forEach(c => {
+                lP.innerHTML += `<div class="alu-row-item">
+                    <div>
+                        <div class="ref-name">${c.ref} <span style="color:#9ca3af; font-weight:400;">×${c.cant}</span></div>
+                        <div class="ref-desc">${c.desc}</div>
+                        <div class="ref-detail">${c.med.toFixed(1)} cm c/u · ${c.mts.toFixed(2)} m totales · merma ${Math.round((c.factorMerma-1)*100)}%</div>
+                    </div>
+                    <div class="ref-cost">${alu_fmt(c.costo)}</div>
+                </div>`;
+            });
+            document.getElementById('alu-total-perfil').innerText = alu_fmt(r.totalAlu);
+
+            // Vidrios
+            const lV = document.getElementById('alu-list-vidrios');
+            lV.innerHTML = '';
+            const vidLabel = aluConfig.vidrios[r.vid].label;
+            r.vidrios.forEach(v => {
+                lV.innerHTML += `<div class="alu-row-item">
+                    <div>
+                        <div class="ref-name">${v.label}</div>
+                        <div class="ref-desc">${vidLabel}</div>
+                        <div class="ref-detail">${v.w_cm.toFixed(1)} × ${v.h_cm.toFixed(1)} cm · ${v.area.toFixed(3)} m²</div>
+                    </div>
+                    <div class="ref-cost">${alu_fmt(v.costo)}</div>
+                </div>`;
+            });
+            document.getElementById('alu-total-vidrios').innerText = alu_fmt(r.totalVid);
+
+            // Accesorios
+            const lA = document.getElementById('alu-list-accesorios');
+            lA.innerHTML = '';
+            r.detalleAcc.forEach(a => {
+                lA.innerHTML += `<div class="alu-row-item">
+                    <div>
+                        <div class="ref-name">${a.desc} ${a.cantLabel ? `<span style="color:#9ca3af; font-weight:400;">${a.cantLabel}</span>`:''}</div>
+                    </div>
+                    <div class="ref-cost">${alu_fmt(a.costo)}</div>
+                </div>`;
+            });
+            document.getElementById('alu-total-accesorios').innerText = alu_fmt(r.totalAcc);
+
+            // Mano de obra
+            const lM = document.getElementById('alu-list-mo');
+            lM.innerHTML = '';
+            const moItems = [
+                { desc:'Mano de obra (armado)', costo:r.costoMO },
+                { desc:'Insumos (silicona, tornillos)', costo:r.costoInsumos },
+                { desc:'Instalación', costo:r.costoInst },
+                { desc:'Transporte', costo:r.transporte }
+            ];
+            let totalMO = 0;
+            moItems.forEach(m => {
+                if (m.costo <= 0) return;
+                totalMO += m.costo;
+                lM.innerHTML += `<div class="alu-row-item">
+                    <div><div class="ref-name">${m.desc}</div></div>
+                    <div class="ref-cost">${alu_fmt(m.costo)}</div>
+                </div>`;
+            });
+            document.getElementById('alu-total-mo').innerText = alu_fmt(totalMO);
+
+            // Resumen financiero
+            document.getElementById('alu-sum-costo').innerText = alu_fmt(r.costoPrimo);
+            document.getElementById('alu-sum-util-pct').innerText = aluConfig.formula.utilidad + '%';
+            document.getElementById('alu-sum-util').innerText = alu_fmt(r.utilidad);
+            if (r.descuento > 0) {
+                document.getElementById('alu-sum-util').innerText += ` (− desc ${alu_fmt(r.descuento)})`;
+            }
+            document.getElementById('alu-sum-neto').innerText = alu_fmt(r.precioVenta);
+            document.getElementById('alu-sum-iva-pct').innerText = aluConfig.formula.iva + '%';
+            document.getElementById('alu-sum-iva').innerText = alu_fmt(r.ivaMonto);
+            document.getElementById('alu-sum-final').innerText = alu_fmt(r.precioFinal);
+
+            // Scroll suave al resultado
+            document.getElementById('alu-result').scrollIntoView({behavior:'smooth', block:'start'});
+        }
+
+        // =================================================================
+        // COMPARTIR Y AGREGAR AL CARRITO PRINCIPAL
+        // =================================================================
+        function alu_compartirWA() {
+            if (!aluLastCalc) { alert('Calcula primero'); return; }
+            const r = aluLastCalc;
+            const sysData = aluConfig.sistemas[r.sys];
+            const cfgLbl = ALU_CONFIG_LABELS[r.cfg].label;
+            const vidLbl = aluConfig.vidrios[r.vid].label;
+            const colLbl = ALU_COLOR_LABELS[r.col];
+
+            let texto = `*COTIZACIÓN* 📋\n----------------------------\n`;
+            texto += `🪟 *Sistema:* ${sysData.nombre}\n`;
+            texto += `🔹 *Diseño:* ${cfgLbl}\n`;
+            texto += `📏 *Medidas:* ${r.w} × ${r.h} cm\n`;
+            texto += `💎 *Vidrio:* ${vidLbl}\n`;
+            texto += `🎨 *Color aluminio:* ${colLbl}\n`;
+            if (r.incluirCF) texto += `➕ Cuerpo fijo extra ${r.cfAncho}×${r.cfAlto} cm\n`;
+            if (r.incluirAlfajia) texto += `➕ Alfajía / poyo reforzado\n`;
+            if (r.incluirMosq) texto += `➕ Mosquitero\n`;
+            texto += `\n✅ *INCLUYE:* Perfilería aluminio VIALCOR, vidrio, accesorios, herrajes, transporte e instalación. Garantía escrita 18 meses.\n\n`;
+            texto += `💰 *Precio total c/IVA:* ${alu_fmt(r.precioFinal)}\n`;
+            texto += `----------------------------`;
+
+            try { navigator.clipboard.writeText(texto); } catch(e) {}
+            window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+        }
+
+        function alu_agregarACotizacion() {
+            if (!aluLastCalc) { alert('Calcula primero'); return; }
+            const r = aluLastCalc;
+            const cantidad = parseInt(document.getElementById('alu-cantidad').value) || 1;
+            const sysData = aluConfig.sistemas[r.sys];
+            const cfgLbl = ALU_CONFIG_LABELS[r.cfg].label;
+            const item = {
+                producto: `${sysData.nombre} (${cfgLbl})`,
+                medidas: `${r.w}×${r.h}`,
+                vidrio: aluConfig.vidrios[r.vid].label,
+                precio: r.precioFinal * cantidad,
+                precioUnitario: r.precioFinal,
+                cantidad,
+                fecha: new Date(),
+                esAluminio: true,
+                raw: {
+                    producto: sysData.nombre,
+                    ancho: r.w, alto: r.h,
+                    sistema: r.sys, config: r.cfg,
+                    espesor: r.vid, color: r.col,
+                    desmonte:false, sandblasting:false, led:false
+                }
+            };
+            quoteItems.push(item);
+            renderQuote();
+            // Volver a vista principal y mostrar carrito
+            cerrarVistaAluminio();
+            setTimeout(()=>{
+                document.getElementById('quote-summary').scrollIntoView({behavior:'smooth'});
+            }, 200);
+        }
+
+        // =================================================================
+        // CONFIGURACIÓN - MODAL EDITABLE
+        // =================================================================
+        function alu_renderConfigUI() {
+            alu_renderTabPerfiles();
+            alu_renderTabAccesorios();
+            alu_renderTabVidrios();
+            alu_renderTabFormula();
+        }
+
+        function alu_cfgSwitchTab(btn, tab) {
+            document.querySelectorAll('.alu-cfg-content').forEach(el=>el.classList.remove('active'));
+            document.querySelectorAll('.alu-cfg-tab').forEach(el=>el.classList.remove('active'));
+            document.getElementById('alu-cfg-tab-'+tab).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        // PERFILES: tabla editable por sistema, con selector de color
+        let aluCfgCurrentColor = 'natural';
+        function alu_renderTabPerfiles() {
+            const t = document.getElementById('alu-cfg-tab-perfiles');
+            // Pestañas de color
+            let colorTabsHTML = '<div class="alu-color-tabs">';
+            Object.keys(ALU_COLOR_LABELS).forEach(k => {
+                const sel = (k === aluCfgCurrentColor) ? 'active' : '';
+                colorTabsHTML += `<div class="alu-color-tab ${sel}" onclick="aluCfgCurrentColor='${k}'; alu_renderTabPerfiles();">${ALU_COLOR_LABELS[k]}</div>`;
+            });
+            colorTabsHTML += '</div>';
+
+            let html = `<div class="alu-quick-info">
+                Precios por <b>tira completa de 6m</b>. Selecciona el color para editar la columna correspondiente. Toca cualquier valor para modificarlo.
+            </div>` + colorTabsHTML;
+
+            const colorIdx = ALU_COLOR_IDX[aluCfgCurrentColor];
+            Object.keys(aluConfig.sistemas).forEach(sysKey => {
+                const s = aluConfig.sistemas[sysKey];
+                html += `<div class="alu-cfg-section-title">${s.icono} ${s.nombre}</div>`;
+                Object.keys(s.perfiles).forEach(pKey => {
+                    const p = s.perfiles[pKey];
+                    const val = p.precios[colorIdx];
+                    html += `<div class="alu-edit-row">
+                        <label>${p.desc}<span class="ref-tag">${p.ref}</span></label>
+                        <input type="number" value="${val}"
+                            data-target="sistemas.${sysKey}.perfiles.${pKey}.precios.${colorIdx}">
+                    </div>`;
+                });
+            });
+            t.innerHTML = html;
+        }
+
+        function alu_renderTabAccesorios() {
+            const t = document.getElementById('alu-cfg-tab-accesorios');
+            let html = `<div class="alu-quick-info">
+                Precios de cada accesorio. Aquí defines lo que cuesta cada bisagra, rodachina, cerradura, manija, felpa por metro, etc.
+            </div>`;
+            Object.keys(aluConfig.accesorios).forEach(sysKey => {
+                const sys = aluConfig.sistemas[sysKey];
+                html += `<div class="alu-cfg-section-title">${sys.icono} ${sys.nombre}</div>`;
+                const accs = aluConfig.accesorios[sysKey];
+                Object.keys(accs).forEach(aKey => {
+                    const a = accs[aKey];
+                    let tipoLabel = '';
+                    if (a.porHoja) tipoLabel = `${a.porHoja}/hoja`;
+                    else if (a.porMovil) tipoLabel = `${a.porMovil}/móvil`;
+                    else if (a.porMetro) tipoLabel = `por metro`;
+                    else if (a.porAncho) tipoLabel = `por m de ancho`;
+                    else if (a.fijo) tipoLabel = `fijo`;
+                    html += `<div class="alu-edit-row">
+                        <label>${a.desc}<span class="ref-tag">${tipoLabel}${a.opcional?' · opcional':''}</span></label>
+                        <input type="number" value="${a.precio}"
+                            data-target="accesorios.${sysKey}.${aKey}.precio">
+                    </div>`;
+                });
+            });
+            t.innerHTML = html;
+        }
+
+        function alu_renderTabVidrios() {
+            const t = document.getElementById('alu-cfg-tab-vidrios');
+            let html = `<div class="alu-quick-info">
+                Precio del vidrio por metro cuadrado. Estos son los precios que se aplican al área neta del vano (después de descontar la perfilería).
+            </div>`;
+            html += `<div class="alu-cfg-section-title">💎 Vidrios disponibles ($/m²)</div>`;
+            Object.keys(aluConfig.vidrios).forEach(vKey => {
+                const v = aluConfig.vidrios[vKey];
+                html += `<div class="alu-edit-row">
+                    <label>${v.label}<span class="ref-tag">${vKey}</span></label>
+                    <input type="number" value="${v.precio}" data-target="vidrios.${vKey}.precio">
+                </div>`;
+            });
+            t.innerHTML = html;
+        }
+
+        function alu_renderTabFormula() {
+            const t = document.getElementById('alu-cfg-tab-formula');
+            let html = `<div class="alu-quick-info">
+                Estos son los parámetros del cálculo. Aquí controlas tu utilidad, mermas, mano de obra, etc. Son los <b>botones más importantes</b> para ajustar el precio final.
+            </div>`;
+            const F = aluConfig.formula;
+            const items = [
+                {section:'💰 Utilidad e IVA', rows:[
+                    {k:'utilidad', label:'Utilidad sobre costo primo (%)'},
+                    {k:'iva', label:'IVA (%)'}
+                ]},
+                {section:'📈 Inflación y Mermas', rows:[
+                    {k:'inflacion', label:'Inflación sobre lista (%)'},
+                    {k:'mermaBaja', label:'Merma aluminio - obra grande (%)'},
+                    {k:'mermaAlta', label:'Merma aluminio - pieza pequeña (%)'},
+                    {k:'umbralOptimo', label:'Umbral metros para merma baja (m)'},
+                    {k:'umbralProyectoGrande', label:'Umbral total proyecto grande (m)'},
+                    {k:'mermaVidrio', label:'Merma vidrio (%)'},
+                    {k:'accImprevistos', label:'Imprevistos accesorios (%)'},
+                    {k:'largoTira', label:'Largo tira aluminio (cm)'}
+                ]},
+                {section:'🛠️ Mano de Obra e Insumos', rows:[
+                    {k:'moFija', label:'MO base por ventana ($)'},
+                    {k:'moPorM2', label:'MO variable por m² ($)'},
+                    {k:'insumosFijos', label:'Insumos fijos (silicona, etc.) ($)'}
+                ]},
+                {section:'🚚 Instalación', rows:[
+                    {k:'instBasicaFija', label:'Instalación básica - fijo ($)'},
+                    {k:'instBasicaPorM2', label:'Instalación básica - por m² ($)'},
+                    {k:'instAlturaFija', label:'Instalación con altura - fijo ($)'},
+                    {k:'instAlturaPorM2', label:'Instalación con altura - por m² ($)'}
+                ]}
+            ];
+            items.forEach(g => {
+                html += `<div class="alu-cfg-section-title">${g.section}</div>`;
+                g.rows.forEach(r => {
+                    html += `<div class="alu-edit-row">
+                        <label>${r.label}</label>
+                        <input type="number" value="${F[r.k]}" step="${(r.k.includes('umbral')?'0.1':'1')}" data-target="formula.${r.k}">
+                    </div>`;
+                });
+            });
+            // Dificultad por sistema
+            html += `<div class="alu-cfg-section-title">⚙️ Dificultad de armado (multiplicador MO)</div>`;
+            Object.keys(aluConfig.dificultad).forEach(sk => {
+                html += `<div class="alu-edit-row">
+                    <label>${aluConfig.sistemas[sk].nombre}<span class="ref-tag">sistema ${sk}</span></label>
+                    <input type="number" step="0.05" value="${aluConfig.dificultad[sk]}" data-target="dificultad.${sk}">
+                </div>`;
+            });
+            t.innerHTML = html;
+        }
+
+        function alu_guardarConfigEditada() {
+            // Recorrer todos los inputs con data-target y aplicarlos
+            const inputs = document.querySelectorAll('#alu-modal-config input[data-target]');
+            inputs.forEach(inp => {
+                const path = inp.dataset.target.split('.');
+                const val = parseFloat(inp.value);
+                if (isNaN(val)) return;
+                let obj = aluConfig;
+                for (let i=0; i<path.length-1; i++) {
+                    obj = obj[path[i]];
+                    if (!obj) return;
+                }
+                obj[path[path.length-1]] = val;
+            });
+            alu_saveConfig();
+            // Refresh UI principal
+            alu_renderUI();
+            alert('✓ Configuración guardada');
+            alu_cerrarConfig();
+        }
+
+        // ---------- INIT ----------
+        alu_loadConfig();
+        // Asegurar config inicial si nunca se abrió la vista
+        if (aluConfig && aluConfig.configsValidas) {
+            const valida = aluConfig.configsValidas[aluState.sistema];
+            if (!valida.includes(aluState.config)) aluState.config = valida[0];
+        }
+        // ===== FIN MÓDULO ALUMINIO =====
 
     </script>
 </body>
 
 </html>
-
-
