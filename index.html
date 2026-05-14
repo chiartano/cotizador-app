@@ -1254,7 +1254,7 @@
 
     <script>
 
-        const APP_VERSION = "3.1"; // v3.1: Módulo Aluminio separado. Ventanas/puertas ya no aparecen en cotizador principal.
+        const APP_VERSION = "3.2"; // v3.2: Rebalance aluminio. Cerraduras por móvil. Alfajía 11cm.
 
         function checkVersion() {
             const savedVersion = localStorage.getItem('app_version');
@@ -2172,7 +2172,7 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
         // su propia config, su propio motor de cálculo y su propia UI.
         // =================================================================
 
-        const ALU_STORAGE_KEY = 'alu_config_v1';
+        const ALU_STORAGE_KEY = 'alu_config_v2';
 
         // ---------- DEFAULTS DE FÁBRICA ----------
         // Estos son los valores iniciales. Se sobreescriben por lo guardado
@@ -2243,35 +2243,35 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
             // Accesorios por sistema (precios editables del mercado colombiano 2025)
             accesorios: {
                 '3831': {
-                    bisagra:     { desc:'Bisagras de presión', porHoja:2, precio:18000 },
-                    cremona:     { desc:'Cremona / manija',     porHoja:1, precio:45000 },
-                    felpaMl:     { desc:'Felpa perimetral (por metro)', porMetro:true, precio:4500 },
-                    tornilleria: { desc:'Tornillería + escuadras (fijo)', fijo:true, precio:18000 },
-                    mosquitero:  { desc:'Kit mosquitero (1 nave)', opcional:'mosquitero', precio:75000 },
-                    alfajia:     { desc:'Alfajía 8cm (por metro lineal de ancho)', opcional:'alfajia', porAncho:true, precio:18000 }
+                    bisagra:     { desc:'Bisagras de presión',              porHoja:2, precio:14000 },
+                    cremona:     { desc:'Cremona / manija',                 porHoja:1, precio:45000 },
+                    felpaMl:     { desc:'Felpa perimetral (por metro)',     porMetro:true, precio:4500 },
+                    tornilleria: { desc:'Tornillería + escuadras',          fijo:true, precio:10000 },
+                    mosquitero:  { desc:'Kit mosquitero (1 nave)',          opcional:'mosquitero', precio:75000 },
+                    alfajia:     { desc:'Alfajía 11cm (por metro de ancho)',opcional:'alfajia', porAncho:true, precio:25000 }
                 },
                 '5020': {
-                    rodachina:   { desc:'Rodachinas',           porMovil:2, precio:8500 },
-                    cerradura:   { desc:'Cerradura central',    fijo:true,  precio:22000 },
-                    felpaMl:     { desc:'Felpa pelo+nylon (por metro)', porMetro:true, precio:3800 },
-                    tornilleria: { desc:'Tornillería + escuadras', fijo:true, precio:15000 },
-                    mosquitero:  { desc:'Kit mosquitero (1 nave)', opcional:'mosquitero', precio:65000 },
-                    alfajia:     { desc:'Alfajía 8cm (por metro)', opcional:'alfajia', porAncho:true, precio:16000 }
+                    rodachina:   { desc:'Rodachinas',                       porMovil:2, precio:8500 },
+                    cerradura:   { desc:'Cerradura de impacto (por móvil)', porMovil:1, precio:22000 },
+                    felpaMl:     { desc:'Felpa pelo+nylon (por metro)',     porMetro:true, precio:3800 },
+                    tornilleria: { desc:'Tornillería + escuadras',          fijo:true, precio:8000 },
+                    mosquitero:  { desc:'Kit mosquitero (1 nave)',          opcional:'mosquitero', precio:65000 },
+                    alfajia:     { desc:'Alfajía 11cm (por metro de ancho)',opcional:'alfajia', porAncho:true, precio:22000 }
                 },
                 '744': {
-                    rodachina:   { desc:'Rodachinas reforzadas', porMovil:2, precio:14500 },
-                    cerradura:   { desc:'Cerradura central',     fijo:true,  precio:35000 },
-                    felpaMl:     { desc:'Felpa pelo+nylon (por metro)', porMetro:true, precio:4500 },
-                    tornilleria: { desc:'Tornillería + escuadras', fijo:true, precio:20000 },
-                    mosquitero:  { desc:'Kit mosquitero (1 nave)', opcional:'mosquitero', precio:75000 },
-                    alfajia:     { desc:'Alfajía 8cm (por metro)', opcional:'alfajia', porAncho:true, precio:18000 }
+                    rodachina:   { desc:'Rodachinas reforzadas',            porMovil:2, precio:14500 },
+                    cerradura:   { desc:'Cerradura de impacto (por móvil)', porMovil:1, precio:35000 },
+                    felpaMl:     { desc:'Felpa pelo+nylon (por metro)',     porMetro:true, precio:4500 },
+                    tornilleria: { desc:'Tornillería + escuadras',          fijo:true, precio:10000 },
+                    mosquitero:  { desc:'Kit mosquitero (1 nave)',          opcional:'mosquitero', precio:75000 },
+                    alfajia:     { desc:'Alfajía 11cm (por metro de ancho)',opcional:'alfajia', porAncho:true, precio:25000 }
                 },
                 '8025': {
-                    rodachina:   { desc:'Rodachinas puerta (par)', porMovil:2, precio:38000 },
-                    cerradura:   { desc:'Cerradura puerta corrediza', fijo:true, precio:85000 },
-                    manija:      { desc:'Manija gancho (par)',     porMovil:1, precio:28000 },
-                    felpaMl:     { desc:'Felpa puerta (por metro)',porMetro:true, precio:6500 },
-                    tornilleria: { desc:'Tornillería + escuadras', fijo:true, precio:30000 }
+                    rodachina:   { desc:'Rodachinas puerta (par)',          porMovil:2, precio:38000 },
+                    cerradura:   { desc:'Cerradura de impacto (por móvil)', porMovil:1, precio:85000 },
+                    manija:      { desc:'Manija gancho (par)',              porMovil:1, precio:28000 },
+                    felpaMl:     { desc:'Felpa puerta (por metro)',         porMetro:true, precio:6500 },
+                    tornilleria: { desc:'Tornillería + escuadras',          fijo:true, precio:15000 }
                 }
             },
             // Vidrios disponibles ($/m²)
@@ -2288,19 +2288,21 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
             formula: {
                 inflacion: 10,        // % sobre lista
                 mermaBaja: 10,        // % en obras grandes
-                mermaAlta: 35,        // % en piezas pequeñas
-                umbralOptimo: 3.0,    // metros para usar merma baja
+                mermaAlta: 22,        // % en piezas pequeñas (antes 35%, era exagerado)
+                umbralOptimo: 2.5,    // metros para usar merma baja (antes 3.0)
                 umbralProyectoGrande: 12.0, // metros totales para considerar obra grande
                 largoTira: 600,       // cm (6m)
                 mermaVidrio: 15,      // %
                 accImprevistos: 8,    // % extra sobre accesorios
-                moFija: 55000,        // $ MO base por ventana
-                moPorM2: 35000,       // $ MO por m²
-                insumosFijos: 18000,  // $ silicona, tornillos extra
-                instBasicaFija: 45000,
-                instBasicaPorM2: 15000,
-                instAlturaFija: 75000,
-                instAlturaPorM2: 25000,
+                // ── MO: rebalanceada para que escale con el tamaño ──
+                moFija: 25000,        // $ MO base por ventana (antes 55000)
+                moPorM2: 55000,       // $ MO por m² (antes 35000)
+                insumosFijos: 10000,  // $ silicona, tornillos extra (antes 18000)
+                // ── Instalación: también más variable, menos fija ──
+                instBasicaFija: 20000,    // antes 45000
+                instBasicaPorM2: 35000,   // antes 15000
+                instAlturaFija: 40000,    // antes 75000
+                instAlturaPorM2: 55000,   // antes 25000
                 utilidad: 35,         // % sobre costo primo
                 iva: 19               // %
             },
