@@ -1,4 +1,3 @@
-
 const CACHE_NAME = 'cotizador-v3';
 
 const urlsToCache = [
