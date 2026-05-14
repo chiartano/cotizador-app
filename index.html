@@ -1254,7 +1254,7 @@
 
     <script>
 
-        const APP_VERSION = "3.2"; // v3.2: Rebalance aluminio. Cerraduras por móvil. Alfajía 11cm.
+        const APP_VERSION = "3.3"; // v3.3: Vidrios 3+3 y Frozen 4mm/5mm añadidos al módulo aluminio.
 
         function checkVersion() {
             const savedVersion = localStorage.getItem('app_version');
@@ -2276,13 +2276,16 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
             },
             // Vidrios disponibles ($/m²)
             vidrios: {
-                '4mm':  { label:'4mm Crudo (económico)',  precio:28000 },
-                '5mm':  { label:'5mm Crudo',              precio:35000 },
-                '6mm':  { label:'6mm Templado',           precio:106000 },
-                '8mm':  { label:'8mm Templado',           precio:135000 },
-                '10mm': { label:'10mm Templado',          precio:170000 },
-                '4+4':  { label:'4+4 Laminado',           precio:155000 },
-                '5+5':  { label:'5+5 Laminado',           precio:175000 }
+                '4mm':        { label:'4mm Crudo (económico)',                  precio:28000 },
+                '5mm':        { label:'5mm Crudo',                              precio:35000 },
+                '3+3':        { label:'3+3 Laminado seguridad',                 precio:110000 },
+                'Frozen 4mm': { label:'Frozen 4mm esmerilado (baño/cocina)',    precio:75000 },
+                'Frozen 5mm': { label:'Frozen 5mm esmerilado (baño/cocina)',    precio:95000 },
+                '6mm':        { label:'6mm Templado',                           precio:106000 },
+                '8mm':        { label:'8mm Templado',                           precio:135000 },
+                '10mm':       { label:'10mm Templado',                          precio:170000 },
+                '4+4':        { label:'4+4 Laminado',                           precio:155000 },
+                '5+5':        { label:'5+5 Laminado',                           precio:175000 }
             },
             // Parámetros del cálculo (todos editables)
             formula: {
