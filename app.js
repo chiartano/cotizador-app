@@ -24,7 +24,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
 }
 
 
-        const APP_VERSION = "3.9"; // v3.9: Preview visual SVG de ventana en módulo aluminio
+        const APP_VERSION = "4.0"; // v4.0: Comparación lado a lado + Dashboard básico
 
         function checkVersion() {
             const savedVersion = localStorage.getItem('app_version');
@@ -558,6 +558,17 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 precio: precioFinal,
                 fecha: new Date()
             });
+
+            // Registrar también en el historial del dashboard (no rompe nada si no está cargado)
+            if (typeof dash_registrar === 'function') {
+                dash_registrar({
+                    producto: prodNombre,
+                    medidas: medidasStr,
+                    precio: precioFinal,
+                    fecha: new Date(),
+                    origen: 'principal'
+                });
+            }
 
             const detalles = {
                 vidrio: costoVidrioTotal,
