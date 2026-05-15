@@ -1,4 +1,3 @@
-
 const CACHE_NAME = 'cotizador-v4';
 
 // Archivos esenciales para que la app funcione offline.
