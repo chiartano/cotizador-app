@@ -1,20 +1,35 @@
-const CACHE_NAME = 'cotizador-v3';
 
+const CACHE_NAME = 'cotizador-v4';
+
+// Archivos esenciales para que la app funcione offline.
+// Estrategia: network-first → siempre intenta internet primero,
+// si falla usa el caché. Eso significa que cualquier cambio en
+// estos archivos se aplica automáticamente al abrir con datos.
 const urlsToCache = [
   './',
   './index.html',
   './manifest.json',
-  './icon.png'
+  './styles.css',
+  './app.js',
+  './aluminio.js',
+  './icon.png',
+  './icono.png'
 ];
 
 self.addEventListener('install', event => {
-  // Obliga al SW a activarse inmediatamente
+  // Obliga al SW a activarse inmediatamente (sin esperar a que se cierren pestañas)
   self.skipWaiting();
-  
+
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        return cache.addAll(urlsToCache);
+        // Usamos add individual para que la instalación no falle si algún
+        // icono opcional no está presente en el servidor
+        return Promise.all(
+          urlsToCache.map(url => cache.add(url).catch(err => {
+            console.warn('No se pudo cachear:', url, err);
+          }))
+        );
       })
   );
 });
@@ -25,6 +40,7 @@ self.addEventListener('activate', event => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
+            // Borra caches viejos (cotizador-v3, etc.)
             return caches.delete(cacheName);
           }
         })
@@ -35,7 +51,9 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// FETCH: ESTRATEGIA "NETWORK FIRST" (Primero Internet, luego Caché)
+// FETCH: ESTRATEGIA "NETWORK FIRST" (Primero Internet, luego Caché).
+// Esto garantiza que los usuarios siempre vean la versión más reciente
+// cuando tengan conexión, y solo usen caché si están offline.
 self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(event.request)
@@ -44,7 +62,7 @@ self.addEventListener('fetch', event => {
         if (!response || response.status !== 200 || response.type !== 'basic') {
           return response;
         }
-        
+
         // Clonamos la respuesta para guardarla
         const responseToCache = response.clone();
         caches.open(CACHE_NAME)
