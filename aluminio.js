@@ -895,6 +895,26 @@
                 incluirCF, cfAncho, cfAlto, incluirAlfajia, incluirMosq
             };
 
+            // Si el comparador está usando este motor en modo silencioso,
+            // no registramos historial ni repintamos UI principal.
+            if (window.__cmp_silent_calc) {
+                return aluLastCalc;
+            }
+
+            // Registrar en historial del dashboard
+            if (typeof dash_registrar === 'function') {
+                const sysData = aluConfig.sistemas[sys];
+                const cfgLbl = (typeof ALU_CONFIG_LABELS !== 'undefined' && ALU_CONFIG_LABELS[cfg])
+                    ? ALU_CONFIG_LABELS[cfg].label : cfg;
+                dash_registrar({
+                    producto: `${sysData.nombre} (${cfgLbl})`,
+                    medidas: `${w}×${h}`,
+                    precio: precioFinal,
+                    fecha: new Date(),
+                    origen: 'aluminio'
+                });
+            }
+
             alu_renderResult(aluLastCalc);
         }
 
