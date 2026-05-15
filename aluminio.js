@@ -237,7 +237,7 @@
             localStorage.removeItem(ALU_STORAGE_KEY);
             aluConfig = JSON.parse(JSON.stringify(ALU_DEFAULTS));
             alu_renderConfigUI();
-            alert('Valores restaurados.');
+            toast('Valores de fábrica restaurados', 'success');
         }
 
         // ---------- NAVEGACIÓN ENTRE VISTAS ----------
@@ -266,6 +266,178 @@
         }
 
         // ---------- RENDER UI PRINCIPAL ----------
+        // =================================================================
+        // PREVIEW VISUAL — Dibuja un esquema SVG de la ventana según config
+        // =================================================================
+        function alu_renderPreview() {
+            const box = document.getElementById('alu-preview-svg');
+            const caption = document.getElementById('alu-preview-caption');
+            if (!box) return;
+
+            const cfg = aluState.config;
+            const sys = aluState.sistema;
+            const isPuerta = (sys === '8025');
+
+            // Dimensiones del SVG (mantener relación ~16:11 horizontal o 11:16 vertical)
+            // Para puertas, la verticalidad ayuda; para ventanas, formato horizontal
+            const W = 280;
+            const H = isPuerta ? 230 : 160;
+            const pad = 6;
+            const innerW = W - 2*pad;
+            const innerH = H - 2*pad;
+
+            // Colores
+            const stroke = '#475569';
+            const fillFijo = '#dbeafe';   // azul claro = vidrio fijo
+            const fillHoja = '#fef3c7';   // amarillo claro = hoja móvil
+            const fillCF = '#e0e7ff';     // morado claro = cuerpo fijo grande
+
+            // Helpers para dibujar
+            const rect = (x,y,w,h,fill,label,sub) => {
+                let s = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}" stroke="${stroke}" stroke-width="1.5" rx="2"/>`;
+                if (label) {
+                    const cx = x + w/2, cy = y + h/2;
+                    s += `<text x="${cx}" y="${cy + 3}" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">${label}</text>`;
+                    if (sub) s += `<text x="${cx}" y="${cy + 17}" text-anchor="middle" font-size="9" fill="#64748b">${sub}</text>`;
+                }
+                return s;
+            };
+            // Flecha indicando dirección de apertura (para hojas batientes)
+            const arrowBat = (x,y,w,h,dir) => {
+                // dir: 'right' (manija a la izquierda, abre hacia la derecha) o 'left'
+                const cy = y + h/2;
+                if (dir === 'right') {
+                    return `<path d="M ${x+5} ${y+5} L ${x+w-5} ${cy} L ${x+5} ${y+h-5}" fill="none" stroke="#d97706" stroke-width="1.5" stroke-linejoin="round"/>`;
+                } else {
+                    return `<path d="M ${x+w-5} ${y+5} L ${x+5} ${cy} L ${x+w-5} ${y+h-5}" fill="none" stroke="#d97706" stroke-width="1.5" stroke-linejoin="round"/>`;
+                }
+            };
+            // Marca de basculante: triángulo apuntando hacia adentro
+            const arrowBasc = (x,y,w,h) => {
+                const cx = x + w/2;
+                return `<path d="M ${x+8} ${y+h-4} L ${cx} ${y+4} L ${x+w-8} ${y+h-4}" fill="none" stroke="#d97706" stroke-width="1.5" stroke-linejoin="round"/>`;
+            };
+            // Marca de corredera: flecha doble horizontal
+            const arrowCorr = (x,y,w,h) => {
+                const cy = y + h/2;
+                return `<path d="M ${x+5} ${cy} L ${x+w-5} ${cy} M ${x+5} ${cy} L ${x+10} ${cy-4} M ${x+5} ${cy} L ${x+10} ${cy+4} M ${x+w-5} ${cy} L ${x+w-10} ${cy-4} M ${x+w-5} ${cy} L ${x+w-10} ${cy+4}" fill="none" stroke="#d97706" stroke-width="1.5"/>`;
+            };
+
+            let svgInner = '';
+            let captionText = '';
+
+            // Marco perimetral siempre
+            svgInner += `<rect x="${pad}" y="${pad}" width="${innerW}" height="${innerH}" fill="white" stroke="${stroke}" stroke-width="2.5" rx="3"/>`;
+
+            switch (cfg) {
+                case 'CF': {
+                    // Solo cuerpo fijo: rectángulo con vidrio
+                    svgInner += rect(pad+8, pad+8, innerW-16, innerH-16, fillCF, 'X', 'Cuerpo fijo');
+                    captionText = 'Solo cuerpo fijo. No tiene hojas que abren.';
+                    break;
+                }
+                case 'OX': {
+                    // Hoja batiente izquierda + Fijo derecho
+                    const wHoja = innerW * 0.45;
+                    const wFijo = innerW - wHoja;
+                    const hojaX = pad, hojaY = pad;
+                    const fijoX = pad + wHoja, fijoY = pad;
+                    svgInner += rect(hojaX+4, hojaY+4, wHoja-6, innerH-8, fillHoja, 'O', 'Hoja');
+                    svgInner += arrowBat(hojaX+4, hojaY+4, wHoja-6, innerH-8, 'right');
+                    svgInner += rect(fijoX+2, fijoY+4, wFijo-6, innerH-8, fillFijo, 'X', 'Fijo');
+                    captionText = 'OX — 1 hoja batiente lateral + cuerpo fijo al lado.';
+                    break;
+                }
+                case 'OXO': {
+                    // Hoja izq + Fijo central + Hoja der
+                    const wHoja = innerW * 0.27;
+                    const wFijo = innerW - 2*wHoja;
+                    svgInner += rect(pad+4, pad+4, wHoja-2, innerH-8, fillHoja, 'O', 'Hoja');
+                    svgInner += arrowBat(pad+4, pad+4, wHoja-2, innerH-8, 'right');
+                    svgInner += rect(pad+wHoja+4, pad+4, wFijo-8, innerH-8, fillFijo, 'X', 'Fijo');
+                    svgInner += rect(pad+wHoja+wFijo, pad+4, wHoja-2, innerH-8, fillHoja, 'O', 'Hoja');
+                    svgInner += arrowBat(pad+wHoja+wFijo, pad+4, wHoja-2, innerH-8, 'left');
+                    captionText = 'OXO — 2 hojas batientes a los lados + cuerpo fijo central.';
+                    break;
+                }
+                case '1B_CF': {
+                    // Basculante abajo + CF arriba
+                    const hBasc = innerH * 0.32;
+                    const hCF = innerH - hBasc;
+                    svgInner += rect(pad+4, pad+4, innerW-8, hCF-2, fillCF, 'X', 'Cuerpo fijo');
+                    svgInner += rect(pad+4, pad+hCF+2, innerW-8, hBasc-6, fillHoja, 'O', 'Basculante');
+                    svgInner += arrowBasc(pad+4, pad+hCF+2, innerW-8, hBasc-6);
+                    captionText = '1 Basculante (proyectante) abajo + cuerpo fijo arriba.';
+                    break;
+                }
+                case '2B_CF': {
+                    const hBasc = innerH * 0.32;
+                    const hCF = innerH - hBasc;
+                    const wB = (innerW - 4) / 2;
+                    svgInner += rect(pad+4, pad+4, innerW-8, hCF-2, fillCF, 'X', 'Cuerpo fijo');
+                    svgInner += rect(pad+4, pad+hCF+2, wB-2, hBasc-6, fillHoja, 'O', null);
+                    svgInner += arrowBasc(pad+4, pad+hCF+2, wB-2, hBasc-6);
+                    svgInner += rect(pad+4+wB, pad+hCF+2, wB-2, hBasc-6, fillHoja, 'O', null);
+                    svgInner += arrowBasc(pad+4+wB, pad+hCF+2, wB-2, hBasc-6);
+                    captionText = '2 Basculantes abajo + cuerpo fijo arriba.';
+                    break;
+                }
+                case '1H': {
+                    // Solo 1 hoja batiente (sin fijo)
+                    svgInner += rect(pad+8, pad+8, innerW-16, innerH-16, fillHoja, 'O', 'Hoja');
+                    svgInner += arrowBat(pad+8, pad+8, innerW-16, innerH-16, 'right');
+                    captionText = '1 Hoja batiente simple (sin cuerpo fijo).';
+                    break;
+                }
+                case '2H': {
+                    const wH = (innerW - 4) / 2;
+                    svgInner += rect(pad+4, pad+4, wH-2, innerH-8, fillHoja, 'O', 'Hoja');
+                    svgInner += arrowBat(pad+4, pad+4, wH-2, innerH-8, 'right');
+                    svgInner += rect(pad+4+wH, pad+4, wH-2, innerH-8, fillHoja, 'O', 'Hoja');
+                    svgInner += arrowBat(pad+4+wH, pad+4, wH-2, innerH-8, 'left');
+                    captionText = '2 Hojas batientes (sin cuerpo fijo).';
+                    break;
+                }
+                case '2N': {
+                    // Corrediza XO: 1 fija + 1 móvil
+                    const wN = (innerW - 4) / 2;
+                    svgInner += rect(pad+4, pad+4, wN-2, innerH-8, fillFijo, 'X', null);
+                    svgInner += rect(pad+4+wN, pad+4, wN-2, innerH-8, fillHoja, 'O', null);
+                    svgInner += arrowCorr(pad+4+wN, pad+4, wN-2, innerH-8);
+                    captionText = 'XO — 1 nave fija + 1 nave corrediza.';
+                    break;
+                }
+                case '3N': {
+                    // OXO corrediza: las del medio fija, las de afuera móviles
+                    const wN = (innerW - 6) / 3;
+                    svgInner += rect(pad+4, pad+4, wN-2, innerH-8, fillHoja, 'O', null);
+                    svgInner += arrowCorr(pad+4, pad+4, wN-2, innerH-8);
+                    svgInner += rect(pad+4+wN+1, pad+4, wN-2, innerH-8, fillFijo, 'X', null);
+                    svgInner += rect(pad+4+2*wN+2, pad+4, wN-2, innerH-8, fillHoja, 'O', null);
+                    svgInner += arrowCorr(pad+4+2*wN+2, pad+4, wN-2, innerH-8);
+                    captionText = 'OXO corrediza — 2 móviles a los lados + fijo central.';
+                    break;
+                }
+                case '4N': {
+                    const wN = (innerW - 8) / 4;
+                    for (let i = 0; i < 4; i++) {
+                        const x = pad+4 + i*(wN+1);
+                        const fill = (i < 2) ? fillFijo : fillHoja;
+                        const lbl = (i < 2) ? 'X' : 'O';
+                        svgInner += rect(x, pad+4, wN-1, innerH-8, fill, lbl, null);
+                        if (i >= 2) svgInner += arrowCorr(x, pad+4, wN-1, innerH-8);
+                    }
+                    captionText = 'OOXX — 4 naves (2 fijas + 2 móviles).';
+                    break;
+                }
+                default:
+                    captionText = '';
+            }
+
+            box.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${svgInner}</svg>`;
+            caption.innerText = captionText;
+        }
+
         function alu_renderUI() {
             // 1. Sistemas
             const cs = document.getElementById('alu-sistema-chips');
@@ -334,6 +506,9 @@
             cfChk.onchange = () => {
                 document.getElementById('alu-cf-medidas').style.display = cfChk.checked ? 'block' : 'none';
             };
+
+            // Preview visual
+            alu_renderPreview();
         }
 
         // Setters (chips clickeables)
@@ -374,7 +549,7 @@
             // ---- 1. INPUTS ----
             const w = parseFloat(document.getElementById('alu-ancho').value);
             const h = parseFloat(document.getElementById('alu-alto').value);
-            if (!w || !h) { alert('Ingresa Ancho y Alto en centímetros'); return; }
+            if (!w || !h) { toast('Falta ingresar Ancho y Alto', 'warn'); return; }
             if (w < 10 || h < 10) {
                 if (!confirm(`Las medidas (${w}×${h} cm) parecen pequeñas. ¿Continuar?`)) return;
             }
@@ -823,7 +998,7 @@
         // COMPARTIR Y AGREGAR AL CARRITO PRINCIPAL
         // =================================================================
         function alu_compartirWA() {
-            if (!aluLastCalc) { alert('Calcula primero'); return; }
+            if (!aluLastCalc) { toast('Calcula primero', 'warn'); return; }
             const r = aluLastCalc;
             const sysData = aluConfig.sistemas[r.sys];
             const cfgLbl = ALU_CONFIG_LABELS[r.cfg].label;
@@ -848,7 +1023,7 @@
         }
 
         function alu_agregarACotizacion() {
-            if (!aluLastCalc) { alert('Calcula primero'); return; }
+            if (!aluLastCalc) { toast('Calcula primero', 'warn'); return; }
             const r = aluLastCalc;
             const cantidad = parseInt(document.getElementById('alu-cantidad').value) || 1;
             const sysData = aluConfig.sistemas[r.sys];
@@ -883,7 +1058,9 @@
                 }
             };
             quoteItems.push(item);
+            if (typeof persistirCarrito === 'function') persistirCarrito();
             renderQuote();
+            if (typeof toast === 'function') toast(`Agregado: ${item.producto}`, 'success');
             // Volver a vista principal y mostrar carrito
             cerrarVistaAluminio();
             setTimeout(()=>{
@@ -1054,7 +1231,7 @@
             alu_saveConfig();
             // Refresh UI principal
             alu_renderUI();
-            alert('✓ Configuración guardada');
+            toast('Configuración guardada', 'success');
             alu_cerrarConfig();
         }
 
@@ -1066,4 +1243,3 @@
             if (!valida.includes(aluState.config)) aluState.config = valida[0];
         }
         // ===== FIN MÓDULO ALUMINIO =====
-
