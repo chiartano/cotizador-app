@@ -11,6 +11,8 @@ const urlsToCache = [
   './styles.css',
   './app.js',
   './aluminio.js',
+  './comparador.js',
+  './dashboard.js',
   './icon.png',
   './icono.png'
 ];
@@ -39,7 +41,7 @@ self.addEventListener('activate', event => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
-            // Borra caches viejos (cotizador-v4, cotizador-v3, etc.)
+            // Borra caches viejos (cotizador-v3, etc.)
             return caches.delete(cacheName);
           }
         })
