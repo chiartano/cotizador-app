@@ -5,8 +5,26 @@
  * ================================================================ */
 "use strict";
 
+// ============================================================
+// TOAST NOTIFICATIONS — Reemplazo elegante para alert()
+// ============================================================
+// Uso: toast('Mensaje'), toast('Éxito', 'success'), toast('Error', 'error', 4000)
+function toast(mensaje, tipo = 'info', duracion = 3000) {
+    const cont = document.getElementById('toast-container');
+    if (!cont) return;
+    const el = document.createElement('div');
+    el.className = 'toast ' + tipo;
+    const icons = { success:'✓', error:'⚠️', warn:'⚠️', info:'ℹ️' };
+    el.innerHTML = `<span class="toast-icon">${icons[tipo] || 'ℹ️'}</span><span class="toast-text">${mensaje}</span>`;
+    cont.appendChild(el);
+    // La animación CSS lo saca tras 2.5s; lo removemos del DOM tras 3s
+    setTimeout(() => {
+        if (el.parentNode) el.parentNode.removeChild(el);
+    }, duracion);
+}
 
-        const APP_VERSION = "3.6"; // v3.6: Refactor a archivos separados (styles.css / app.js / aluminio.js)
+
+        const APP_VERSION = "3.9"; // v3.9: Preview visual SVG de ventana en módulo aluminio
 
         function checkVersion() {
             const savedVersion = localStorage.getItem('app_version');
@@ -88,7 +106,80 @@
         };
 
         // Variables para cotización múltiple
+        // === Persistencia automática del carrito y datos del cliente ===
+        const CARRITO_STORAGE_KEY = 'cotizador_carrito_v1';
+        const CLIENTE_STORAGE_KEY = 'cotizador_cliente_v1';
+
+        // Cargar carrito guardado al iniciar
         let quoteItems = [];
+        try {
+            const saved = localStorage.getItem(CARRITO_STORAGE_KEY);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed)) quoteItems = parsed;
+            }
+        } catch(e) { console.warn('No se pudo cargar carrito previo:', e); }
+
+        // Guardar carrito automáticamente cada vez que cambie
+        function persistirCarrito() {
+            try {
+                localStorage.setItem(CARRITO_STORAGE_KEY, JSON.stringify(quoteItems));
+            } catch(e) { console.warn('No se pudo guardar carrito:', e); }
+        }
+
+        // Cliente actual (en memoria + storage)
+        let clienteActual = { nombre:'', telefono:'', obra:'', direccion:'' };
+        try {
+            const savedCli = localStorage.getItem(CLIENTE_STORAGE_KEY);
+            if (savedCli) clienteActual = Object.assign(clienteActual, JSON.parse(savedCli));
+        } catch(e) {}
+
+        function onClienteChange() {
+            clienteActual.nombre    = document.getElementById('cliente-nombre').value.trim();
+            clienteActual.telefono  = document.getElementById('cliente-telefono').value.trim();
+            clienteActual.obra      = document.getElementById('cliente-obra').value.trim();
+            clienteActual.direccion = document.getElementById('cliente-direccion').value.trim();
+            try { localStorage.setItem(CLIENTE_STORAGE_KEY, JSON.stringify(clienteActual)); } catch(e){}
+            actualizarResumenCliente();
+        }
+
+        function actualizarResumenCliente() {
+            const sum = document.getElementById('client-summary');
+            if (!sum) return;
+            const c = clienteActual;
+            if (c.nombre || c.obra) {
+                let txt = '👤 ' + (c.nombre || 'Sin nombre');
+                if (c.obra) txt += ' · ' + c.obra;
+                sum.innerText = txt;
+                sum.style.color = '#0369a1';
+            } else {
+                sum.innerText = 'Datos del cliente (opcional)';
+            }
+        }
+
+        function toggleClienteForm() {
+            const f = document.getElementById('client-form');
+            const a = document.getElementById('client-arrow');
+            const open = f.style.display === 'none' || !f.style.display;
+            f.style.display = open ? 'block' : 'none';
+            a.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+
+        function restaurarClienteEnUI() {
+            const f = (id) => document.getElementById(id);
+            if (!f('cliente-nombre')) return;
+            f('cliente-nombre').value    = clienteActual.nombre || '';
+            f('cliente-telefono').value  = clienteActual.telefono || '';
+            f('cliente-obra').value      = clienteActual.obra || '';
+            f('cliente-direccion').value = clienteActual.direccion || '';
+            actualizarResumenCliente();
+        }
+
+        function limpiarCliente() {
+            clienteActual = { nombre:'', telefono:'', obra:'', direccion:'' };
+            try { localStorage.removeItem(CLIENTE_STORAGE_KEY); } catch(e){}
+            restaurarClienteEnUI();
+        }
         let lastCalculation = null;
 
         // Cargar config del localStorage o usar default
@@ -164,6 +255,10 @@
             renderConfigForm();
             renderHistorial();
             verificarProducto();
+
+            // Restaurar UI del cliente y renderizar carrito guardado
+            restaurarClienteEnUI();
+            if (quoteItems.length > 0) renderQuote();
         }
 
         function verificarProducto() {
@@ -278,8 +373,7 @@
             let alto = parseFloat(document.getElementById('alto').value);
 
             if (!ancho || !alto) {
-                alert("Por favor ingresa Ancho y Alto en centímetros");
-                return;
+                toast('Falta ingresar Ancho y Alto', 'warn'); return;
             }
 
             // Validación: Si escriben valores muy pequeños (ej: 1.2), probablemente pensaron en metros
@@ -618,7 +712,7 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
 ----------------------------`;
 
             // Copiar al portapapeles y abrir WhatsApp
-            navigator.clipboard.writeText(texto).catch(err => console.error('Error al copiar', err));
+            navigator.clipboard.writeText(texto).then(() => toast('Texto copiado al portapapeles', 'info', 2000)).catch(err => console.error('Error al copiar', err));
             window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
         }
 
@@ -705,7 +799,7 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
             }
 
             localStorage.setItem('vidrios_config', JSON.stringify(currentConfig));
-            alert("Configuración guardada en este dispositivo.");
+            toast('Configuración guardada', 'success');
             cerrarConfig();
             document.getElementById('lbl-desmonte-val').innerText = fmtMoney(currentConfig.globales.desmonte);
             // Recargar para aplicar cambios en selects si hubo cambios
@@ -741,7 +835,7 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
         function restaurarFabrica() {
             if (confirm('¿Estás seguro de restaurar TODOS los valores a la configuración original de fábrica? Se perderán tus precios personalizados.')) {
                 localStorage.removeItem('vidrios_config');
-                alert("Configuración restaurada. La aplicación se reiniciará.");
+                toast('Configuración restaurada — recarga la app', 'success', 4000);
                 location.reload();
             }
         }
@@ -759,7 +853,9 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
             itemToAdd.precio = itemToAdd.precio * qty;
 
             quoteItems.push(itemToAdd);
+            persistirCarrito();
             renderQuote();
+            toast(`Agregado: ${itemToAdd.producto}`, 'success');
 
             // Limpiar formulario automáticamente para el siguiente item
             limpiar();
@@ -811,10 +907,13 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
                         ${obsHtml}
                     </div>
                     <div style="text-align:right; margin-top:8px; padding-top:8px; border-top:1px dashed #eee;">
-                        <button onclick="editarItem(${index})" style="background:none; border:none; cursor:pointer; margin-right:15px; color:#666;">
+                        <button onclick="editarItem(${index})" style="background:none; border:none; cursor:pointer; margin-right:12px; color:#666; font-size:0.88rem;">
                             ✏️ Editar
                         </button>
-                        <button onclick="borrarItem(${index})" style="background:none; border:none; cursor:pointer; color:#c62828;">
+                        <button onclick="duplicarItem(${index})" style="background:none; border:none; cursor:pointer; margin-right:12px; color:#0891b2; font-size:0.88rem;">
+                            📎 Duplicar
+                        </button>
+                        <button onclick="borrarItem(${index})" style="background:none; border:none; cursor:pointer; color:#c62828; font-size:0.88rem;">
                             🗑️ Borrar
                         </button>
                     </div>
@@ -835,7 +934,21 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
 
         function borrarItem(index) {
             quoteItems.splice(index, 1);
+            persistirCarrito();
             renderQuote();
+            toast('Ítem eliminado', 'info');
+        }
+
+        function duplicarItem(index) {
+            const item = quoteItems[index];
+            if (!item) return;
+            // Deep clone para evitar referencias compartidas
+            const copia = JSON.parse(JSON.stringify(item));
+            // Insertar la copia justo después del original
+            quoteItems.splice(index + 1, 0, copia);
+            persistirCarrito();
+            renderQuote();
+            toast('Ítem duplicado', 'success');
         }
 
         function editarItem(index) {
@@ -918,8 +1031,10 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
         }
 
         function limpiarCotizacion() {
-            if (confirm('¿Borrar toda la lista de cotización?')) {
+            if (confirm('¿Borrar toda la lista de cotización (incluyendo datos del cliente)?')) {
                 quoteItems = [];
+                persistirCarrito();
+                limpiarCliente();
                 renderQuote();
             }
         }
@@ -931,6 +1046,16 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
             let discount = parseFloat(document.getElementById('quote-discount').value) || 0;
             let final = total - discount;
             let texto = `*PRESUPUESTO* 📋\n----------------------------\n`;
+
+            // Encabezado con datos del cliente (si están)
+            const c = clienteActual;
+            if (c.nombre || c.obra || c.telefono || c.direccion) {
+                if (c.nombre)    texto += `👤 *Cliente:* ${c.nombre}\n`;
+                if (c.obra)      texto += `🏠 *Obra:* ${c.obra}\n`;
+                if (c.direccion) texto += `📍 ${c.direccion}\n`;
+                if (c.telefono)  texto += `📞 ${c.telefono}\n`;
+                texto += `----------------------------\n`;
+            }
 
             quoteItems.forEach((item, index) => {
                 texto += `*${index + 1}. ${item.producto}*`;
@@ -974,11 +1099,19 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
             texto += `✅ Incluye transporte e instalación.\n`;
             texto += `📅 Validez: 15 días.`;
 
-            navigator.clipboard.writeText(texto).catch(err => console.error('Error al copiar', err));
-            window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+            navigator.clipboard.writeText(texto).then(() => toast('Texto copiado al portapapeles', 'info', 2000)).catch(err => console.error('Error al copiar', err));
+
+            // Si hay teléfono del cliente, abrir WhatsApp directo a su número
+            const tel = (clienteActual.telefono || '').replace(/\D/g, '');
+            if (tel.length >= 7) {
+                // Asumir Colombia (+57) si son 10 dígitos sin código de país
+                const numFinal = (tel.length === 10) ? '57' + tel : tel;
+                window.open(`https://wa.me/${numFinal}?text=${encodeURIComponent(texto)}`, '_blank');
+            } else {
+                window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+            }
         }
         
 
         // Iniciar
         init();
-
