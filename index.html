@@ -22,6 +22,7 @@
                 style="background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%); color:white; padding:8px 14px; border-radius:8px; font-size:0.82rem; font-weight:800; box-shadow:0 2px 8px rgba(217,119,6,0.4);">
                 🪟 ALUMINIO
             </button>
+            <button class="btn-icon btn-dashboard" onclick="dash_abrir()" title="Dashboard del negocio">📊</button>
             <button class="btn-icon" onclick="abrirConfig()">⚙️</button>
         </div>
     </header>
@@ -181,6 +182,11 @@
                         AGREGAR</button>
                     <button class="btn-calc" onclick="compartir()" style="background: #25D366; flex: 1;">📱
                         WHATSAPP</button>
+                </div>
+                <div style="margin-top: 10px;">
+                    <button class="btn-calc btn-comparar" onclick="cmp_abrirDesdeMain()" style="width:100%;">
+                        🔀 COMPARAR CON OTRA OPCIÓN
+                    </button>
                 </div>
             </div>
         </div>
@@ -457,6 +463,11 @@
                         <button class="alu-btn-add" onclick="alu_agregarACotizacion()">➕ AGREGAR</button>
                         <button class="alu-btn-wa" onclick="alu_compartirWA()">📱 WHATSAPP</button>
                     </div>
+                    <div style="margin-top:10px;">
+                        <button class="btn-calc btn-comparar" onclick="cmp_abrirDesdeAluminio()" style="width:100%;">
+                            🔀 COMPARAR CON OTRO SISTEMA
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -531,11 +542,89 @@
         </div>
     </div>
 
+    <!-- ====================================================== -->
+    <!-- MODAL: COMPARADOR LADO A LADO                            -->
+    <!-- ====================================================== -->
+    <div id="cmp-modal" class="cmp-overlay">
+        <div class="cmp-panel">
+            <div class="cmp-header">
+                <h2>🔀 Comparar Opciones</h2>
+                <button class="cmp-btn-cerrar" onclick="cmp_cerrarModal()">✕</button>
+            </div>
+            <div class="cmp-body">
+                <div class="cmp-selectores">
+                    <div class="cmp-selector-row">
+                        <div class="cmp-selector-col">
+                            <label><span class="cmp-letra">A</span>Opción A</label>
+                            <select id="cmp-select-a" onchange="cmp_recalcularAmbos()"></select>
+                        </div>
+                        <div class="cmp-selector-col">
+                            <label><span class="cmp-letra">B</span>Opción B</label>
+                            <select id="cmp-select-b" onchange="cmp_recalcularAmbos()"></select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cmp-columnas">
+                    <div id="cmp-col-a" class="cmp-columna"></div>
+                    <div id="cmp-col-b" class="cmp-columna"></div>
+                </div>
+
+                <div id="cmp-resumen-dif" class="cmp-resumen-dif" style="display:none;"></div>
+            </div>
+            <div class="cmp-footer">
+                <button class="cmp-btn-cerrar-pie" onclick="cmp_cerrarModal()">Cerrar</button>
+                <button class="cmp-btn-wa" onclick="cmp_compartir()">📱 ENVIAR COMPARACIÓN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================== -->
+    <!-- MODAL: DASHBOARD DEL NEGOCIO                             -->
+    <!-- ====================================================== -->
+    <div id="dash-modal" class="dash-overlay">
+        <div class="dash-panel">
+            <div class="dash-header">
+                <h2>📊 Dashboard</h2>
+                <button class="dash-btn-cerrar" onclick="dash_cerrar()">✕</button>
+            </div>
+            <div class="dash-body">
+                <div class="dash-rangos">
+                    <button class="dash-rango-chip active" data-rango="mes" onclick="dash_cambiarRango('mes')">Este mes</button>
+                    <button class="dash-rango-chip" data-rango="mes_anterior" onclick="dash_cambiarRango('mes_anterior')">Mes pasado</button>
+                    <button class="dash-rango-chip" data-rango="todo" onclick="dash_cambiarRango('todo')">Todo</button>
+                </div>
+
+                <div id="dash-mensaje" class="dash-mensaje">📊 Cargando...</div>
+
+                <div class="dash-cards-grid">
+                    <div class="dash-card">
+                        <div class="dash-card-label">📋 Cotizaciones</div>
+                        <div class="dash-card-value" id="dash-card-cotizaciones">0</div>
+                    </div>
+                    <div class="dash-card">
+                        <div class="dash-card-label">💰 Ticket promedio</div>
+                        <div class="dash-card-value" id="dash-card-ticket">$0</div>
+                    </div>
+                    <div class="dash-card dash-card-big">
+                        <div class="dash-card-label">📈 Total cotizado</div>
+                        <div class="dash-card-value" id="dash-card-total">$0</div>
+                    </div>
+                </div>
+
+                <div class="dash-section-title">🏆 Top productos cotizados</div>
+                <div id="dash-top-list"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Contenedor de notificaciones toast -->
     <div id="toast-container"></div>
 
     <script src="app.js"></script>
     <script src="aluminio.js"></script>
+    <script src="comparador.js"></script>
+    <script src="dashboard.js"></script>
     <script>
         // Registro del Service Worker (PWA)
         if ('serviceWorker' in navigator) {
