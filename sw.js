@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cotizador-v4';
+const CACHE_NAME = 'cotizador-v5';
 
 // Archivos esenciales para que la app funcione offline.
 // Estrategia: network-first → siempre intenta internet primero,
@@ -39,7 +39,7 @@ self.addEventListener('activate', event => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
-            // Borra caches viejos (cotizador-v3, etc.)
+            // Borra caches viejos (cotizador-v4, cotizador-v3, etc.)
             return caches.delete(cacheName);
           }
         })
