@@ -195,6 +195,41 @@
             </div>
 
             <div class="quote-body">
+                <!-- Datos del cliente -->
+                <div id="client-section" style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; padding:12px; margin-bottom:14px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleClienteForm()">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:1rem;">👤</span>
+                            <span id="client-summary" style="font-weight:700; color:#0369a1; font-size:0.92rem;">Datos del cliente (opcional)</span>
+                        </div>
+                        <span id="client-arrow" style="color:#0369a1; transition:transform 0.2s;">▼</span>
+                    </div>
+                    <div id="client-form" style="display:none; margin-top:10px;">
+                        <div style="margin-bottom:8px;">
+                            <label style="font-size:0.75rem; font-weight:600; color:#0369a1; margin-bottom:3px; display:block;">Nombre</label>
+                            <input type="text" id="cliente-nombre" placeholder="Ej: Juan Pérez" oninput="onClienteChange()"
+                                style="width:100%; padding:8px; border:1.5px solid #bae6fd; border-radius:6px; font-size:0.92rem; box-sizing:border-box;">
+                        </div>
+                        <div class="row" style="margin-bottom:8px;">
+                            <div class="col">
+                                <label style="font-size:0.75rem; font-weight:600; color:#0369a1; margin-bottom:3px; display:block;">Teléfono</label>
+                                <input type="tel" id="cliente-telefono" placeholder="3001234567" oninput="onClienteChange()"
+                                    style="width:100%; padding:8px; border:1.5px solid #bae6fd; border-radius:6px; font-size:0.92rem; box-sizing:border-box;">
+                            </div>
+                            <div class="col">
+                                <label style="font-size:0.75rem; font-weight:600; color:#0369a1; margin-bottom:3px; display:block;">Obra / Proyecto</label>
+                                <input type="text" id="cliente-obra" placeholder="Ej: Casa Chapinero" oninput="onClienteChange()"
+                                    style="width:100%; padding:8px; border:1.5px solid #bae6fd; border-radius:6px; font-size:0.92rem; box-sizing:border-box;">
+                            </div>
+                        </div>
+                        <div>
+                            <label style="font-size:0.75rem; font-weight:600; color:#0369a1; margin-bottom:3px; display:block;">Dirección (opcional)</label>
+                            <input type="text" id="cliente-direccion" placeholder="Ej: Calle 100 #15-20" oninput="onClienteChange()"
+                                style="width:100%; padding:8px; border:1.5px solid #bae6fd; border-radius:6px; font-size:0.92rem; box-sizing:border-box;">
+                        </div>
+                    </div>
+                </div>
+
                 <div id="quote-items-list"></div>
             </div>
 
@@ -252,6 +287,11 @@
             <div class="alu-card">
                 <div class="alu-card-title"><span class="alu-step-num">2</span>DISEÑO</div>
                 <div class="alu-chips" id="alu-config-chips"></div>
+                <!-- Preview visual de la ventana según configuración -->
+                <div id="alu-preview-box" style="margin-top:14px; background:#f9fafb; border:1px dashed #cbd5e1; border-radius:10px; padding:12px; text-align:center;">
+                    <div id="alu-preview-svg" style="display:flex; justify-content:center; align-items:center; min-height:140px;"></div>
+                    <div id="alu-preview-caption" style="margin-top:6px; font-size:0.75rem; color:#64748b; line-height:1.4;"></div>
+                </div>
             </div>
 
             <!-- 3. MEDIDAS -->
@@ -491,6 +531,9 @@
         </div>
     </div>
 
+    <!-- Contenedor de notificaciones toast -->
+    <div id="toast-container"></div>
+
     <script src="app.js"></script>
     <script src="aluminio.js"></script>
     <script>
@@ -506,4 +549,3 @@
 </body>
 
 </html>
-
