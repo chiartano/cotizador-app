@@ -1051,6 +1051,29 @@
                         <input type="number" id="alu-alto" placeholder="100" inputmode="numeric">
                     </div>
                 </div>
+                <!-- Campo extra para configuraciones con basculante + CF -->
+                <div id="alu-basc-container" style="display:none; margin-top:12px; padding:10px; background:#fef3c7; border:1px solid #fde68a; border-radius:8px;">
+                    <label style="display:block; font-size:0.75rem; font-weight:700; color:#92400e; margin-bottom:4px;">
+                        ALTO DE LA(S) BASCULANTE(S) (cm)
+                    </label>
+                    <input type="number" id="alu-basc-alto" placeholder="40" inputmode="numeric"
+                        style="width:100%; padding:12px; font-size:1.1rem; font-weight:700; text-align:center; border:2px solid #f59e0b; border-radius:8px; background:white; color:#92400e; box-sizing:border-box;">
+                    <div style="font-size:0.72rem; color:#92400e; margin-top:6px; line-height:1.4;">
+                        💡 El resto del alto será cuerpo fijo. Típico: 30 a 50 cm para una basculante de baño/dormitorio.
+                    </div>
+                </div>
+                <!-- Campo extra para configuraciones OX / OXO (ancho de la hoja batiente lateral) -->
+                <div id="alu-hojabat-container" style="display:none; margin-top:12px; padding:10px; background:#fef3c7; border:1px solid #fde68a; border-radius:8px;">
+                    <label style="display:block; font-size:0.75rem; font-weight:700; color:#92400e; margin-bottom:4px;">
+                        ANCHO DE LA(S) HOJA(S) BATIENTE(S) (cm)
+                    </label>
+                    <input type="number" id="alu-hojabat-ancho" placeholder="60" inputmode="numeric"
+                        style="width:100%; padding:12px; font-size:1.1rem; font-weight:700; text-align:center; border:2px solid #f59e0b; border-radius:8px; background:white; color:#92400e; box-sizing:border-box;">
+                    <div style="font-size:0.72rem; color:#92400e; margin-top:6px; line-height:1.4;">
+                        💡 Ancho de cada hoja batiente. Típico: 50-70 cm. El resto del ancho será el cuerpo fijo. <br>
+                        <b>OX</b>: 1 hoja a un lado + fijo lateral. <b>OXO</b>: hojas a ambos lados + fijo central.
+                    </div>
+                </div>
             </div>
 
             <!-- 4. VIDRIO -->
@@ -1254,7 +1277,7 @@
 
     <script>
 
-        const APP_VERSION = "3.3"; // v3.3: Vidrios 3+3 y Frozen 4mm/5mm añadidos al módulo aluminio.
+        const APP_VERSION = "3.5"; // v3.5: VC3831 con OX (batiente+fijo lateral) y OXO (2 batientes+fijo central).
 
         function checkVersion() {
             const savedVersion = localStorage.getItem('app_version');
@@ -2035,14 +2058,27 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
                 let qtyBadge = item.cantidad > 1 ? `<span style="background:#e3f2fd; color:#1565c0; padding:2px 6px; border-radius:4px; font-size:0.8em; margin-left:5px;">x${item.cantidad}</span>` : '';
                 let obsHtml = item.observaciones ? `<div style="color:#d32f2f; font-style:italic; margin-top:4px;">📝 ${item.observaciones}</div>` : '';
                 let ledHtml = (item.raw && item.raw.led) ? `<span style="color:#fbc02d; font-weight:bold; margin-left:5px;">+ LED ✨</span>` : '';
+                let aluBadge = item.esAluminio ? `<span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-size:0.7em; margin-left:5px; font-weight:700;">🪟 ALU</span>` : '';
+
+                // Línea de detalles distinta según el tipo de producto
+                let detallesLinea;
+                if (item.esAluminio) {
+                    const colorLbl = (item.raw && item.raw.color)
+                        ? (ALU_COLOR_LABELS[item.raw.color] || item.raw.color)
+                        : 'Natural';
+                    detallesLinea = `📏 ${item.medidas} cm | 💎 ${item.vidrio} | 🎨 Aluminio ${colorLbl}`;
+                } else {
+                    const colorTxt = item.color || '';
+                    detallesLinea = `📏 ${item.medidas} cm | 💎 ${item.vidrio} ${item.sandblasting ? '+ Sand' : ''} ${ledHtml} | 🎨 ${colorTxt}`;
+                }
 
                 row.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                        <div class="quote-prod-name">${index + 1}. ${item.producto} ${qtyBadge}</div>
+                        <div class="quote-prod-name">${index + 1}. ${item.producto} ${qtyBadge} ${aluBadge}</div>
                         <div style="font-weight:bold; color:var(--accent-blue); font-size:1.1rem;">${fmtMoney(item.precio)}</div>
                     </div>
                     <div class="quote-details">
-                        📏 ${item.medidas} cm | 💎 ${item.vidrio} ${item.sandblasting ? '+ Sand' : ''} ${ledHtml} | 🎨 ${item.color}
+                        ${detallesLinea}
                         ${obsHtml}
                     </div>
                     <div style="text-align:right; margin-top:8px; padding-top:8px; border-top:1px dashed #eee;">
@@ -2077,7 +2113,52 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
             const item = quoteItems[index];
             if (!item || !item.raw) return;
 
-            // Restaurar valores en el formulario
+            // Si es un item de ALUMINIO, abrir el módulo de aluminio con datos cargados
+            if (item.esAluminio) {
+                // Setear el estado del módulo aluminio según el item
+                aluState.sistema     = item.raw.sistema || '5020';
+                aluState.config      = item.raw.config  || '2N';
+                aluState.vidrio      = item.raw.espesor || '6mm';
+                aluState.color       = item.raw.color   || 'natural';
+                aluState.instalacion = item.raw.instalacion || 'basica';
+
+                // Borrar el item del carrito antes de editar (se vuelve a agregar después)
+                borrarItem(index);
+
+                // Abrir vista aluminio
+                abrirVistaAluminio();
+
+                // Esperar el render y poblar valores
+                setTimeout(() => {
+                    document.getElementById('alu-ancho').value = item.raw.ancho;
+                    document.getElementById('alu-alto').value  = item.raw.alto;
+                    if (item.raw.extras) {
+                        document.getElementById('alu-extra-cf').checked        = !!item.raw.extras.cf;
+                        document.getElementById('alu-extra-alfajia').checked   = !!item.raw.extras.alfajia;
+                        document.getElementById('alu-extra-mosquitero').checked= !!item.raw.extras.mosquitero;
+                        if (item.raw.extras.cf) {
+                            document.getElementById('alu-cf-medidas').style.display = 'block';
+                            document.getElementById('alu-cf-ancho').value = item.raw.extras.cfAncho || '';
+                            document.getElementById('alu-cf-alto').value  = item.raw.extras.cfAlto  || '';
+                        }
+                        if (item.raw.extras.basculanteAlto) {
+                            const elBasc = document.getElementById('alu-basc-alto');
+                            if (elBasc) elBasc.value = item.raw.extras.basculanteAlto;
+                        }
+                        if (item.raw.extras.hojaBatAncho) {
+                            const elHoja = document.getElementById('alu-hojabat-ancho');
+                            if (elHoja) elHoja.value = item.raw.extras.hojaBatAncho;
+                        }
+                    }
+                    if (item.raw.transporte) document.getElementById('alu-transporte').value = item.raw.transporte;
+                    if (item.raw.descuento)  document.getElementById('alu-descuento').value  = item.raw.descuento;
+                    if (item.cantidad)       document.getElementById('alu-cantidad').value   = item.cantidad;
+                    alu_calcular();
+                }, 100);
+                return;
+            }
+
+            // Si es item del cotizador principal (divisiones, espejos)
             document.getElementById('producto').value = item.raw.producto;
             document.getElementById('ancho').value = item.raw.ancho;
             if (item.raw.ancho2) document.getElementById('ancho2').value = item.raw.ancho2;
@@ -2128,12 +2209,22 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
                 texto += `\n`;
                 texto += `   📏 ${item.medidas} cm\n`;
 
-                let detallesVidrio = item.vidrio;
-                if (item.sandblasting) detallesVidrio += " + Sand";
-                if (item.raw && item.raw.led) detallesVidrio += " + LED ✨";
-                texto += `   💎 ${detallesVidrio}\n`;
-                if (!item.producto.includes("Espejo")) {
-                    texto += `   🎨 ${item.color.toUpperCase()}\n`;
+                if (item.esAluminio) {
+                    // Items de aluminio: formato propio
+                    texto += `   💎 ${item.vidrio}\n`;
+                    if (item.raw && item.raw.color) {
+                        const colorLbl = ALU_COLOR_LABELS[item.raw.color] || item.raw.color;
+                        texto += `   🎨 Aluminio ${colorLbl}\n`;
+                    }
+                } else {
+                    // Items de divisiones / espejos
+                    let detallesVidrio = item.vidrio;
+                    if (item.sandblasting) detallesVidrio += " + Sand";
+                    if (item.raw && item.raw.led) detallesVidrio += " + LED ✨";
+                    texto += `   💎 ${detallesVidrio}\n`;
+                    if (!item.producto.includes("Espejo") && item.color) {
+                        texto += `   🎨 ${item.color.toUpperCase()}\n`;
+                    }
                 }
                 if (item.observaciones) {
                     texto += `   📝 Nota: ${item.observaciones}\n`;
@@ -2315,7 +2406,7 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
             },
             // Configuraciones de diseño por sistema
             configsValidas: {
-                '3831': ['1H','2H','CF'],
+                '3831': ['OX','OXO','1B_CF','2B_CF','1H','2H','CF'],
                 '5020': ['2N','3N','4N','CF'],
                 '744':  ['2N','3N','4N','CF'],
                 '8025': ['2N','3N','4N']
@@ -2331,12 +2422,16 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
             'crudo':0,'natural':1,'champana':2,'anolock':3,'demas':4,'maderato':5,'blanco_negro':6
         };
         const ALU_CONFIG_LABELS = {
-            '1H':{label:'1 Hoja',sub:'Abatible simple'},
-            '2H':{label:'2 Hojas',sub:'Abatible doble'},
-            '2N':{label:'2 Naves',sub:'XO (1 fija, 1 móvil)'},
-            '3N':{label:'3 Naves',sub:'OXO (3 paños)'},
-            '4N':{label:'4 Naves',sub:'OOXX (4 paños)'},
-            'CF':{label:'Cuerpo Fijo',sub:'Sin movimiento'}
+            'OX':   {label:'OX - Batiente + Fijo',sub:'1 hoja lateral + fijo lateral'},
+            'OXO':  {label:'OXO - 2 Batientes + Fijo',sub:'Hojas a los lados, fijo central'},
+            '1B_CF':{label:'1 Basculante + CF',sub:'Proyectante abajo, fijo arriba'},
+            '2B_CF':{label:'2 Basculantes + CF',sub:'2 proyectantes abajo, fijo arriba'},
+            '1H':   {label:'1 Hoja Simple',sub:'Solo abatible, sin fijo'},
+            '2H':   {label:'2 Hojas Simples',sub:'Abatible doble, sin fijo'},
+            '2N':   {label:'2 Naves',sub:'XO (1 fija, 1 móvil)'},
+            '3N':   {label:'3 Naves',sub:'OXO (3 paños)'},
+            '4N':   {label:'4 Naves',sub:'OOXX (4 paños)'},
+            'CF':   {label:'Solo Cuerpo Fijo',sub:'Sin hojas móviles'}
         };
 
         // ---------- ESTADO RUNTIME ----------
@@ -2399,6 +2494,7 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
             document.querySelector('header').style.display = 'none';
             document.getElementById('alu-view').classList.add('active');
             alu_renderUI();
+            alu_actualizarVisibilidadBasc();
             window.scrollTo({top:0, behavior:'instant'});
         }
         function cerrarVistaAluminio() {
@@ -2488,11 +2584,24 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
         }
 
         // Setters (chips clickeables)
-        function alu_setSistema(s) { aluState.sistema = s; alu_renderUI(); }
-        function alu_setConfig(c)  { aluState.config = c;  alu_renderUI(); }
+        function alu_setSistema(s) { aluState.sistema = s; alu_renderUI(); alu_actualizarCamposExtra(); }
+        function alu_setConfig(c)  { aluState.config = c;  alu_renderUI(); alu_actualizarCamposExtra(); }
         function alu_setVidrio(v)  { aluState.vidrio = v;  alu_renderUI(); }
         function alu_setColor(c)   { aluState.color = c;   alu_renderUI(); }
         function alu_setInstalacion(i) { aluState.instalacion = i; alu_renderUI(); }
+
+        // Mostrar/ocultar campos adicionales según la configuración elegida
+        function alu_actualizarCamposExtra() {
+            const c = aluState.config;
+            const necesitaBasc   = (c === '1B_CF' || c === '2B_CF');
+            const necesitaHojaBat = (c === 'OX' || c === 'OXO');
+            const contBasc = document.getElementById('alu-basc-container');
+            const contHoja = document.getElementById('alu-hojabat-container');
+            if (contBasc) contBasc.style.display = necesitaBasc ? 'block' : 'none';
+            if (contHoja) contHoja.style.display = necesitaHojaBat ? 'block' : 'none';
+        }
+        // Alias por compatibilidad
+        function alu_actualizarVisibilidadBasc() { alu_actualizarCamposExtra(); }
 
         function alu_toggleDespiece(btn) {
             const d = document.getElementById('alu-despiece');
@@ -2540,15 +2649,41 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
             const mermaVid  = 1 + (F.mermaVidrio/100);
 
             // ---- 2. DETERMINAR NAVES / HOJAS / MÓVILES ----
-            let numNaves, numMoviles, numHojas;
+            let numNaves, numMoviles, numHojas, numBasculantes;
+            numBasculantes = 0;
             switch(cfg) {
                 case '1H': numNaves=1; numMoviles=1; numHojas=1; break;
                 case '2H': numNaves=2; numMoviles=2; numHojas=2; break;
+                case '1B_CF': numNaves=1; numMoviles=1; numHojas=1; numBasculantes=1; break;
+                case '2B_CF': numNaves=2; numMoviles=2; numHojas=2; numBasculantes=2; break;
+                case 'OX':  numNaves=2; numMoviles=1; numHojas=1; break;  // 1 batiente + 1 fijo lateral
+                case 'OXO': numNaves=3; numMoviles=2; numHojas=2; break;  // 2 batientes + 1 fijo central
                 case '2N': numNaves=2; numMoviles=1; numHojas=0; break;
                 case '3N': numNaves=3; numMoviles=2; numHojas=0; break;
                 case '4N': numNaves=4; numMoviles=2; numHojas=0; break;
                 case 'CF': numNaves=0; numMoviles=0; numHojas=0; break;
                 default:   numNaves=2; numMoviles=1; numHojas=0;
+            }
+
+            // Alto de la(s) basculante(s) — solo aplica en 1B_CF y 2B_CF
+            let basculanteAlto = 0;
+            if (numBasculantes > 0) {
+                basculanteAlto = parseFloat(document.getElementById('alu-basc-alto').value) || 40;
+                if (basculanteAlto >= h - 10) {
+                    alert(`El alto de la basculante (${basculanteAlto}cm) deja muy poco espacio para el cuerpo fijo. Revisa.`);
+                    basculanteAlto = h - 30; // forzar mínimo 30cm para CF
+                }
+            }
+
+            // Ancho de la(s) hoja(s) batiente lateral — solo aplica en OX y OXO
+            let hojaBatAncho = 0;
+            if (cfg === 'OX' || cfg === 'OXO') {
+                hojaBatAncho = parseFloat(document.getElementById('alu-hojabat-ancho').value) || 60;
+                const anchoTotal = (cfg === 'OXO') ? hojaBatAncho * 2 : hojaBatAncho;
+                if (anchoTotal >= w - 30) {
+                    alert(`La(s) hoja(s) batiente(s) (${hojaBatAncho}cm) dejan muy poco espacio para el cuerpo fijo. Ajusta.`);
+                    hojaBatAncho = (cfg === 'OXO') ? (w-40)/2 : (w-40);
+                }
             }
 
             // ---- 3. ACUMULADOR DE CORTES ----
@@ -2566,15 +2701,91 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
             const vidrios = [];
 
             if (sys === '3831') {
-                // Marco perimetral
+                // Marco perimetral siempre presente
                 reg('cabezalSillar', sysData.perfiles.cabezalSillar, w, 2);
                 reg('jamba',         sysData.perfiles.jamba,         h, 2);
+
                 if (cfg === 'CF') {
+                    // Solo cuerpo fijo
                     const wVid = w - 5, hVid = h - 5;
                     reg('pisavidrio', sysData.perfiles.pisavidrio, wVid, 2);
                     reg('pisavidrio', sysData.perfiles.pisavidrio, hVid, 2);
                     vidrios.push({ w_cm: wVid-0.5, h_cm: hVid-0.5, label:'Vidrio cuerpo fijo' });
+
+                } else if (cfg === 'OX') {
+                    // === BATIENTE LATERAL + CUERPO FIJO LATERAL ===
+                    const wHoja = hojaBatAncho;            // ancho de la hoja batiente
+                    const hHoja = h - 5;                   // alto interior
+                    const wFijo = w - wHoja - 5;           // ancho del fijo lateral
+
+                    // Divisor vertical entre hoja y fijo
+                    reg('divisor', sysData.perfiles.divisor, h, 1);
+
+                    // Hoja batiente: marco Z (2 verticales + 2 horizontales)
+                    reg('marcoHoja',  sysData.perfiles.marcoHoja,  hHoja, 2);
+                    reg('marcoHoja',  sysData.perfiles.marcoHoja,  wHoja - 3, 2);
+                    reg('pisavidrio', sysData.perfiles.pisavidrio, wHoja - 6, 2);
+                    reg('pisavidrio', sysData.perfiles.pisavidrio, hHoja - 6, 2);
+                    vidrios.push({ w_cm: wHoja - 6, h_cm: hHoja - 6, label:'Hoja batiente (O)' });
+
+                    // Cuerpo fijo lateral: pisavidrio interior
+                    reg('pisavidrio', sysData.perfiles.pisavidrio, wFijo, 2);
+                    reg('pisavidrio', sysData.perfiles.pisavidrio, hHoja, 2);
+                    vidrios.push({ w_cm: wFijo - 0.5, h_cm: hHoja - 0.5, label:'Cuerpo fijo (X)' });
+
+                } else if (cfg === 'OXO') {
+                    // === 2 BATIENTES LATERALES + CUERPO FIJO CENTRAL ===
+                    const wHoja = hojaBatAncho;
+                    const hHoja = h - 5;
+                    const wFijo = w - (2 * wHoja) - 8;     // descuenta 2 hojas + 2 divisores
+
+                    // 2 divisores verticales
+                    reg('divisor', sysData.perfiles.divisor, h, 2);
+
+                    // 2 hojas batientes (idénticas)
+                    reg('marcoHoja',  sysData.perfiles.marcoHoja,  hHoja, 4);     // 2 verticales × 2 hojas
+                    reg('marcoHoja',  sysData.perfiles.marcoHoja,  wHoja - 3, 4); // 2 horizontales × 2 hojas
+                    reg('pisavidrio', sysData.perfiles.pisavidrio, wHoja - 6, 4);
+                    reg('pisavidrio', sysData.perfiles.pisavidrio, hHoja - 6, 4);
+                    vidrios.push({ w_cm: wHoja - 6, h_cm: hHoja - 6, label:'Hoja batiente izq (O)' });
+                    vidrios.push({ w_cm: wHoja - 6, h_cm: hHoja - 6, label:'Hoja batiente der (O)' });
+
+                    // Cuerpo fijo central: pisavidrio interior
+                    reg('pisavidrio', sysData.perfiles.pisavidrio, wFijo, 2);
+                    reg('pisavidrio', sysData.perfiles.pisavidrio, hHoja, 2);
+                    vidrios.push({ w_cm: wFijo - 0.5, h_cm: hHoja - 0.5, label:'Cuerpo fijo central (X)' });
+
+                } else if (numBasculantes > 0) {
+                    // === BASCULANTE(S) + CUERPO FIJO ARRIBA ===
+                    const hBasc = basculanteAlto;        // alto de la basculante
+                    const hCF   = h - hBasc;             // alto del cuerpo fijo arriba
+
+                    // Divisor horizontal entre CF arriba y basculante abajo
+                    reg('divisor', sysData.perfiles.divisor, w, 1);
+
+                    // --- BASCULANTE(S) ABAJO ---
+                    const wHoja = (numBasculantes === 2) ? (w-8)/2 : (w-5);
+                    const hHoja = hBasc - 3;
+                    reg('marcoHoja',  sysData.perfiles.marcoHoja,  hHoja, 2 * numBasculantes);
+                    reg('marcoHoja',  sysData.perfiles.marcoHoja,  wHoja, 2 * numBasculantes);
+                    reg('pisavidrio', sysData.perfiles.pisavidrio, wHoja-3, 2 * numBasculantes);
+                    reg('pisavidrio', sysData.perfiles.pisavidrio, hHoja-3, 2 * numBasculantes);
+                    if (numBasculantes === 2) {
+                        reg('divisor', sysData.perfiles.divisor, hBasc, 1);
+                    }
+                    for (let i = 0; i < numBasculantes; i++) {
+                        vidrios.push({ w_cm: wHoja-3, h_cm: hHoja-3, label:`Basculante ${i+1}` });
+                    }
+
+                    // --- CUERPO FIJO ARRIBA ---
+                    const wCFVid = w - 5;
+                    const hCFVid = hCF - 5;
+                    reg('pisavidrio', sysData.perfiles.pisavidrio, wCFVid, 2);
+                    reg('pisavidrio', sysData.perfiles.pisavidrio, hCFVid, 2);
+                    vidrios.push({ w_cm: wCFVid-0.5, h_cm: hCFVid-0.5, label:'Cuerpo fijo superior' });
+
                 } else {
+                    // 1H o 2H — hojas simples sin cuerpo fijo
                     const wHoja = (numHojas === 2) ? (w-8)/2 : (w-5);
                     const hHoja = h - 5;
                     reg('marcoHoja',  sysData.perfiles.marcoHoja,  hHoja, 2*numHojas);
@@ -2677,7 +2888,31 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
                     costo = cant * a.precio;
                     cantLabel = `x${cant}`;
                 } else if (a.porMetro) {
-                    cant = perimetroM * Math.max(1, numMoviles);
+                    // Felpa: perímetro real de cada hoja móvil
+                    let perimetroHojas = 0;
+                    if (numBasculantes > 0) {
+                        // Basculantes: ancho de la hoja × alto de la basculante
+                        const wH = (numBasculantes === 2) ? (w-8)/2 : (w-5);
+                        const hH = basculanteAlto - 3;
+                        perimetroHojas = (2 * (wH + hH) / 100) * numBasculantes;
+                    } else if (cfg === 'OX' || cfg === 'OXO') {
+                        // Hojas batientes laterales: ancho de hoja × alto interior
+                        const wH = hojaBatAncho - 6;
+                        const hH = h - 5 - 6;
+                        perimetroHojas = (2 * (wH + hH) / 100) * numHojas;
+                    } else if (numHojas > 0 && sys === '3831') {
+                        // Hojas abatibles simples (1H, 2H)
+                        const wH = (numHojas === 2) ? (w-8)/2 : (w-5);
+                        const hH = h - 5;
+                        perimetroHojas = (2 * (wH + hH) / 100) * numHojas;
+                    } else if (numMoviles > 0) {
+                        // Corredizas: perímetro de cada nave móvil
+                        const wN = (w-4)/numNaves;
+                        const hN = h - (sys==='8025' ? 6 : 4.5);
+                        perimetroHojas = (2 * (wN + hN) / 100) * numMoviles;
+                    }
+                    cant = perimetroHojas;
+                    if (cant <= 0) return;
                     costo = cant * a.precio;
                     cantLabel = `${cant.toFixed(1)} m`;
                 } else if (a.porAncho) {
@@ -2724,6 +2959,7 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
             // ---- 11. GUARDAR Y RENDERIZAR ----
             aluLastCalc = {
                 sys, cfg, vid, col, tipoInst, w, h, numNaves, numMoviles, numHojas,
+                numBasculantes, basculanteAlto, hojaBatAncho,
                 cortes, vidrios, detalleAcc,
                 totalAlu, totalVid, totalAcc, costoMO, costoInsumos, costoInst, transporte,
                 costoPrimo, utilidad, precioVenta, ivaMonto, precioFinal, margen,
@@ -2878,6 +3114,18 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
                     ancho: r.w, alto: r.h,
                     sistema: r.sys, config: r.cfg,
                     espesor: r.vid, color: r.col,
+                    instalacion: r.tipoInst,
+                    transporte: r.transporte || 0,
+                    descuento: r.descuento || 0,
+                    extras: {
+                        cf: r.incluirCF,
+                        cfAncho: r.cfAncho,
+                        cfAlto: r.cfAlto,
+                        alfajia: r.incluirAlfajia,
+                        mosquitero: r.incluirMosq,
+                        basculanteAlto: r.basculanteAlto || 0,
+                        hojaBatAncho: r.hojaBatAncho || 0
+                    },
                     desmonte:false, sandblasting:false, led:false
                 }
             };
