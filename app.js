@@ -24,7 +24,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
 }
 
 
-        const APP_VERSION = "5.0"; // v5.0: Inteligencia (restricciones, recomendaciones, upsells) + Generador visual
+        const APP_VERSION = "5.1"; // v5.1: Mejoras en la interfaz y optimizaciones de rendimiento
 
         function checkVersion() {
             const savedVersion = localStorage.getItem('app_version');
