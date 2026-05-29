@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cotizador-v7';
+const CACHE_NAME = 'cotizador-v7.1';
 
 // Archivos esenciales para que la app funcione offline.
 // Estrategia: network-first → siempre intenta internet primero,
