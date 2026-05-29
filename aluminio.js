@@ -881,7 +881,8 @@
             const utilidad = costoPrimo * (F.utilidad/100);
             const precioVenta = costoPrimo + utilidad - descuento;
             const ivaMonto = precioVenta * (F.iva/100);
-            const precioFinal = precioVenta + ivaMonto;
+            // Aumento general del 5% sobre el precio final (IVA incluido)
+            const precioFinal = (precioVenta + ivaMonto) * 1.05;
             const margen = (utilidad / (costoPrimo + utilidad)) * 100;
 
             // ---- 11. GUARDAR Y RENDERIZAR ----
@@ -916,6 +917,9 @@
             }
 
             alu_renderResult(aluLastCalc);
+
+            // IQ v5.0: análisis inteligente post-cálculo (no rompe nada si iq.js no carga)
+            if (typeof iq_analizarAluminio === 'function') iq_analizarAluminio();
         }
 
         // =================================================================
@@ -1037,6 +1041,11 @@
             texto += `\n✅ *INCLUYE:* Perfilería aluminio VIALCOR, vidrio, accesorios, herrajes, transporte e instalación. Garantía escrita 18 meses.\n\n`;
             texto += `💰 *Precio total c/IVA:* ${alu_fmt(r.precioFinal)}\n`;
             texto += `----------------------------`;
+
+            // IQ v5.0: añadir las sugerencias opcionales que el vendedor haya marcado
+            if (typeof iq_getSugerenciasWAText === 'function') {
+                texto += iq_getSugerenciasWAText('alu');
+            }
 
             try { navigator.clipboard.writeText(texto); } catch(e) {}
             window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');

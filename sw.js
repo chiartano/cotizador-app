@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cotizador-v5.1';
+const CACHE_NAME = 'cotizador-v6';
 
 // Archivos esenciales para que la app funcione offline.
 // Estrategia: network-first → siempre intenta internet primero,
@@ -13,6 +13,8 @@ const urlsToCache = [
   './aluminio.js',
   './comparador.js',
   './dashboard.js',
+  './iq.js',
+  './visual.js',
   './icon.png',
   './icono.png'
 ];
