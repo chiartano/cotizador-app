@@ -1345,14 +1345,51 @@
 /* ----- PLANTILLAS RÁPIDAS (al inicio de cada vista) ----- */
 .iq-plantillas-box {
     margin: 12px 0 18px 0;
-    padding: 12px 14px;
     background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
     border: 1px solid #f59e0b;
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+    overflow: hidden;
+}
+/* Header clicable de plantillas */
+.iq-plt-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+.iq-plt-header:hover { background: rgba(0,0,0,0.04); }
+.iq-plt-header-label {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #92400e;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    flex: 1;
+}
+.iq-plt-header-count {
+    font-size: 0.72rem;
+    background: #f59e0b;
+    color: white;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 10px;
+}
+.iq-plt-header-arrow {
+    font-size: 0.75rem;
+    color: #92400e;
+    opacity: 0.7;
+}
+/* Cuerpo desplegable */
+.iq-plt-body {
+    padding: 4px 14px 12px;
+    animation: fadeIn 0.2s;
 }
 .iq-plt-title {
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     font-weight: 800;
     color: #92400e;
     text-transform: uppercase;
@@ -1467,6 +1504,32 @@
 }
 .iq-btn-apply:hover, .iq-btn-apply:active { background: #15803d; }
 
+/* Botón ✕ para cerrar franjas de aviso individualmente */
+.iq-btn-cerrar-strip {
+    flex-shrink: 0;
+    background: rgba(0,0,0,0.12);
+    border: none;
+    color: inherit;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.7;
+    transition: opacity 0.15s, background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+}
+.iq-btn-cerrar-strip:hover, .iq-btn-cerrar-strip:active {
+    opacity: 1;
+    background: rgba(0,0,0,0.22);
+}
+
 /* ----- SUGERENCIAS OPCIONALES PARA WHATSAPP -----
  * Reemplaza al antiguo panel "Vende más sin esfuerzo".
  * Diseño discreto: checkboxes que el vendedor decide marcar para
@@ -1486,12 +1549,17 @@
     font-size: 0.78rem;
     font-weight: 700;
     color: #334155;
-    margin-bottom: 8px;
+    margin-bottom: 0;
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     gap: 8px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    padding: 8px 0 6px;
+    user-select: none;
+}
+.iq-wa-sug-body-collapsible {
+    padding-top: 6px;
 }
 .iq-wa-sug-hint {
     font-size: 0.7rem;
