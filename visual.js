@@ -39,9 +39,7 @@ function viz_generarParaPrincipal() {
     const r = lastCalculation;
     const raw = r.raw;
     const cliente = (typeof clienteActual !== 'undefined') ? clienteActual : { nombre:'', telefono:'', obra:'' };
-    const cfg = (typeof currentConfig !== 'undefined') ? currentConfig.globales : {};
-    const precioIva = r.precio * (1 + (cfg.iva || 0.19));
-
+    // r.precio ya incluye IVA (es el precioFinal del cálculo). NO volver a aplicar IVA.
     const datos = {
         folio: (typeof folioActual === 'function') ? folioActual() : '',
         cliente: cliente,
@@ -51,8 +49,8 @@ function viz_generarParaPrincipal() {
         color: raw.color_acc,
         sandblasting: raw.sandblasting,
         led: raw.led,
-        precioNeto: r.precio,
-        precioFinal: precioIva,
+        precioNeto: r.precio / (1 + ((typeof currentConfig !== 'undefined' ? currentConfig.globales.iva : 0.19) || 0.19)),
+        precioFinal: r.precio,
         observaciones: raw.observaciones || '',
         modo: 'principal'
     };
