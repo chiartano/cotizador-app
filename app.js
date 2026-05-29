@@ -114,18 +114,25 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
         // ============================================================
         // FOLIO / NUMERACIÓN PROFESIONAL DE COTIZACIONES
         // ============================================================
-        // Formato: COT-AAAA-NNNN  (ej: COT-2026-0042)
+        // Formato: COT-AAAA-NNNN  (ej: COT-2026-0101)
         // - Consecutivo de 4 dígitos que se reinicia cada año.
-        // - El número se RESERVA al ver el carrito (solo para mostrar) y solo
-        //   se CONSUME (avanza el contador) al pulsar "ENVIAR AL CLIENTE".
-        //   Así no se gastan números en cotizaciones que nunca se envían.
+        // - Arranca en 101 para que el primer número se vea profesional.
+        // - El número se RESERVA al ver el carrito o el resultado (solo para
+        //   mostrar) y se CONSUME (avanza el contador) en CUALQUIER envío:
+        //   tanto "ENVIAR AL CLIENTE" (carrito) como "WHATSAPP" individual.
         const FOLIO_PREFIX = 'COT';
-        const FOLIO_COUNTER_KEY = 'cotizador_folio_counter_v1'; // { "2026": 42, ... }
-        const FOLIO_ACTUAL_KEY  = 'cotizador_folio_actual_v1';  // folio reservado del carrito vigente
+        const FOLIO_BASE = 100;  // el primer folio emitido será FOLIO_BASE + 1 = 101
+        const FOLIO_COUNTER_KEY = 'cotizador_folio_counter_v2'; // { "2026": 142, ... }
+        const FOLIO_ACTUAL_KEY  = 'cotizador_folio_actual_v2';  // folio reservado del carrito vigente
 
         function _folioCounters() {
             try { return JSON.parse(localStorage.getItem(FOLIO_COUNTER_KEY)) || {}; }
             catch(e) { return {}; }
+        }
+
+        // Último número emitido en el año (o la base si aún no hay ninguno).
+        function _folioCount(counters, anio) {
+            return (counters && counters[anio] != null) ? counters[anio] : FOLIO_BASE;
         }
 
         function _folioFormat(anio, n) {
@@ -136,7 +143,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
         function folioPreview() {
             const anio = new Date().getFullYear();
             const counters = _folioCounters();
-            const siguiente = (counters[anio] || 0) + 1;
+            const siguiente = _folioCount(counters, anio) + 1;
             return _folioFormat(anio, siguiente);
         }
 
@@ -161,7 +168,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             const folio = folioActual();
             const anio = new Date().getFullYear();
             const counters = _folioCounters();
-            counters[anio] = (counters[anio] || 0) + 1;
+            counters[anio] = _folioCount(counters, anio) + 1;
             try {
                 localStorage.setItem(FOLIO_COUNTER_KEY, JSON.stringify(counters));
                 localStorage.removeItem(FOLIO_ACTUAL_KEY);
@@ -738,6 +745,12 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             // Margen Real
             const margen = (ganancia / precioSinIva) * 100;
 
+            // PRECIO AL CLIENTE: el valor calculado en `precioSinIva` ya es el
+            // precio final CON IVA incluido (así está estructurada la lista de
+            // costos del negocio). NO se le vuelve a sumar IVA. Es el número que
+            // se muestra, se guarda en el carrito y se envía por WhatsApp.
+            const precioCliente = precioSinIva;
+
             const medidasStr = esLEspecial ? 
                 `L(${Math.round(ancho * 100)}+${Math.round(ancho2 * 100)})x${Math.round(alto * 100)}` : 
                 `${Math.round(ancho * 100)}x${Math.round(alto * 100)}`;
@@ -749,7 +762,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 vidrio: esEspejo ? 'Espejo' : espesor,
                 sandblasting: tieneSandblasting,
                 color: colorAcc,
-                precio: precioFinal, // Precio final con IVA incluido (el que se cobra al cliente)
+                precio: precioCliente, // Precio final con IVA incluido (el que se cobra al cliente)
                 observaciones: observaciones,
                 // Datos crudos para edición
                 raw: {
@@ -775,7 +788,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             guardarHistorial({
                 producto: prodNombre,
                 medidas: medidasStr,
-                precio: precioFinal,
+                precio: precioCliente,
                 fecha: new Date()
             });
 
@@ -784,7 +797,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 dash_registrar({
                     producto: prodNombre,
                     medidas: medidasStr,
-                    precio: precioFinal,
+                    precio: precioCliente,
                     fecha: new Date(),
                     origen: 'principal'
                 });
@@ -805,7 +818,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 espesorLabel: esEspejo ? 'Espejo' : espesor
             };
 
-            mostrarResultados(precioFinal, precioSinIva, detalles, margen, mercado);
+            mostrarResultados(precioCliente, precioCliente, detalles, margen, mercado);
 
             // IQ v5.0: análisis inteligente post-cálculo (no rompe nada si iq.js no carga)
             if (typeof iq_analizarPrincipal === 'function') iq_analizarPrincipal();
@@ -908,8 +921,11 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             const color = document.getElementById('color_acc').value;
             const tieneSandblasting = document.getElementById('check-sandblasting').checked;
             const tieneLed = document.getElementById('check-espejo-led').checked;
-            const neto = document.getElementById('res-precio-neto').innerText;
             const total = document.getElementById('res-precio-final').innerText.replace('Total con IVA: ', '');
+
+            // Folio: el envío individual también consume número (igual que el carrito).
+            const folio = folioConsumir();
+            const fechaEnvio = new Date().toLocaleDateString('es-CO', { day:'2-digit', month:'2-digit', year:'numeric' });
 
             // Lógica de Garantía (12 meses para clásica, 18 para el resto)
             const esClasica = prod.toLowerCase().includes('clásica') || prod.toLowerCase().includes('clasica');
@@ -935,6 +951,9 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
 \uD83D\uDD39 *Medidas:* ${medidasTxt}
 \uD83D\uDD39 *Vidrio:* ${txtVidrio}`;
 
+            // Insertar el N\u00B0 de folio justo despu\u00E9s del t\u00EDtulo de la cotizaci\u00F3n.
+            texto = texto.replace('\n', `\n*N\u00B0 ${folio}*  \u00B7  ${fechaEnvio}\n`);
+
             if (!prod.includes("Espejo")) {
                 texto += `\n\uD83D\uDD39 *Acabado:* ${color.toUpperCase()}`;
             }
@@ -951,8 +970,12 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
             }
 
             // Copiar al portapapeles y abrir WhatsApp
-            navigator.clipboard.writeText(texto).then(() => toast('Texto copiado al portapapeles', 'info', 2000)).catch(err => console.error('Error al copiar', err));
+            navigator.clipboard.writeText(texto).then(() => toast(`Cotización ${folio} enviada`, 'success', 2500)).catch(err => console.error('Error al copiar', err));
             window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+
+            // El folio se consumió: refrescar el encabezado del carrito si está visible.
+            const folioEl = document.getElementById('quote-folio');
+            if (folioEl) folioEl.innerText = '#' + folioActual();
         }
 
         function fmtMoney(num) {

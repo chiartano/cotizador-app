@@ -150,7 +150,7 @@
                 <div id="iq-strip-main" class="iq-strip-container"></div>
 
                 <div class="price-tag">
-                    <div class="price-label">Precio Neto (Sin IVA)</div>
+                    <div class="price-label">Precio Neto</div>
                     <div class="price-value" id="res-precio-neto">$0</div>
                     <div id="res-comparacion" style="font-size: 0.95rem; margin-bottom: 8px; display:none;"></div>
                     <div class="price-sub" id="res-precio-final">Total con IVA: $0</div>
@@ -731,7 +731,7 @@
     <script src="dashboard.js"></script>
     <script src="iq.js"></script>
     <script src="visual.js"></script>
-        <script>
+    <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js').then(reg => {
