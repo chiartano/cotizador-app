@@ -541,9 +541,13 @@ function iq_analizarAluminio() {
 
 // =================================================================
 // 6. RENDER DE LA BANDA INTELIGENTE (warnings + recomendaciones)
-// Los "upsells" salen de aquí: ahora se renderizan aparte como
-// checkboxes opcionales justo antes del botón de WhatsApp.
+// Cada aviso tiene un ✕ para cerrarlo individualmente.
 // =================================================================
+function _iq_cerrarStrip(el) {
+    const strip = el.closest('.iq-strip');
+    if (strip) strip.style.display = 'none';
+}
+
 function _iq_pintarStrip(modo, ev) {
     const cont = document.getElementById(modo === 'main' ? 'iq-strip-main' : 'iq-strip-alu');
     if (!cont) return;
@@ -558,45 +562,49 @@ function _iq_pintarStrip(modo, ev) {
     if (totalCosas === 0) {
         cont.innerHTML = `<div class="iq-strip iq-strip-ok">
             <span class="iq-icon">✅</span>
-            <span class="iq-msg">Configuración técnicamente correcta. Vamos bien.</span>
+            <span class="iq-msg">Configuración técnicamente correcta.</span>
+            <button class="iq-btn-cerrar-strip" onclick="_iq_cerrarStrip(this)" title="Cerrar">✕</button>
         </div>`;
-        // También pintamos las sugerencias de WhatsApp (pueden existir aunque la config sea correcta)
         _iq_pintarSugerenciasWA(modo, ev.upsells || []);
         return;
     }
 
     let html = '';
 
-    // 1. ERRORES (rojo - lo más urgente)
+    // 1. ERRORES (rojo)
     errores.forEach(e => {
         html += `<div class="iq-strip iq-strip-error">
             <span class="iq-icon">🚫</span>
             <span class="iq-msg">${e.txt}</span>
+            <button class="iq-btn-cerrar-strip" onclick="_iq_cerrarStrip(this)" title="Cerrar">✕</button>
         </div>`;
     });
 
-    // 2. AVISOS (amarillo)
+    // 2. AVISOS (amarillo, cerrables)
     avisos.forEach(w => {
         html += `<div class="iq-strip iq-strip-warn">
             <span class="iq-icon">⚠️</span>
             <span class="iq-msg">${w.txt}</span>
+            <button class="iq-btn-cerrar-strip" onclick="_iq_cerrarStrip(this)" title="Cerrar">✕</button>
         </div>`;
     });
 
-    // 3. INFO (azul claro)
+    // 3. INFO (azul claro, cerrables)
     infos.forEach(i => {
         html += `<div class="iq-strip iq-strip-info">
             <span class="iq-icon">ℹ️</span>
             <span class="iq-msg">${i.txt}</span>
+            <button class="iq-btn-cerrar-strip" onclick="_iq_cerrarStrip(this)" title="Cerrar">✕</button>
         </div>`;
     });
 
-    // 4. RECOMENDACIONES (verde con botón)
+    // 4. RECOMENDACIONES (verde con botón aplicar y X)
     ev.recommends.forEach(r => {
         html += `<div class="iq-strip iq-strip-reco">
             <span class="iq-icon">💡</span>
             <span class="iq-msg">${r.txt}</span>
             <button class="iq-btn-apply" onclick='iq_aplicar(${JSON.stringify(r.apply)})'>✓ Aplicar</button>
+            <button class="iq-btn-cerrar-strip" onclick="_iq_cerrarStrip(this)" title="Ignorar">✕</button>
         </div>`;
     });
 
@@ -611,6 +619,20 @@ function _iq_pintarStrip(modo, ev) {
 // Renderiza checkboxes discretos. NO modifica el cálculo: solo
 // agrega texto sutil al mensaje si el vendedor las marca.
 // -----------------------------------------------------------------
+// Estado apertura sugerencias WA
+const _iq_wa_open = {};
+
+function iq_toggleWA(modo) {
+    _iq_wa_open[modo] = !_iq_wa_open[modo];
+    const contId = modo === 'main' ? 'iq-upsells-wa-main' : 'iq-upsells-wa-alu';
+    const cont = document.getElementById(contId);
+    if (!cont) return;
+    const body = cont.querySelector('.iq-wa-sug-body-collapsible');
+    const arrow = cont.querySelector('.iq-wa-toggle-arrow');
+    if (body) body.style.display = _iq_wa_open[modo] ? 'block' : 'none';
+    if (arrow) arrow.textContent = _iq_wa_open[modo] ? '▲' : '▼';
+}
+
 function _iq_pintarSugerenciasWA(modo, upsells) {
     const cont = document.getElementById(modo === 'main' ? 'iq-upsells-wa-main' : 'iq-upsells-wa-alu');
     if (!cont) return;
@@ -621,11 +643,19 @@ function _iq_pintarSugerenciasWA(modo, upsells) {
         return;
     }
 
+    // Preservar estado de apertura al re-renderizar
+    const abierto = !!_iq_wa_open[modo];
+
     cont.style.display = 'block';
     let html = `<div class="iq-wa-sug">
-        <div class="iq-wa-sug-title">💬 ¿Mencionar algo más en el mensaje?
-            <span class="iq-wa-sug-hint">opcional — tú eliges qué incluir</span>
+        <div class="iq-wa-sug-title" onclick="iq_toggleWA('${modo}')" style="cursor:pointer;">
+            <span>💬 ¿Mencionar algo más en el mensaje?</span>
+            <span style="display:flex;align-items:center;gap:6px;">
+                <span class="iq-wa-sug-hint">opcional</span>
+                <span class="iq-wa-toggle-arrow">${abierto ? '▲' : '▼'}</span>
+            </span>
         </div>
+        <div class="iq-wa-sug-body-collapsible" style="display:${abierto ? 'block' : 'none'};">
         <div class="iq-wa-sug-list">`;
 
     upsells.forEach(u => {
@@ -843,40 +873,59 @@ function iq_guardarPlantillasUsuario(arr) {
     try { localStorage.setItem(IQ_USER_PLT_KEY, JSON.stringify(arr)); } catch(e){}
 }
 
+// Estado de apertura de plantillas (por modo) — persiste en memoria durante la sesión
+const _iq_plt_open = {};
+
+function iq_togglePlantillas(modo, containerId) {
+    _iq_plt_open[modo] = !_iq_plt_open[modo];
+    iq_renderPlantillas(modo, containerId);
+}
+
 function iq_renderPlantillas(modo, containerId) {
     const cont = document.getElementById(containerId);
     if (!cont) return;
     const sistema = IQ_PLANTILLAS.filter(p => p.modo === modo);
     const usuario = iq_leerPlantillasUsuario().filter(p => p.modo === modo);
+    const abierto = !!_iq_plt_open[modo];
+    const total = sistema.length + usuario.length;
 
-    let html = `<div class="iq-plt-title">⚡ Plantillas rápidas</div>
-                <div class="iq-plt-grid">`;
-    sistema.forEach(p => {
-        html += `<button class="iq-plt-chip" onclick="iq_aplicarPlantilla('${p.id}')">
-            <span class="iq-plt-emoji">${p.emoji}</span>
-            <span class="iq-plt-nombre">${p.nombre}</span>
-        </button>`;
-    });
-    html += `</div>`;
+    // Siempre visible: el header-toggle. El cuerpo solo si está abierto.
+    let html = `<div class="iq-plt-header" onclick="iq_togglePlantillas('${modo}','${containerId}')">
+        <span class="iq-plt-header-label">⚡ Plantillas rápidas</span>
+        <span class="iq-plt-header-count">${total}</span>
+        <span class="iq-plt-header-arrow">${abierto ? '▲' : '▼'}</span>
+    </div>`;
 
-    // Bloque de plantillas del vendedor (solo si tiene alguna)
-    if (usuario.length) {
-        html += `<div class="iq-plt-title" style="margin-top:14px;">⭐ Mis plantillas</div>
-                 <div class="iq-plt-grid">`;
-        usuario.forEach(p => {
-            const safeNombre = String(p.nombre).replace(/'/g, "\\'");
-            html += `<div class="iq-plt-chip iq-plt-chip-user">
-                <span class="iq-plt-emoji" onclick="iq_aplicarPlantillaUsuario('${p.id}')" style="cursor:pointer;">⭐</span>
-                <span class="iq-plt-nombre" onclick="iq_aplicarPlantillaUsuario('${p.id}')" style="cursor:pointer;">${p.nombre}</span>
-                <span onclick="iq_renombrarPlantillaUsuario('${p.id}','${modo}','${containerId}')"
-                    title="Renombrar"
-                    style="cursor:pointer; color:#0891b2; padding:0 3px; flex-shrink:0;">✏️</span>
-                <span onclick="iq_borrarPlantillaUsuario('${p.id}','${modo}','${containerId}')"
-                    title="Borrar"
-                    style="cursor:pointer; color:#c62828; font-weight:700; padding:0 3px; flex-shrink:0;">✕</span>
-            </div>`;
+    if (abierto) {
+        html += `<div class="iq-plt-body">
+            <div class="iq-plt-title">Sistema</div>
+            <div class="iq-plt-grid">`;
+        sistema.forEach(p => {
+            html += `<button class="iq-plt-chip" onclick="iq_aplicarPlantilla('${p.id}')">
+                <span class="iq-plt-emoji">${p.emoji}</span>
+                <span class="iq-plt-nombre">${p.nombre}</span>
+            </button>`;
         });
         html += `</div>`;
+
+        if (usuario.length) {
+            html += `<div class="iq-plt-title" style="margin-top:14px;">⭐ Mis plantillas</div>
+                     <div class="iq-plt-grid">`;
+            usuario.forEach(p => {
+                html += `<div class="iq-plt-chip iq-plt-chip-user">
+                    <span class="iq-plt-emoji" onclick="iq_aplicarPlantillaUsuario('${p.id}')" style="cursor:pointer;">⭐</span>
+                    <span class="iq-plt-nombre" onclick="iq_aplicarPlantillaUsuario('${p.id}')" style="cursor:pointer;">${p.nombre}</span>
+                    <span onclick="iq_renombrarPlantillaUsuario('${p.id}','${modo}','${containerId}')"
+                        title="Renombrar"
+                        style="cursor:pointer; color:#0891b2; padding:0 3px; flex-shrink:0;">✏️</span>
+                    <span onclick="iq_borrarPlantillaUsuario('${p.id}','${modo}','${containerId}')"
+                        title="Borrar"
+                        style="cursor:pointer; color:#c62828; font-weight:700; padding:0 3px; flex-shrink:0;">✕</span>
+                </div>`;
+            });
+            html += `</div>`;
+        }
+        html += `</div>`; // .iq-plt-body
     }
 
     cont.innerHTML = html;
