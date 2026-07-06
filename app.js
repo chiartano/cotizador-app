@@ -594,6 +594,8 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             let ancho = parseFloat(document.getElementById('ancho').value);
             let ancho2 = parseFloat(document.getElementById('ancho2').value) || 0;
             let alto = parseFloat(document.getElementById('alto').value);
+            const anchoCmOriginal = ancho;
+            const altoCmOriginal = alto;
 
             if (!ancho || !alto) {
                 toast('Falta ingresar Ancho y Alto', 'warn'); return;
@@ -623,6 +625,14 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             const observaciones = document.getElementById('observaciones').value;
 
             const cfg = currentConfig.globales;
+            const productoNormalizado = prodNombre.normalize
+                ? prodNombre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+                : prodNombre.toLowerCase();
+            const esPromoCorredizaEconomica = productoNormalizado === 'division corrediza clasica'
+                && anchoCmOriginal <= 130
+                && (altoCmOriginal === 180 || altoCmOriginal === 190)
+                && espesor === '6mm'
+                && colorAcc === 'natural';
             
             const esLEspecial = prodNombre.includes("División de baño L -");
             let anchoCalculo = ancho;
@@ -705,7 +715,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             }
 
             const costoInsumos = cfg.insumos;
-            const otros = costoInstalacion + costoTransporte + costoInsumos + costoDesmonte;
+            const otros = costoInstalacion + costoTransporte + recargoTransporte + costoInsumos + costoDesmonte;
             const costoDirecto = costoVidrioTotal + costoAcc + costoAluminio + costoLed + otros;
 
             // 4. Estructura y Utilidad
@@ -727,29 +737,31 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             const totalCostos = costoDirecto + est;
 
             // FÓRMULA CLAVE: Margen sobre Venta
-            let precioSinIva = totalCostos / (1 - utilPorcentaje);
-            let precioFinal = precioSinIva * (1 + cfg.iva);
+            const AJUSTE_COMERCIAL = 1.05;
+            const precioBase = esPromoCorredizaEconomica ? 650000 : totalCostos / (1 - utilPorcentaje);
+            let precioFinal = esPromoCorredizaEconomica ? 650000 : precioBase * AJUSTE_COMERCIAL;
 
             // Aumento general del 5% sobre el precio final (IVA incluido)
-            precioFinal *= 1.05;
-            precioSinIva = precioFinal / (1 + cfg.iva);
+            // Ajuste comercial aplicado arriba; no se suma IVA nuevamente al cliente.
 
             // Descuento Adicional
-            if (descuentoAdicional > 0) {
-                precioFinal -= descuentoAdicional;
-                precioSinIva = precioFinal / (1 + cfg.iva);
+            if (!esPromoCorredizaEconomica && descuentoAdicional > 0) {
+                precioFinal = Math.max(0, precioFinal - descuentoAdicional);
             }
 
-            const ganancia = precioSinIva - totalCostos;
+            const precioCliente = precioFinal;
+            const baseGravable = precioCliente / (1 + cfg.iva);
+            const ivaADeclarar = precioCliente - baseGravable;
+            const gananciaReal = baseGravable - totalCostos;
+            const margenReal = baseGravable > 0 ? (gananciaReal / baseGravable) * 100 : 0;
+            const ganancia = gananciaReal;
 
             // Margen Real
-            const margen = (ganancia / precioSinIva) * 100;
+            const margen = margenReal;
 
-            // PRECIO AL CLIENTE: el valor calculado en `precioSinIva` ya es el
             // precio final CON IVA incluido (así está estructurada la lista de
             // costos del negocio). NO se le vuelve a sumar IVA. Es el número que
             // se muestra, se guarda en el carrito y se envía por WhatsApp.
-            const precioCliente = precioSinIva;
 
             const medidasStr = esLEspecial ? 
                 `L(${Math.round(ancho * 100)}+${Math.round(ancho2 * 100)})x${Math.round(alto * 100)}` : 
@@ -780,6 +792,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                     recargo: recargoTransporte,
                     extra: extraAcc,
                     descuento: descuentoAdicional,
+                    promo_fija_corrediza_economica: esPromoCorredizaEconomica,
                     observaciones: observaciones
                 }
             };
@@ -810,12 +823,19 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 led: costoLed,
                 instalacion: costoInstalacion,
                 transporte: costoTransporte,
+                recargoTransporte: recargoTransporte,
                 insumos: costoInsumos,
                 desmonte: costoDesmonte,
                 estructura: est,
                 ganancia: ganancia,
                 descuento: descuentoAdicional,
-                espesorLabel: esEspejo ? 'Espejo' : espesor
+                espesorLabel: esEspejo ? 'Espejo' : espesor,
+                baseGravable: baseGravable,
+                ivaADeclarar: ivaADeclarar,
+                gananciaReal: gananciaReal,
+                margenReal: margenReal,
+                promoFija: esPromoCorredizaEconomica,
+                promoLabel: 'Promo fija Corrediza Economica <130cm'
             };
 
             mostrarResultados(precioCliente, precioCliente, detalles, margen, mercado);
@@ -851,6 +871,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
 
             addRow("Instalación", d.instalacion);
             addRow("Transporte", d.transporte);
+            addRow("Recargo Transporte / Lejania", d.recargoTransporte);
             if (d.desmonte > 0) addRow("Desmonte", d.desmonte);
             addRow("Insumos (Silicona/Tornillos)", d.insumos);
 
@@ -863,12 +884,30 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 lista.appendChild(row);
             }
 
+            addRow("Base gravable real", d.baseGravable);
+            addRow("IVA a declarar", d.ivaADeclarar);
+            if (d.gananciaReal !== undefined) {
+                const row = document.createElement('div');
+                row.className = 'detail-row';
+                row.innerHTML = `<span>Ganancia real (despues de IVA)</span> <span class="detail-val">${fmtMoney(d.gananciaReal)}</span>`;
+                lista.appendChild(row);
+            }
+            if (d.margenReal !== undefined) {
+                const row = document.createElement('div');
+                row.className = 'detail-row';
+                row.innerHTML = `<span>Margen real (despues de IVA)</span> <span class="detail-val">${d.margenReal.toFixed(1)}%</span>`;
+                lista.appendChild(row);
+            }
+
             document.getElementById('res-ganancia').innerText = fmtMoney(d.ganancia);
             document.getElementById('res-margen').innerText = mar.toFixed(1) + "%";
 
             // Lógica de Comparación con Competencia
             const divComp = document.getElementById('res-comparacion');
-            if (mercado > 0) {
+            if (d.promoFija) {
+                divComp.innerHTML = `<span style="color:#0369a1; font-weight:700;">${d.promoLabel}</span>`;
+                divComp.style.display = 'block';
+            } else if (mercado > 0) {
                 const diff = final - mercado;
                 const diffPorc = (diff / mercado) * 100;
                 let msg = "", color = "";
@@ -883,6 +922,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 divComp.innerHTML = `<span style="color:${color}; font-weight:700;">${msg}</span>`;
                 divComp.style.display = 'block';
             } else {
+                divComp.innerHTML = '';
                 divComp.style.display = 'none';
             }
 

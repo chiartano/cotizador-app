@@ -879,11 +879,19 @@
             const costoMateriales = totalAlu + totalVid;
             const costoPrimo = costoMateriales + totalAcc + costoMO + costoInsumos + costoInst + transporte;
             const utilidad = costoPrimo * (F.utilidad/100);
-            const precioVenta = costoPrimo + utilidad - descuento;
+            const precioVenta = costoPrimo + utilidad;
             const ivaMonto = precioVenta * (F.iva/100);
-            // Aumento general del 5% sobre el precio final (IVA incluido)
-            const precioFinal = (precioVenta + ivaMonto) * 1.05;
-            const margen = (utilidad / (costoPrimo + utilidad)) * 100;
+            let precioFinal = precioVenta + ivaMonto;
+
+            if (descuento > 0) {
+                precioFinal = Math.max(0, precioFinal - descuento);
+            }
+
+            const baseGravable = precioFinal / (1 + F.iva/100);
+            const ivaADeclarar = precioFinal - baseGravable;
+            const gananciaReal = baseGravable - costoPrimo;
+            const margenReal = baseGravable > 0 ? (gananciaReal / baseGravable) * 100 : 0;
+            const margen = margenReal;
 
             // ---- 11. GUARDAR Y RENDERIZAR ----
             aluLastCalc = {
@@ -892,6 +900,7 @@
                 cortes, vidrios, detalleAcc,
                 totalAlu, totalVid, totalAcc, costoMO, costoInsumos, costoInst, transporte,
                 costoPrimo, utilidad, precioVenta, ivaMonto, precioFinal, margen,
+                baseGravable, ivaADeclarar, gananciaReal, margenReal,
                 mermaAltaUsada, descuento, totalMetros,
                 incluirCF, cfAncho, cfAlto, incluirAlfajia, incluirMosq
             };
@@ -1012,6 +1021,10 @@
             document.getElementById('alu-sum-neto').innerText = alu_fmt(r.precioVenta);
             document.getElementById('alu-sum-iva-pct').innerText = aluConfig.formula.iva + '%';
             document.getElementById('alu-sum-iva').innerText = alu_fmt(r.ivaMonto);
+            const gananciaRealEl = document.getElementById('alu-sum-ganancia-real');
+            if (gananciaRealEl) gananciaRealEl.innerText = alu_fmt(r.gananciaReal);
+            const margenRealEl = document.getElementById('alu-sum-margen-real');
+            if (margenRealEl) margenRealEl.innerText = r.margenReal.toFixed(1) + '%';
             document.getElementById('alu-sum-final').innerText = alu_fmt(r.precioFinal);
 
             // Scroll suave al resultado

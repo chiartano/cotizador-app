@@ -233,18 +233,24 @@ function cmp_calcularPrincipal(productoAlt) {
     const costoDirecto = costoVidrioTotal + costoAcc + costoLed + costoAluminio
                        + costoInstalacion + costoTransporte + costoInsumos + costoDesmonte;
     const totalCostos = costoDirecto + est;
-    let precioSinIva = totalCostos / (1 - utilPorcentaje);
-    let precioFinal = precioSinIva * (1 + cfg.iva);
+
+    const precioBase = totalCostos / (1 - utilPorcentaje);
+    const AJUSTE_COMERCIAL = 1.05;
+    let precioFinal = precioBase * AJUSTE_COMERCIAL;
 
     if (descuentoAdicional > 0) {
-        precioFinal -= descuentoAdicional;
-        precioSinIva = precioFinal / (1 + cfg.iva);
+        precioFinal = Math.max(0, precioFinal - descuentoAdicional);
     }
+
+    const baseGravable = precioFinal / (1 + cfg.iva);
+    const gananciaReal = baseGravable - totalCostos;
+    const margenReal = baseGravable > 0 ? (gananciaReal / baseGravable) * 100 : 0;
 
     return {
         error: false,
-        precioNeto: precioSinIva,
+        precioNeto: baseGravable,
         precioFinal: precioFinal,
+        margenReal: margenReal,
         producto: productoAlt,
         desglose: {
             vidrio: costoVidrioTotal,
