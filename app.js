@@ -628,11 +628,18 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             const productoNormalizado = prodNombre.normalize
                 ? prodNombre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
                 : prodNombre.toLowerCase();
-            const esPromoCorredizaEconomica = productoNormalizado === 'division corrediza clasica'
+            const esPromoCorredizaEconomicaNatural = productoNormalizado === 'division corrediza clasica'
                 && anchoCmOriginal <= 130
                 && (altoCmOriginal === 180 || altoCmOriginal === 190)
                 && espesor === '6mm'
                 && colorAcc === 'natural';
+            const esPromoCorredizaEconomicaNegra = productoNormalizado === 'division corrediza clasica'
+                && anchoCmOriginal <= 130
+                && (altoCmOriginal === 180 || altoCmOriginal === 190)
+                && espesor === '6mm'
+                && colorAcc === 'negro';
+            const esPromoCorredizaEconomica = esPromoCorredizaEconomicaNatural || esPromoCorredizaEconomicaNegra;
+            const precioPromoCorredizaEconomica = esPromoCorredizaEconomicaNegra ? 690000 : 650000;
             
             const esLEspecial = prodNombre.includes("División de baño L -");
             let anchoCalculo = ancho;
@@ -738,8 +745,8 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
 
             // FÓRMULA CLAVE: Margen sobre Venta
             const AJUSTE_COMERCIAL = 1.05;
-            const precioBase = esPromoCorredizaEconomica ? 650000 : totalCostos / (1 - utilPorcentaje);
-            let precioFinal = esPromoCorredizaEconomica ? 650000 : precioBase * AJUSTE_COMERCIAL;
+            const precioBase = esPromoCorredizaEconomica ? precioPromoCorredizaEconomica : totalCostos / (1 - utilPorcentaje);
+            let precioFinal = esPromoCorredizaEconomica ? precioPromoCorredizaEconomica : precioBase * AJUSTE_COMERCIAL;
 
             // Aumento general del 5% sobre el precio final (IVA incluido)
             // Ajuste comercial aplicado arriba; no se suma IVA nuevamente al cliente.
@@ -793,6 +800,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                     extra: extraAcc,
                     descuento: descuentoAdicional,
                     promo_fija_corrediza_economica: esPromoCorredizaEconomica,
+                    promo_fija_corrediza_economica_color: esPromoCorredizaEconomicaNegra ? 'negro' : (esPromoCorredizaEconomicaNatural ? 'natural' : ''),
                     observaciones: observaciones
                 }
             };
@@ -984,6 +992,11 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 medidasTxt = `L(${ancho} + ${ancho2}) x ${alto} cm`;
             }
 
+            const promoColor = lastCalculation?.raw?.promo_fija_corrediza_economica_color || 'natural';
+            const notaPromo = lastCalculation?.raw?.promo_fija_corrediza_economica
+                ? `\n_Promocion por tiempo limitado para divisiones de hasta 130cm de ancho, con alto de 180cm o 190cm, en vidrio 6mm color ${promoColor}. Otras medidas o acabados se cotizan a la medida exacta._`
+                : "";
+
             // Usamos códigos Unicode para los emojis para evitar errores de codificación (rombos negros)
             let texto = `*COTIZACIÓN* \uD83D\uDCC4
 ----------------------------
@@ -1001,7 +1014,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             texto += `\n\n\u2705 *INCLUYE:*
 Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, transporte, instalación y garantía escrita por ${garantia}.
 
-\uD83D\uDCB0 *Precio:* ${total} (IVA incluido)
+\uD83D\uDCB0 *Precio:* ${total} (IVA incluido)${notaPromo}
 ----------------------------`;
 
             // IQ v5.0: a\u00F1adir las sugerencias opcionales que el vendedor haya marcado
