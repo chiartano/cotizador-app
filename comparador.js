@@ -165,6 +165,21 @@ function cmp_calcularPrincipal(productoAlt) {
     const recargoTransporte = s.recargo || 0;
     const extraAcc = s.extra || 0;
     const descuentoAdicional = s.descuento || 0;
+    const productoNormalizado = productoAlt.normalize
+        ? productoAlt.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+        : productoAlt.toLowerCase();
+    const esPromoCorredizaEconomicaNatural = productoNormalizado === 'division corrediza clasica'
+        && (s.ancho || 0) <= 130
+        && ((s.alto || 0) === 180 || (s.alto || 0) === 190)
+        && espesor === '6mm'
+        && colorAcc === 'natural';
+    const esPromoCorredizaEconomicaNegra = productoNormalizado === 'division corrediza clasica'
+        && (s.ancho || 0) <= 130
+        && ((s.alto || 0) === 180 || (s.alto || 0) === 190)
+        && espesor === '6mm'
+        && colorAcc === 'negro';
+    const esPromoCorredizaEconomica = esPromoCorredizaEconomicaNatural || esPromoCorredizaEconomicaNegra;
+    const precioPromoCorredizaEconomica = esPromoCorredizaEconomicaNegra ? 690000 : 650000;
 
     // ---- Costo vidrio ----
     let precioVidrio;
@@ -234,11 +249,11 @@ function cmp_calcularPrincipal(productoAlt) {
                        + costoInstalacion + costoTransporte + costoInsumos + costoDesmonte;
     const totalCostos = costoDirecto + est;
 
-    const precioBase = totalCostos / (1 - utilPorcentaje);
+    const precioBase = esPromoCorredizaEconomica ? precioPromoCorredizaEconomica : totalCostos / (1 - utilPorcentaje);
     const AJUSTE_COMERCIAL = 1.05;
-    let precioFinal = precioBase * AJUSTE_COMERCIAL;
+    let precioFinal = esPromoCorredizaEconomica ? precioPromoCorredizaEconomica : precioBase * AJUSTE_COMERCIAL;
 
-    if (descuentoAdicional > 0) {
+    if (!esPromoCorredizaEconomica && descuentoAdicional > 0) {
         precioFinal = Math.max(0, precioFinal - descuentoAdicional);
     }
 
@@ -252,6 +267,9 @@ function cmp_calcularPrincipal(productoAlt) {
         precioFinal: precioFinal,
         margenReal: margenReal,
         producto: productoAlt,
+        promoFija: esPromoCorredizaEconomica,
+        promoLabel: 'Promo fija Corrediza Economica <130cm',
+        promoDescuentoIgnorado: esPromoCorredizaEconomica && descuentoAdicional > 0,
         desglose: {
             vidrio: costoVidrioTotal,
             accesorios: costoAcc,
@@ -360,6 +378,13 @@ function cmp_renderColumna(letra, r, id) {
     let avisoCfg = '';
     if (r.cfgAjustada) {
         avisoCfg = `<div class="cmp-aviso">ℹ️ Diseño ajustado: ${r.cfgAjustada}</div>`;
+    }
+
+    if (r.promoFija) {
+        avisoCfg += `<div class="cmp-aviso">Precio promocional cerrado</div>`;
+    }
+    if (r.promoDescuentoIgnorado) {
+        avisoCfg += `<div class="cmp-aviso">Descuento adicional no aplica a esta promocion</div>`;
     }
 
     let desgloseHTML = '';
