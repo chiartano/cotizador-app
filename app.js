@@ -843,7 +843,8 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 gananciaReal: gananciaReal,
                 margenReal: margenReal,
                 promoFija: esPromoCorredizaEconomica,
-                promoLabel: 'Promo fija Corrediza Economica <130cm'
+                promoLabel: 'Promo fija Corrediza Economica <130cm',
+                promoDescuentoIgnorado: esPromoCorredizaEconomica && descuentoAdicional > 0
             };
 
             mostrarResultados(precioCliente, precioCliente, detalles, margen, mercado);
@@ -885,10 +886,15 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
 
             addRow("Aporte Estructura (Fijo)", d.estructura);
 
-            if (d.descuento > 0) {
+            if (d.descuento > 0 && !d.promoDescuentoIgnorado) {
                 const row = document.createElement('div');
                 row.className = 'detail-row';
                 row.innerHTML = `<span style="color:#c62828;">Descuento Adicional</span> <span class="detail-val" style="color:#c62828;">-${fmtMoney(d.descuento)}</span>`;
+                lista.appendChild(row);
+            } else if (d.promoDescuentoIgnorado) {
+                const row = document.createElement('div');
+                row.className = 'detail-row';
+                row.innerHTML = `<span style="color:#0369a1;">Descuento no aplicado por promo</span> <span class="detail-val">${fmtMoney(d.descuento)}</span>`;
                 lista.appendChild(row);
             }
 
@@ -913,7 +919,10 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             // Lógica de Comparación con Competencia
             const divComp = document.getElementById('res-comparacion');
             if (d.promoFija) {
-                divComp.innerHTML = `<span style="color:#0369a1; font-weight:700;">${d.promoLabel}</span>`;
+                const avisoDescuento = d.promoDescuentoIgnorado
+                    ? `<div style="margin-top:6px; color:#b45309; font-weight:700;">Precio promocional cerrado: el descuento adicional no aplica a esta promocion.</div>`
+                    : '';
+                divComp.innerHTML = `<span style="color:#0369a1; font-weight:700;">${d.promoLabel}</span>${avisoDescuento}`;
                 divComp.style.display = 'block';
             } else if (mercado > 0) {
                 const diff = final - mercado;
