@@ -187,6 +187,36 @@
             'CF':   {label:'Solo Cuerpo Fijo',sub:'Sin hojas móviles'}
         };
 
+        const ALU_CANONICAL_METADATA = {
+            '3831': { canonicalProductId: 'VEN-3831', familyId: 'VEN', variantId: null, mappingStatus: 'map_with_attributes' },
+            '5020': { canonicalProductId: 'VEN-5020', familyId: 'VEN', variantId: 'VEN-5020-2H', mappingStatus: 'map_with_variant' },
+            '744': { canonicalProductId: 'VEN-744', familyId: 'VEN', variantId: 'VEN-744-2H', mappingStatus: 'map_with_variant' },
+            '8025': { canonicalProductId: 'VEN-8025', familyId: 'VEN', variantId: 'VEN-8025-COR', mappingStatus: 'map_with_variant' }
+        };
+
+        function alu_thicknessMm(value) {
+            const match = String(value || '').match(/\d+/);
+            return match ? Number(match[0]) : null;
+        }
+
+        function alu_buildCanonicalMetadata(sys, cfg, vid) {
+            const base = ALU_CANONICAL_METADATA[sys];
+            if (!base) return {};
+            const canonicalAttributes = {
+                aluminumSystem: sys,
+                aluminumConfig: cfg
+            };
+            const glassThickness = alu_thicknessMm(vid);
+            if (glassThickness) canonicalAttributes.glassThickness = glassThickness;
+            return {
+                canonicalProductId: base.canonicalProductId,
+                familyId: base.familyId,
+                variantId: base.variantId,
+                mappingStatus: base.mappingStatus,
+                canonicalAttributes
+            };
+        }
+
         // ---------- ESTADO RUNTIME ----------
         let aluConfig = null;       // config activa (defaults + overrides del user)
         let aluState = {            // estado actual del cotizador
@@ -902,7 +932,8 @@
                 costoPrimo, utilidad, precioVenta, ivaMonto, precioFinal, margen,
                 baseGravable, ivaADeclarar, gananciaReal, margenReal,
                 mermaAltaUsada, descuento, totalMetros,
-                incluirCF, cfAncho, cfAlto, incluirAlfajia, incluirMosq
+                incluirCF, cfAncho, cfAlto, incluirAlfajia, incluirMosq,
+                ...alu_buildCanonicalMetadata(sys, cfg, vid)
             };
 
             // Si el comparador está usando este motor en modo silencioso,
@@ -921,7 +952,8 @@
                     medidas: `${w}×${h}`,
                     precio: precioFinal,
                     fecha: new Date(),
-                    origen: 'aluminio'
+                    origen: 'aluminio',
+                    ...alu_buildCanonicalMetadata(sys, cfg, vid)
                 });
             }
 
@@ -1079,6 +1111,11 @@
                 cantidad,
                 fecha: new Date(),
                 esAluminio: true,
+                canonicalProductId: r.canonicalProductId,
+                familyId: r.familyId,
+                variantId: r.variantId,
+                mappingStatus: r.mappingStatus,
+                canonicalAttributes: r.canonicalAttributes,
                 raw: {
                     producto: sysData.nombre,
                     ancho: r.w, alto: r.h,

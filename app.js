@@ -106,6 +106,79 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             "Espejo Flotante": "FIJO",
         };
 
+        const CANONICAL_PRODUCT_METADATA = {
+            "División Batiente (Tradicional)": {
+                canonicalProductId: "DB-BAT",
+                familyId: "DB",
+                variantId: null,
+                mappingStatus: "map_with_attributes"
+            },
+            "División Corrediza Clásica": {
+                canonicalProductId: "DB-COR",
+                familyId: "DB",
+                variantId: "DB-COR-2H",
+                mappingStatus: "map_with_variant"
+            },
+            "División Corrediza Premium": {
+                canonicalProductId: "DB-COR",
+                familyId: "DB",
+                variantId: "DB-COR-PRE",
+                mappingStatus: "map_with_variant"
+            },
+            "División de baño L - Corrediza": {
+                canonicalProductId: "DB-ESC",
+                familyId: "DB",
+                variantId: "DB-ESC-COR",
+                mappingStatus: "map_with_variant",
+                canonicalAttributes: { dimensionSchema: "width_height_side2" }
+            },
+            "División de baño L - Batiente": {
+                canonicalProductId: "DB-ESC",
+                familyId: "DB",
+                variantId: "DB-ESC-BAT",
+                mappingStatus: "map_with_variant",
+                canonicalAttributes: { dimensionSchema: "width_height_side2" }
+            },
+            "Cortaviento / Oficina": {
+                canonicalProductId: null,
+                familyId: null,
+                variantId: null,
+                mappingStatus: "split_required"
+            },
+            "Espejo Flotante": {
+                canonicalProductId: "ESP-FLO",
+                familyId: "ESP",
+                variantId: "ESP-FLO-STD",
+                mappingStatus: "map_with_attributes"
+            }
+        };
+
+        function canonicalThicknessMm(value) {
+            const match = String(value || '').match(/\d+/);
+            return match ? Number(match[0]) : null;
+        }
+
+        function buildCanonicalProductMetadata(productName, context = {}) {
+            const base = CANONICAL_PRODUCT_METADATA[productName];
+            if (!base) return null;
+            const canonicalAttributes = { ...(base.canonicalAttributes || {}) };
+            const thickness = canonicalThicknessMm(context.espesor);
+            if (thickness) canonicalAttributes.glassThickness = thickness;
+            if (productName === "Espejo Flotante") {
+                canonicalAttributes.hasLed = !!context.hasLed;
+                if (context.hasLed) canonicalAttributes.addonIds = ["ACC-LED"];
+            }
+            if (context.hasSandblasting) canonicalAttributes.hasSandblasting = true;
+
+            return {
+                canonicalProductId: base.canonicalProductId,
+                familyId: base.familyId,
+                variantId: base.variantId,
+                mappingStatus: base.mappingStatus,
+                ...(Object.keys(canonicalAttributes).length ? { canonicalAttributes } : {})
+            };
+        }
+
         // Variables para cotización múltiple
         // === Persistencia automática del carrito y datos del cliente ===
         const CARRITO_STORAGE_KEY = 'cotizador_carrito_v1';
@@ -783,6 +856,11 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 color: colorAcc,
                 precio: precioCliente, // Precio final con IVA incluido (el que se cobra al cliente)
                 observaciones: observaciones,
+                ...buildCanonicalProductMetadata(prodNombre, {
+                    espesor,
+                    hasLed: tieneLed,
+                    hasSandblasting: tieneSandblasting
+                }),
                 // Datos crudos para edición
                 raw: {
                     ancho: Math.round(ancho * 100),
@@ -810,7 +888,12 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 producto: prodNombre,
                 medidas: medidasStr,
                 precio: precioCliente,
-                fecha: new Date()
+                fecha: new Date(),
+                ...buildCanonicalProductMetadata(prodNombre, {
+                    espesor,
+                    hasLed: tieneLed,
+                    hasSandblasting: tieneSandblasting
+                })
             });
 
             // Registrar también en el historial del dashboard (no rompe nada si no está cargado)
@@ -820,7 +903,12 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                     medidas: medidasStr,
                     precio: precioCliente,
                     fecha: new Date(),
-                    origen: 'principal'
+                    origen: 'principal',
+                    ...buildCanonicalProductMetadata(prodNombre, {
+                        espesor,
+                        hasLed: tieneLed,
+                        hasSandblasting: tieneSandblasting
+                    })
                 });
             }
 

@@ -267,6 +267,13 @@ function cmp_calcularPrincipal(productoAlt) {
         precioFinal: precioFinal,
         margenReal: margenReal,
         producto: productoAlt,
+        ...(typeof buildCanonicalProductMetadata === 'function'
+            ? buildCanonicalProductMetadata(productoAlt, {
+                espesor,
+                hasLed: tieneLed,
+                hasSandblasting: tieneSandblasting
+            })
+            : {}),
         promoFija: esPromoCorredizaEconomica,
         promoLabel: 'Promo fija Corrediza Economica <130cm',
         promoDescuentoIgnorado: esPromoCorredizaEconomica && descuentoAdicional > 0,
@@ -340,6 +347,9 @@ function cmp_calcularAluminio(sysAlt) {
             precioNeto: resultado.precioVenta,
             precioFinal: resultado.precioFinal,
             producto: aluConfig.sistemas[sysAlt].nombre,
+            ...(typeof alu_buildCanonicalMetadata === 'function'
+                ? alu_buildCanonicalMetadata(sysAlt, cfgAjustada, resultado.vid)
+                : {}),
             cfgAjustada: cfgAjustada !== cfg ? ALU_CONFIG_LABELS[cfgAjustada].label : null,
             desglose: {
                 materiales: resultado.totalAlu + resultado.totalVid,

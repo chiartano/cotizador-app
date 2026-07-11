@@ -13,6 +13,16 @@
 const DASH_HISTORIAL_KEY = 'vidrios_historial';     // misma clave que app.js
 const DASH_HISTORIAL_FULL_KEY = 'cotizador_historial_full_v1'; // historial extendido sin tope
 
+function dash_canonicalMetadata(item = {}) {
+    return {
+        ...(Object.prototype.hasOwnProperty.call(item, 'canonicalProductId') ? { canonicalProductId: item.canonicalProductId } : {}),
+        ...(Object.prototype.hasOwnProperty.call(item, 'familyId') ? { familyId: item.familyId } : {}),
+        ...(Object.prototype.hasOwnProperty.call(item, 'variantId') ? { variantId: item.variantId } : {}),
+        ...(item.mappingStatus ? { mappingStatus: item.mappingStatus } : {}),
+        ...(item.canonicalAttributes ? { canonicalAttributes: item.canonicalAttributes } : {})
+    };
+}
+
 // =================================================================
 // PERSISTENCIA EXTENDIDA
 // =================================================================
@@ -29,7 +39,8 @@ function dash_registrar(item) {
             medidas: item.medidas || '',
             precio: Number(item.precio) || 0,
             timestamp: fecha.getTime(),
-            origen: item.origen || 'principal'  // 'principal' | 'aluminio'
+            origen: item.origen || 'principal',  // 'principal' | 'aluminio'
+            ...dash_canonicalMetadata(item)
         });
 
         // Limpieza: descartar mayores a 1 año (manteniendo la app liviana)
@@ -224,7 +235,8 @@ function dash_migrarHistorialViejo() {
                     medidas: v.medidas || '',
                     precio: v.precio || 0,
                     timestamp: ts,
-                    origen: 'principal'
+                    origen: 'principal',
+                    ...dash_canonicalMetadata(v)
                 });
             }
         });
