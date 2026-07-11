@@ -1,83 +1,135 @@
-const CACHE_NAME = 'cotizador-v7.4';
+const CACHE_PREFIX = 'cotizador-';
+const CACHE_NAME = 'cotizador-v7.5';
+const CLIENT_PROTOCOL_VERSION = 1;
+const CLIENT_ACK_TIMEOUT_MS = 2000;
 
-// Archivos esenciales para que la app funcione offline.
-// Estrategia: network-first → siempre intenta internet primero,
-// si falla usa el caché. Eso significa que cualquier cambio en
-// estos archivos se aplica automáticamente al abrir con datos.
-const urlsToCache = [
-  './',
+const CRITICAL_ASSETS = [
   './index.html',
-  './manifest.json',
-  './styles.css',
   './app.js',
   './aluminio.js',
   './comparador.js',
   './dashboard.js',
   './iq.js',
   './visual.js',
-  './icon.png',
-  './icono.png'
+  './styles.css',
+  './manifest.json',
+  './icon.png'
 ];
 
-self.addEventListener('install', event => {
-  // Obliga al SW a activarse inmediatamente (sin esperar a que se cierren pestañas)
-  self.skipWaiting();
+function capabilityToken(clientId) {
+  const randomPart = self.crypto?.randomUUID ? self.crypto.randomUUID() : Math.random().toString(36).slice(2);
+  return `${Date.now()}-${clientId}-${randomPart}`;
+}
 
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        // Usamos add individual para que la instalación no falle si algún
-        // icono opcional no está presente en el servidor
-        return Promise.all(
-          urlsToCache.map(url => cache.add(url).catch(err => {
-            console.warn('No se pudo cachear:', url, err);
-          }))
-        );
-      })
-  );
+function requestClientCapability(client) {
+  return new Promise((resolve, reject) => {
+    const token = capabilityToken(client.id);
+    const channel = new MessageChannel();
+    const timeout = setTimeout(() => {
+      channel.port1.close();
+      reject(new Error(`Cliente sin ACK compatible: ${client.id}`));
+    }, CLIENT_ACK_TIMEOUT_MS);
+
+    channel.port1.onmessage = event => {
+      clearTimeout(timeout);
+      channel.port1.close();
+      const ack = event.data;
+      const compatible = ack
+        && ack.type === 'WILAN_PWA_CLIENT_CAPABILITY_ACK'
+        && ack.token === token
+        && ack.protocolVersion === CLIENT_PROTOCOL_VERSION
+        && ack.controlledUpdate === true
+        && typeof ack.bridgeVersion === 'string';
+      if (compatible) resolve(ack);
+      else reject(new Error(`ACK incompatible: ${client.id}`));
+    };
+    channel.port1.start();
+    client.postMessage({
+      type: 'WILAN_PWA_CLIENT_CAPABILITY_REQUEST',
+      protocolVersion: CLIENT_PROTOCOL_VERSION,
+      token
+    }, [channel.port2]);
+  });
+}
+
+async function requireCompatibleWindowClients() {
+  const windowClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+  await Promise.all(windowClients.map(requestClientCapability));
+}
+
+function freshRequest(asset) {
+  return new Request(new URL(asset, self.registration.scope), { cache: 'reload' });
+}
+
+async function fetchCriticalAsset(asset) {
+  const response = await fetch(freshRequest(asset));
+  if (!response || !response.ok) throw new Error(`Recurso crítico no disponible: ${asset}`);
+  return response;
+}
+
+async function installCompleteShell() {
+  await caches.delete(CACHE_NAME);
+  const cache = await caches.open(CACHE_NAME);
+  try {
+    for (const asset of CRITICAL_ASSETS) {
+      const response = await fetchCriticalAsset(asset);
+      await cache.put(asset, response.clone());
+    }
+    const verification = await Promise.all(CRITICAL_ASSETS.map(asset => cache.match(asset)));
+    if (verification.some(response => !response)) throw new Error('App shell incompleto');
+  } catch (error) {
+    await caches.delete(CACHE_NAME);
+    throw error;
+  }
+}
+
+self.addEventListener('install', event => {
+  event.waitUntil((async () => {
+    await requireCompatibleWindowClients();
+    await installCompleteShell();
+  })());
+});
+
+self.addEventListener('message', event => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
-            // Borra caches viejos (cotizador-v3, etc.)
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
-  );
-  // Reclama el control de la página inmediatamente
-  self.clients.claim();
+  event.waitUntil((async () => {
+    const cacheNames = await caches.keys();
+    await Promise.all(cacheNames.map(cacheName => {
+      if (cacheName.startsWith(CACHE_PREFIX) && cacheName !== CACHE_NAME) return caches.delete(cacheName);
+      return Promise.resolve(false);
+    }));
+    await self.clients.claim();
+  })());
 });
 
-// FETCH: ESTRATEGIA "NETWORK FIRST" (Primero Internet, luego Caché).
-// Esto garantiza que los usuarios siempre vean la versión más reciente
-// cuando tengan conexión, y solo usen caché si están offline.
+function criticalAssetKey(request) {
+  const requestUrl = new URL(request.url);
+  for (const asset of CRITICAL_ASSETS) {
+    const assetUrl = new URL(asset, self.registration.scope);
+    if (requestUrl.origin === assetUrl.origin && requestUrl.pathname === assetUrl.pathname) return asset;
+  }
+  return null;
+}
+
+async function cachedShellResponse(key) {
+  const cache = await caches.open(CACHE_NAME);
+  const response = await cache.match(key);
+  if (!response) throw new Error(`Recurso ausente en shell activo: ${key}`);
+  return response;
+}
+
 self.addEventListener('fetch', event => {
-  event.respondWith(
-    fetch(event.request)
-      .then(response => {
-        // Si hay internet y responde bien, guardamos una copia fresca en caché
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
-        }
+  const request = event.request;
+  if (request.method !== 'GET') return;
 
-        // Clonamos la respuesta para guardarla
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME)
-          .then(cache => {
-            cache.put(event.request, responseToCache);
-          });
+  if (request.mode === 'navigate') {
+    event.respondWith(cachedShellResponse('./index.html'));
+    return;
+  }
 
-        return response;
-      })
-      .catch(() => {
-        // Si NO hay internet, devolvemos lo que haya en caché
-        return caches.match(event.request);
-      })
-  );
+  const key = criticalAssetKey(request);
+  if (key) event.respondWith(cachedShellResponse(key));
 });

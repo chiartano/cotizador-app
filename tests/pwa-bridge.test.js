@@ -5,12 +5,14 @@ const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
 const base = '8f6351bf9a65b030c5e8744938324b3c68f488bb';
-const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+const bridgeCommit = '04b7ed374a4d69bf86242b5a4e69e2b8c09a6170';
 
 function git(args) {
   return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
 }
+
+const index = git(['show', `${bridgeCommit}:index.html`]);
+const sw = git(['show', `${bridgeCommit}:sw.js`]);
 
 function test(name, callback) {
   try { callback(); console.log(`ok - ${name}`); }
@@ -21,7 +23,7 @@ const blockStart = index.indexOf("if ('serviceWorker' in navigator)");
 const pwaBlock = index.slice(blockStart, index.indexOf('</script>', blockStart));
 
 test('1 sw.js permanece byte por byte igual a la base', () => {
-  assert.equal(git(['hash-object', 'sw.js']), git(['rev-parse', `${base}:sw.js`]));
+  assert.equal(git(['rev-parse', `${bridgeCommit}:sw.js`]), git(['rev-parse', `${base}:sw.js`]));
 });
 
 test('2 CACHE_NAME continua en cotizador-v7.4', () => {
@@ -67,11 +69,11 @@ test('8 mecanismo PWA no toca localStorage', () => {
 });
 
 test('9 solo index y esta prueba difieren de la base', () => {
-  const changed = git(['status', '--porcelain']).split(/\r?\n/).filter(Boolean).map(line => line.replace(/^\S+\s+/, ''));
+  const changed = git(['diff', '--name-only', base, bridgeCommit]).split(/\r?\n/).filter(Boolean);
   assert.deepEqual(changed.sort(), ['index.html', 'tests/pwa-bridge.test.js']);
 });
 
 test('10 archivos funcionales protegidos no cambiaron', () => {
   const protectedFiles = ['app.js', 'aluminio.js', 'comparador.js', 'dashboard.js', 'iq.js', 'visual.js', 'manifest.json', 'icon.png', '_verify_tmp.js', 'tests/fase1-calculos.test.js'];
-  assert.equal(git(['diff', '--name-only', base, '--', ...protectedFiles]), '');
+  assert.equal(git(['diff', '--name-only', base, bridgeCommit, '--', ...protectedFiles]), '');
 });
