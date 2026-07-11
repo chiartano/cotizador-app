@@ -735,18 +735,114 @@
     <script src="visual.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
+            const WILAN_PWA_PROTOCOL_VERSION = 1;
+            const WILAN_PWA_BRIDGE_VERSION = 'f0-bridge-v1';
+            const UPDATE_CONSENT_KEY = 'wilan_pwa_update_consent_v1';
+            const UPDATE_RELOAD_GUARD_KEY = 'wilan_pwa_update_reload_guard_v1';
+            const UPDATE_DISMISSED_KEY = 'wilan_pwa_update_dismissed_v1';
+            let pendingUpdateRegistration = null;
+            let updateNoticeVisible = false;
+
+            function hasActiveQuoteWork() {
+                const valueIds = ['ancho', 'alto', 'ancho2', 'observaciones', 'descuento_adicional', 'alu-ancho', 'alu-alto'];
+                const hasValues = valueIds.some(id => {
+                    const element = document.getElementById(id);
+                    return element && String(element.value || '').trim() !== '';
+                });
+                const resultText = document.getElementById('res-precio-final')?.innerText || '';
+                const hasResult = resultText !== '' && resultText !== 'Total con IVA: $0';
+                const aluminumVisible = document.getElementById('alu-result')?.style.display !== 'none';
+                const quoteVisible = document.getElementById('quote-summary')?.style.display !== 'none';
+                const modalSelectors = ['#modal-config', '#modal-libreta', '#cmp-modal', '#dash-modal', '#viz-modal', '#alu-modal-config'];
+                const modalOpen = modalSelectors.some(selector => {
+                    const element = document.querySelector(selector);
+                    return element && getComputedStyle(element).display !== 'none';
+                });
+                return hasValues || hasResult || aluminumVisible || quoteVisible || modalOpen;
+            }
+
+            function createUpdateNotice() {
+                let notice = document.getElementById('pwa-update-notice');
+                if (notice) return notice;
+
+                notice = document.createElement('div');
+                notice.id = 'pwa-update-notice';
+                notice.setAttribute('role', 'status');
+                notice.setAttribute('aria-live', 'polite');
+                notice.style.cssText = 'position:fixed;left:12px;right:12px;bottom:14px;z-index:9999;display:none;gap:10px;align-items:center;justify-content:space-between;padding:12px;background:#0f172a;color:white;border-radius:8px;box-shadow:0 10px 30px rgba(15,23,42,.25);font-size:.9rem;flex-wrap:wrap';
+                notice.innerHTML = `
+                    <span style="line-height:1.35;">Hay una nueva versión disponible.</span>
+                    <span style="display:flex;gap:8px;flex-shrink:0;">
+                        <button id="pwa-update-now" type="button" style="border:0;border-radius:6px;padding:9px 10px;font-weight:800;background:#38bdf8;color:#082f49;cursor:pointer;">Actualizar ahora</button>
+                        <button id="pwa-update-later" type="button" style="border:1px solid rgba(255,255,255,.45);border-radius:6px;padding:9px 10px;font-weight:700;background:transparent;color:white;cursor:pointer;">Más tarde</button>
+                    </span>`;
+                document.body.appendChild(notice);
+                document.getElementById('pwa-update-now').addEventListener('click', applyPendingUpdate);
+                document.getElementById('pwa-update-later').addEventListener('click', () => {
+                    sessionStorage.setItem(UPDATE_DISMISSED_KEY, '1');
+                    notice.style.display = 'none';
+                    updateNoticeVisible = false;
+                });
+                return notice;
+            }
+
+            function showUpdateNotice(registration) {
+                if (!registration?.waiting || updateNoticeVisible || sessionStorage.getItem(UPDATE_DISMISSED_KEY) === '1') return;
+                pendingUpdateRegistration = registration;
+                createUpdateNotice().style.display = 'flex';
+                updateNoticeVisible = true;
+            }
+
+            function applyPendingUpdate() {
+                if (!pendingUpdateRegistration?.waiting) return;
+                if (hasActiveQuoteWork()) {
+                    const accepted = confirm('Actualizar recargará el cotizador y puede descartar los campos actuales que no hayas guardado. ¿Deseas continuar?');
+                    if (!accepted) return;
+                }
+                sessionStorage.setItem(UPDATE_CONSENT_KEY, '1');
+                sessionStorage.removeItem(UPDATE_DISMISSED_KEY);
+                pendingUpdateRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+
+            navigator.serviceWorker.addEventListener('message', event => {
+                const request = event.data;
+                if (!request || request.type !== 'WILAN_PWA_CLIENT_CAPABILITY_REQUEST') return;
+                const response = {
+                    type: 'WILAN_PWA_CLIENT_CAPABILITY_ACK',
+                    protocolVersion: WILAN_PWA_PROTOCOL_VERSION,
+                    bridgeVersion: WILAN_PWA_BRIDGE_VERSION,
+                    controlledUpdate: true,
+                    token: request.token
+                };
+                if (event.ports?.[0]) {
+                    event.ports[0].postMessage(response);
+                } else if (event.source?.postMessage) {
+                    event.source.postMessage(response);
+                }
+            });
+
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (sessionStorage.getItem(UPDATE_CONSENT_KEY) !== '1') return;
+                if (sessionStorage.getItem(UPDATE_RELOAD_GUARD_KEY) === '1') return;
+                sessionStorage.setItem(UPDATE_RELOAD_GUARD_KEY, '1');
+                window.location.reload();
+            });
+
             window.addEventListener('load', () => {
+                sessionStorage.removeItem(UPDATE_CONSENT_KEY);
+                window.setTimeout(() => sessionStorage.removeItem(UPDATE_RELOAD_GUARD_KEY), 5000);
                 navigator.serviceWorker.register('sw.js').then(reg => {
-                    reg.update(); // Fuerza revisión inmediata del SW en el servidor
+                    if (reg.waiting && navigator.serviceWorker.controller) showUpdateNotice(reg);
                     reg.addEventListener('updatefound', () => {
                         const nuevo = reg.installing;
+                        if (!nuevo) return;
                         nuevo.addEventListener('statechange', () => {
                             if (nuevo.state === 'installed' && navigator.serviceWorker.controller) {
-                                // Hay una versión nueva lista — recargar automáticamente
-                                window.location.reload();
+                                showUpdateNotice(reg);
                             }
                         });
                     });
+                    window.setTimeout(() => reg.update(), 1000);
                 }).catch(err => {
                     console.warn('SW registro falló:', err);
                 });
