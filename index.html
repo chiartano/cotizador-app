@@ -842,7 +842,13 @@
                             }
                         });
                     });
-                    window.setTimeout(() => reg.update(), 1000);
+                    window.setTimeout(() => {
+                        if (reg.active && !reg.installing) {
+                            reg.update().catch((error) => {
+                                console.warn('[PWA] No fue posible comprobar una actualización:', error);
+                            });
+                        }
+                    }, 1000);
                 }).catch(err => {
                     console.warn('SW registro falló:', err);
                 });

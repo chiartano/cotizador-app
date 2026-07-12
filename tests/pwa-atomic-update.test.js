@@ -5,6 +5,7 @@ const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
 const bridgeCommit = '04b7ed374a4d69bf86242b5a4e69e2b8c09a6170';
+const workerCommit = 'b0a3c5f266a86a9d16e92e96472ff3c1ff3d3d3a';
 const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
 
 function git(args) { return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim(); }
@@ -14,7 +15,7 @@ function test(name, callback) {
 }
 
 test('1 etapa 2 no modifica index.html', () => {
-  assert.equal(git(['diff', '--name-only', bridgeCommit, '--', 'index.html']), '');
+  assert.equal(git(['diff', '--name-only', bridgeCommit, workerCommit, '--', 'index.html']), '');
 });
 
 test('2 usa cache versionada v7.5 y shell critico cerrado', () => {
@@ -61,9 +62,8 @@ test('7 shell se sirve cache-first sin escrituras runtime', () => {
 });
 
 test('8 etapa 2 solo cambia worker y pruebas autorizadas', () => {
-  let status = git(['ls-files', '--modified', '--others', '--exclude-standard']).split(/\r?\n/).filter(Boolean);
-  if (status.length === 0) status = git(['diff', '--name-only', bridgeCommit, 'HEAD']).split(/\r?\n/).filter(Boolean);
-  assert.deepEqual(status.sort(), ['scripts/pwa-atomic-browser-harness.js', 'sw.js', 'tests/pwa-atomic-update.test.js', 'tests/pwa-bridge.test.js']);
+  const changed = git(['diff', '--name-only', bridgeCommit, workerCommit]).split(/\r?\n/).filter(Boolean);
+  assert.deepEqual(changed.sort(), ['scripts/pwa-atomic-browser-harness.js', 'sw.js', 'tests/pwa-atomic-update.test.js', 'tests/pwa-bridge.test.js']);
 });
 
 test('9 archivos monetarios y canonicos no cambian', () => {
