@@ -6,6 +6,24 @@
   const commands = new Map();
   const collectionListeners = new Map();
   const now = () => new Date().toISOString();
+  const memberListeners = [];
+  const requestListeners = [];
+  const uid = profile === 'foreign' ? 'uid-foreign-synthetic' : `uid-${profile}-synthetic`;
+  let memberActive = !['no-member', 'applicant', 'pending', 'rejected', 'revoked', 'foreign', 'inactive'].includes(profile);
+  let accessRequest = profile === 'pending'
+    ? { schema: 'agenda-access-request.v1', uid, email: `${profile}.agenda@example.invalid`, provider: 'google.com', requestedRole: 'advisor', status: 'pending', attemptCount: 1, revision: 1, requestedAt: now(), updatedAt: now() }
+    : profile === 'rejected'
+      ? { schema: 'agenda-access-request.v1', uid, email: `${profile}.agenda@example.invalid`, provider: 'google.com', requestedRole: 'advisor', status: 'rejected', attemptCount: 1, revision: 2, requestedAt: now(), updatedAt: now(), generalReason: 'Perfil sintético no validado.' }
+      : profile === 'revoked'
+        ? { schema: 'agenda-access-request.v1', uid, email: `${profile}.agenda@example.invalid`, provider: 'google.com', requestedRole: 'advisor', status: 'revoked', attemptCount: 1, revision: 3, requestedAt: now(), updatedAt: now() }
+        : null;
+  const memberValue = () => memberActive
+    ? { id: uid, uid, active: true, role: 'advisor', createdAt: {}, updatedAt: {} }
+    : ['revoked', 'inactive'].includes(profile)
+      ? { id: uid, uid, active: false, role: 'advisor', createdAt: {}, updatedAt: {} }
+      : null;
+  const emitMember = () => memberListeners.forEach((listener) => listener(memberValue()));
+  const emitRequest = () => requestListeners.forEach((listener) => listener(accessRequest ? JSON.parse(JSON.stringify(accessRequest)) : null));
   const emitAppointments = () => (collectionListeners.get('appointments') || []).forEach((listener) => listener(JSON.parse(JSON.stringify(appointments))));
   const error = (code) => Promise.reject({ details: { code }, code: `functions/${code.toLowerCase().replace(/_/g, '-')}` });
   const feeFor = (payload) => payload.type === 'install_visit'
@@ -54,13 +72,17 @@
   };
   const adapter = {
     authState(callback) {
-      const user = { uid: profile === 'foreign' ? 'uid-foreign-synthetic' : 'uid-advisor-synthetic', email: `${profile}.agenda@example.invalid` };
+      const user = { uid, email: `${profile}.agenda@example.invalid`, displayName: `Synthetic ${profile}` };
       setTimeout(() => callback(user), 0); return () => {};
     },
     signInGoogle: () => Promise.resolve(), signInDemoAdvisor: () => Promise.resolve(), signOut: () => Promise.resolve(),
     subscribeDoc(path, next) {
       if (/\/members\//.test(path)) {
-        setTimeout(() => next(['no-member', 'foreign', 'inactive'].includes(profile) ? (profile === 'inactive' ? { id: 'uid-advisor-synthetic', uid: 'uid-advisor-synthetic', active: false, role: 'advisor', createdAt: {}, updatedAt: {} } : null) : { id: 'uid-advisor-synthetic', uid: 'uid-advisor-synthetic', active: true, role: 'advisor', createdAt: {}, updatedAt: {} }), 0);
+        memberListeners.push(next);
+        setTimeout(() => next(memberValue()), 0);
+      } else if (/\/accessRequests\//.test(path)) {
+        requestListeners.push(next);
+        setTimeout(() => next(accessRequest ? JSON.parse(JSON.stringify(accessRequest)) : null), 0);
       } else if (/agendaConfig/.test(path)) setTimeout(() => next({ serviceEnabled: true, advisorCreationEnabled: true }), 0);
       else setTimeout(() => next(null), 0);
       return () => {};
@@ -73,8 +95,32 @@
       return () => {};
     },
     async call(name, request) {
+      if (name === 'agendaAccessCommand') {
+        const command = request.command;
+        if (command.type === 'requestAccess') {
+          accessRequest = accessRequest?.status === 'pending' ? accessRequest : {
+            schema: 'agenda-access-request.v1',
+            uid,
+            email: `${profile}.agenda@example.invalid`,
+            emailNormalized: `${profile}.agenda@example.invalid`,
+            displayName: `Synthetic ${profile}`,
+            provider: 'google.com',
+            requestedRole: 'advisor',
+            source: 'cotizador',
+            status: 'pending',
+            attemptCount: (accessRequest?.attemptCount || 0) + 1,
+            revision: (accessRequest?.revision || 0) + 1,
+            requestedAt: now(),
+            updatedAt: now(),
+          };
+        } else if (command.type === 'withdrawAccessRequest' && accessRequest?.status === 'pending') {
+          accessRequest = { ...accessRequest, status: 'withdrawn', revision: accessRequest.revision + 1, updatedAt: now() };
+        } else return error('ACCESS_REQUEST_INVALID_TRANSITION');
+        emitRequest();
+        return { commandId: command.commandId, targetUid: uid, status: accessRequest.status, revision: accessRequest.revision };
+      }
       if (name !== 'appointmentCommand') return error('INVALID_COMMAND');
-      if (['no-member', 'foreign', 'inactive'].includes(profile)) return error('WORKSPACE_ACCESS_DENIED');
+      if (!memberActive || ['foreign', 'inactive'].includes(profile)) return error('WORKSPACE_ACCESS_DENIED');
       const command = request.command;
       const prior = commands.get(command.commandId);
       const intent = JSON.stringify({ type: command.type, appointmentId: command.appointmentId, payload: command.payload });
@@ -97,5 +143,20 @@
     }
   };
   global.__WILAN_AGENDA_TEST_ADAPTER__ = adapter;
-  global.__AGENDA_TEST_STATE__ = { appointments, commands };
+  global.__AGENDA_TEST_STATE__ = {
+    appointments,
+    commands,
+    approveAccess() {
+      memberActive = true;
+      accessRequest = { ...accessRequest, status: 'approved', revision: (accessRequest?.revision || 0) + 1, updatedAt: now() };
+      emitRequest();
+      emitMember();
+    },
+    revokeAccess() {
+      memberActive = false;
+      accessRequest = { ...accessRequest, status: 'revoked', revision: (accessRequest?.revision || 0) + 1, updatedAt: now() };
+      emitRequest();
+      emitMember();
+    },
+  };
 })(window);

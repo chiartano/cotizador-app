@@ -22,11 +22,17 @@
   let agendaOpen = false;
   let authState = { kind: 'unauthenticated' };
   let queryState = { appointments: [], overrides: [], loading: false };
+  let accessMessage = '';
 
   const authCopy = (kind) => ({
     loading: 'Preparando acceso seguro…', signing_in: 'Abriendo acceso Google…',
     checking_membership: 'Verificando tu membresía…', unauthenticated: 'Inicia sesión para usar Agenda.',
-    no_membership: 'Tu cuenta no tiene membresía en wilan-main.',
+    no_membership: 'Tu cuenta está identificada, pero todavía no tiene acceso a la Agenda de WILAN.',
+    request_withdrawn: 'Retiraste la solicitud de acceso.',
+    request_pending: 'Solicitud enviada. Está pendiente de aprobación.',
+    request_rejected: 'Tu solicitud no fue aprobada.',
+    approved_pending_membership: 'La solicitud fue aprobada. Estamos confirmando tu acceso.',
+    revoked: 'Tu acceso fue desactivado por el administrador.',
     invalid_membership: 'La membresía no cumple el esquema de seguridad.',
     inactive: 'Tu membresía está inactiva.', network_error: 'No fue posible verificar el acceso.'
   }[kind] || 'Acceso no disponible.');
@@ -73,11 +79,30 @@
 
   const renderAuth = () => {
     const content = root.querySelector('#agenda-content');
-    const identity = authState.user?.email ? `<p class="agenda-muted">${esc(authState.user.email)}</p>` : '';
-    content.innerHTML = `<div class="agenda-empty"><h3>${esc(authCopy(authState.kind))}</h3>${identity}
+    const request = authState.accessRequest;
+    const identity = authState.user?.email
+      ? `<div class="agenda-identity"><strong>${esc(authState.user.displayName || 'Cuenta Google')}</strong><p class="agenda-muted">${esc(authState.user.email)}</p></div>`
+      : '';
+    const decided = request?.decidedAt?.toDate?.() || request?.updatedAt?.toDate?.() || (request?.updatedAt ? new Date(request.updatedAt) : null);
+    const cooldownReady = !decided || !Number.isFinite(decided.getTime()) || Date.now() - decided.getTime() >= 24 * 3600000;
+    const canRequest = ['no_membership', 'request_withdrawn', 'revoked'].includes(authState.kind)
+      || (authState.kind === 'request_rejected' && cooldownReady);
+    const reason = request?.generalReason ? `<p class="agenda-warning">${esc(request.generalReason)}</p>` : '';
+    const explanation = ['no_membership', 'request_withdrawn'].includes(authState.kind)
+      ? '<p class="agenda-muted">Envía una solicitud para que el administrador la revise. La solicitud no concede acceso por sí sola.</p>'
+      : authState.kind === 'request_pending'
+        ? '<p class="agenda-muted">No puedes ver citas ni agendar hasta que un operator apruebe la solicitud.</p>'
+        : authState.kind === 'revoked'
+          ? '<p class="agenda-muted">Las citas históricas se conservan, pero esta sesión ya no puede leerlas ni crear nuevas.</p>'
+          : '';
+    content.innerHTML = `<div class="agenda-empty"><h3>${esc(authCopy(authState.kind))}</h3>${identity}${explanation}${reason}
+      ${accessMessage ? `<p class="agenda-message" role="status">${esc(accessMessage)}</p>` : ''}
       ${authState.kind === 'unauthenticated' || authState.kind === 'network_error'
         ? '<button type="button" class="agenda-primary" data-agenda-action="login">Iniciar sesión con Google</button>' : ''}
-      ${authState.user ? '<button type="button" class="agenda-secondary" data-agenda-action="logout">Cerrar sesión</button>' : ''}
+      ${canRequest ? `<button type="button" class="agenda-primary" data-agenda-action="request-access">${authState.kind === 'revoked' ? 'Solicitar reactivación' : 'Solicitar acceso'}</button>` : ''}
+      ${authState.kind === 'request_pending' ? '<button type="button" class="agenda-secondary" data-agenda-action="withdraw-access">Retirar solicitud</button>' : ''}
+      ${authState.kind === 'request_rejected' && !cooldownReady ? '<p class="agenda-muted">Podrás volver a solicitar después del cooldown de 24 horas.</p>' : ''}
+      ${authState.user ? '<button type="button" class="agenda-secondary" data-agenda-action="switch-account">Usar otra cuenta</button>' : ''}
     </div>`;
   };
   const card = (appointment) => {
@@ -155,6 +180,14 @@
     if (form.sending) return;
     const layer = root.querySelector('#agenda-form-layer');
     layer.hidden = true; layer.setAttribute('aria-hidden', 'true');
+  };
+  const resetAndCloseForm = () => {
+    form = initialForm();
+    const layer = root?.querySelector('#agenda-form-layer');
+    if (layer) {
+      layer.hidden = true;
+      layer.setAttribute('aria-hidden', 'true');
+    }
   };
   const openForm = (quoteContext) => {
     form = initialForm();
@@ -303,6 +336,17 @@
     if (action === 'form-close') return closeForm();
     if (action === 'login') return A().auth.signIn();
     if (action === 'logout') return A().auth.signOut();
+    if (action === 'switch-account') return A().auth.signOut();
+    if (action === 'request-access' || action === 'withdraw-access') {
+      accessMessage = action === 'request-access' ? 'Enviando solicitud segura…' : 'Retirando solicitud…';
+      renderAuth();
+      const result = await A().access.send({
+        type: action === 'request-access' ? 'requestAccess' : 'withdrawAccessRequest'
+      });
+      accessMessage = result.ok ? 'Acción confirmada por el backend.' : result.error.message;
+      renderAuth();
+      return;
+    }
     if (action === 'direct') return openForm(null);
     if (action === 'quote') return openForm(bridgeContext());
     if (action === 'next') {
@@ -353,8 +397,12 @@
     root.querySelector('#agenda-form').addEventListener('submit', (event) => { event.preventDefault(); submitForm(); });
     A().auth.subscribe((next) => {
       const wasAllowed = allowed(); authState = next;
+      if (next.kind !== 'checking_membership') accessMessage = '';
       if (allowed() && !wasAllowed) A().queries.start();
-      if (!allowed() && wasAllowed) A().queries.stop();
+      if (!allowed() && wasAllowed) {
+        A().queries.stop();
+        resetAndCloseForm();
+      }
       if (agendaOpen) renderAgenda();
       refreshQuoteAction();
     });

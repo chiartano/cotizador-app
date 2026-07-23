@@ -18,8 +18,8 @@ test('1 etapa 2 no modifica index.html', () => {
   assert.equal(git(['diff', '--name-only', bridgeCommit, workerCommit, '--', 'index.html']), '');
 });
 
-test('2 usa cache versionada v7.6 y shell critico cerrado', () => {
-  assert.match(sw, /const CACHE_NAME = 'cotizador-v7\.6'/);
+test('2 usa cache versionada v7.7 y shell critico cerrado', () => {
+  assert.match(sw, /const CACHE_NAME = 'cotizador-v7\.7'/);
   for (const asset of ['index.html', 'app.js', 'aluminio.js', 'comparador.js', 'dashboard.js', 'iq.js', 'visual.js', 'styles.css', 'agenda/agenda.css', 'agenda/config.js', 'agenda/ui.js', 'manifest.json', 'icon.png']) assert.match(sw, new RegExp(asset.replace('.', '\\.')));
 });
 

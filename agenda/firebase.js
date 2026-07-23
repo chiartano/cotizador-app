@@ -47,7 +47,11 @@
       const adapter = {
         authState: (callback) => auth.onAuthStateChanged(callback),
         signInGoogle: () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()),
-        signInDemoAdvisor: () => auth.signInWithEmailAndPassword(config.demoAdvisor.email, config.demoAdvisor.password),
+        signInDemoAdvisor: () => {
+          const profile = new URLSearchParams(global.location?.search || '').get('agendaProfile');
+          const account = profile === 'applicant' ? config.demoApplicant : config.demoAdvisor;
+          return auth.signInWithEmailAndPassword(account.email, account.password);
+        },
         signOut: () => auth.signOut(),
         call: async (name, payload) => (await functions.httpsCallable(name)(payload)).data,
         subscribeDoc: (path, next, error) => db.doc(path).onSnapshot((snapshot) => next(snapshot.exists ? { id: snapshot.id, ...snapshot.data() } : null), error),

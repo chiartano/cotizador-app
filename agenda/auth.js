@@ -4,7 +4,14 @@
   const listeners = new Set();
   let unsubscribeAuth = null;
   let unsubscribeMember = null;
-  let state = { kind: 'unauthenticated', user: null, member: null, error: null };
+  let unsubscribeRequest = null;
+  let memberLoaded = false;
+  let requestLoaded = false;
+  let currentMember = null;
+  let currentRequest = null;
+  let currentUser = null;
+  let state = { kind: 'unauthenticated', user: null, member: null, accessRequest: null, error: null };
+
   const emit = (next) => {
     state = { ...state, ...next };
     listeners.forEach((listener) => listener(state));
@@ -16,16 +23,76 @@
       && typeof member.active === 'boolean'
       && ['advisor', 'operator'].includes(member.role);
   };
-  const watchMember = (adapter, user) => {
+  const validRequest = (request, uid) => Boolean(
+    request
+    && request.schema === 'agenda-access-request.v1'
+    && request.uid === uid
+    && request.requestedRole === 'advisor'
+    && request.provider === 'google.com'
+    && ['pending', 'approved', 'rejected', 'revoked', 'withdrawn'].includes(request.status)
+  );
+  const requestKind = (status) => ({
+    pending: 'request_pending',
+    rejected: 'request_rejected',
+    revoked: 'revoked',
+    withdrawn: 'request_withdrawn',
+    approved: 'approved_pending_membership',
+  }[status] || 'no_membership');
+  const resolve = () => {
+    if (!currentUser) return;
+    if (!memberLoaded || !requestLoaded) {
+      emit({ kind: 'checking_membership', user: currentUser, member: null, accessRequest: null, error: null });
+      return;
+    }
+    const request = validRequest(currentRequest, currentUser.uid) ? currentRequest : null;
+    if (currentMember) {
+      if (!structurallyValid(currentMember, currentUser.uid)) {
+        emit({ kind: 'invalid_membership', user: currentUser, member: null, accessRequest: request, error: null });
+      } else if (!currentMember.active) {
+        emit({
+          kind: request?.status === 'revoked' ? 'revoked' : 'inactive',
+          user: currentUser,
+          member: currentMember,
+          accessRequest: request,
+          error: null,
+        });
+      } else {
+        emit({ kind: currentMember.role, user: currentUser, member: currentMember, accessRequest: request, error: null });
+      }
+      return;
+    }
+    emit({
+      kind: request ? requestKind(request.status) : 'no_membership',
+      user: currentUser,
+      member: null,
+      accessRequest: request,
+      error: null,
+    });
+  };
+  const stopWorkspaceListeners = () => {
     unsubscribeMember?.();
+    unsubscribeRequest?.();
+    unsubscribeMember = null;
+    unsubscribeRequest = null;
+  };
+  const watchAccess = (adapter, user) => {
+    stopWorkspaceListeners();
+    memberLoaded = false;
+    requestLoaded = false;
+    currentMember = null;
+    currentRequest = null;
     const config = global.WilanAgenda.config;
-    const path = `artifacts/${config.appId}/workspaces/${config.workspaceId}/members/${user.uid}`;
-    unsubscribeMember = adapter.subscribeDoc(path, (member) => {
-      if (!member) return emit({ kind: 'no_membership', user, member: null, error: null });
-      if (!structurallyValid(member, user.uid)) return emit({ kind: 'invalid_membership', user, member: null, error: null });
-      if (!member.active) return emit({ kind: 'inactive', user, member, error: null });
-      emit({ kind: member.role, user, member, error: null });
-    }, (error) => emit({ kind: 'network_error', user, member: null, error }));
+    const root = `artifacts/${config.appId}/workspaces/${config.workspaceId}`;
+    unsubscribeMember = adapter.subscribeDoc(`${root}/members/${user.uid}`, (member) => {
+      currentMember = member;
+      memberLoaded = true;
+      resolve();
+    }, (error) => emit({ kind: 'network_error', user, member: null, accessRequest: null, error }));
+    unsubscribeRequest = adapter.subscribeDoc(`${root}/accessRequests/${user.uid}`, (request) => {
+      currentRequest = request;
+      requestLoaded = true;
+      resolve();
+    }, (error) => emit({ kind: 'network_error', user, member: null, accessRequest: null, error }));
   };
   const start = async () => {
     emit({ kind: 'loading' });
@@ -34,12 +101,14 @@
       unsubscribeAuth?.();
       unsubscribeAuth = adapter.authState((user) => {
         if (!user) {
-          unsubscribeMember?.(); unsubscribeMember = null;
-          emit({ kind: 'unauthenticated', user: null, member: null, error: null });
+          stopWorkspaceListeners();
+          currentUser = null;
+          emit({ kind: 'unauthenticated', user: null, member: null, accessRequest: null, error: null });
           return;
         }
-        emit({ kind: 'checking_membership', user, member: null, error: null });
-        watchMember(adapter, user);
+        currentUser = user;
+        emit({ kind: 'checking_membership', user, member: null, accessRequest: null, error: null });
+        watchAccess(adapter, user);
       });
     } catch (error) {
       emit({ kind: 'network_error', error });
@@ -60,5 +129,5 @@
   const subscribe = (listener) => { listeners.add(listener); listener(state); return () => listeners.delete(listener); };
   const getState = () => state;
 
-  global.WilanAgenda.auth = { start, signIn, signOut, subscribe, getState, structurallyValid };
+  global.WilanAgenda.auth = { start, signIn, signOut, subscribe, getState, structurallyValid, validRequest };
 })(window);

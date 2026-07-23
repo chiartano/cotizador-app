@@ -45,6 +45,9 @@ const test = async (name, callback) => {
     const context = sandboxFor('127.0.0.1'); load(context, 'agenda/config.js');
     assert.equal(context.WilanAgenda.config.enabled, true);
     assert.equal(context.WilanAgenda.config.emulator, true);
+    assert.equal(context.WilanAgenda.config.firebase.projectId, 'demo-wilan-agenda-backend');
+    assert.equal(context.WilanAgenda.config.appId, 'app_agenda_demo');
+    assert.equal(context.WilanAgenda.config.workspaceId, 'workspace_agenda_demo');
   });
 
   await test('3 bloques rutinarios y sabado excepcional respetan politica', () => {
@@ -145,10 +148,43 @@ const test = async (name, callback) => {
     assert.match(ui, /A\(\)\.pendingDrafts\.save\(\{ \.\.\.draft, status: 'pending' \}\);\s*form\.sending = false;/);
   });
 
-  await test('9 PWA v7.6 incluye shell Agenda local y no cachea Firebase externo', () => {
+  await test('8c acceso abierto solicita advisor sin confiar identidad o rol del navegador', async () => {
+    const context = sandboxFor();
+    load(context, 'agenda/config.js');
+    load(context, 'agenda/commands.js');
+    let captured = null;
+    context.WilanAgenda.firebase = { adapter: { call: async (name, payload) => {
+      captured = { name, payload };
+      return { status: 'pending', revision: 1, targetUid: 'uid-derived-by-backend' };
+    } } };
+    load(context, 'agenda/access.js');
+    const result = await context.WilanAgenda.access.send({ type: 'requestAccess', commandId: 'cmd_access_synthetic_001' });
+    assert.equal(result.ok, true);
+    assert.equal(captured.name, 'agendaAccessCommand');
+    assert.equal(captured.payload.command.schema, 'agenda-access-command.v1');
+    assert.equal(captured.payload.command.type, 'requestAccess');
+    assert.equal('targetUid' in captured.payload.command, false);
+    assert.equal('email' in captured.payload.command.payload, false);
+    assert.equal('role' in captured.payload.command.payload, false);
+  });
+
+  await test('8d revocacion en sesion abierta detiene listeners y limpia citas visibles', () => {
+    const auth = fs.readFileSync(path.join(root, 'agenda/auth.js'), 'utf8');
+    const queries = fs.readFileSync(path.join(root, 'agenda/queries.js'), 'utf8');
+    const ui = fs.readFileSync(path.join(root, 'agenda/ui.js'), 'utf8');
+    assert.match(auth, /requestKind/);
+    assert.match(auth, /request\?\.status === 'revoked' \? 'revoked' : 'inactive'/);
+    assert.match(queries, /emit\(\{ appointments: \[\], config: null, overrides: \[\]/);
+    assert.match(ui, /if \(!allowed\(\) && wasAllowed\)[\s\S]{0,100}A\(\)\.queries\.stop\(\)/);
+    assert.match(ui, /resetAndCloseForm\(\)/);
+    assert.match(ui, /Tu acceso fue desactivado por el administrador/);
+    assert.match(ui, /No puedes ver citas ni agendar/);
+  });
+
+  await test('9 PWA v7.7 incluye shell Agenda local y no cachea Firebase externo', () => {
     const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.6'/);
-    for (const asset of ['agenda.css', 'config.js', 'firebase.js', 'commands.js', 'queries.js', 'ui.js']) assert.match(sw, new RegExp(asset.replace('.', '\\.')));
+    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.7'/);
+    for (const asset of ['agenda.css', 'config.js', 'firebase.js', 'commands.js', 'access.js', 'queries.js', 'ui.js']) assert.match(sw, new RegExp(asset.replace('.', '\\.')));
     assert.doesNotMatch(sw, /gstatic|firebasejs/);
     assert.match(sw, /cache: 'reload'/);
   });

@@ -13,7 +13,7 @@ http.createServer((request, response) => {
   if (!file.startsWith(root)) { response.writeHead(403); response.end(); return; }
   fs.readFile(file, (error, data) => {
     if (error) { response.writeHead(404); response.end('not found'); return; }
-    if (relative === 'index.html') {
+    if (relative === 'index.html' && process.env.WILAN_USE_TEST_ADAPTER !== '0') {
       data = Buffer.from(data.toString('utf8').replace('<script src="agenda/config.js"></script>', '<script src="tests/browser-fixtures/agenda-test-adapter.js"></script><script src="agenda/config.js"></script>'));
     }
     response.writeHead(200, { 'Content-Type': types[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
