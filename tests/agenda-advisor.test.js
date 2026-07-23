@@ -181,9 +181,9 @@ const test = async (name, callback) => {
     assert.match(ui, /No puedes ver citas ni agendar/);
   });
 
-  await test('9 PWA v7.7 incluye shell Agenda local y no cachea Firebase externo', () => {
+  await test('9 PWA v7.8 incluye shell Agenda local y no cachea Firebase externo', () => {
     const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.7'/);
+    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.8'/);
     for (const asset of ['agenda.css', 'config.js', 'firebase.js', 'commands.js', 'access.js', 'queries.js', 'ui.js']) assert.match(sw, new RegExp(asset.replace('.', '\\.')));
     assert.doesNotMatch(sw, /gstatic|firebasejs/);
     assert.match(sw, /cache: 'reload'/);

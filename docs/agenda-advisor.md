@@ -1,9 +1,9 @@
 # Agenda Compartida para advisor en Cotizador
 
-La integración es aditiva y permanece apagada en producción mediante:
+La integración es aditiva. El release productivo final se activa explícitamente mediante:
 
 ```html
-<meta name="wilan-agenda-advisor-enabled" content="false">
+<meta name="wilan-agenda-advisor-enabled" content="true">
 ```
 
 En `localhost` se habilita para pruebas y usa Auth, Firestore y Functions Emulator. El Cotizador, sus cálculos y sus datos históricos siguen funcionando sin iniciar sesión y sin conexión.
@@ -36,7 +36,7 @@ La referencia local confirmada conserva solo `appointmentId`, `initialCommandId`
 
 ## PWA
 
-El shell nuevo es `cotizador-v7.6`. Conserva instalación atómica, descarga con `cache: reload`, verificación total, ACK de ventanas, consentimiento, guardia anti-loop, activación fail-closed y ausencia de escrituras runtime. Los módulos Agenda locales forman parte del shell; los SDK Firebase se cargan solo cuando el feature flag está activo. Si Firebase no está disponible, el Cotizador base continúa operando.
+El shell final es `cotizador-v7.8`. Conserva instalación atómica, descarga con `cache: reload`, verificación total, ACK de ventanas, consentimiento, guardia anti-loop, activación fail-closed y ausencia de escrituras runtime. Los módulos Agenda locales forman parte del shell; los SDK Firebase se cargan solo cuando el feature flag está activo. Si Firebase no está disponible, el Cotizador base continúa operando.
 
 ## Preparación productiva — no ejecutar sin la compuerta humana
 
