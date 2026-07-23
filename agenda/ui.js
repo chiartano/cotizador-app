@@ -66,7 +66,7 @@
     document.body.appendChild(container);
     const headerActions = document.querySelector('header > div');
     if (headerActions) headerActions.prepend(container.querySelector('#agenda-header-button'));
-    const result = document.querySelector('#resultado-panel .card');
+    const result = document.querySelector('#quote-summary') || document.querySelector('#resultado-panel .card');
     if (result) result.appendChild(container.querySelector('#agenda-quote-action'));
     return container;
   };
@@ -129,13 +129,13 @@
       ${section('Recientes', recent, 'Aún no hay citas recientes.')}`;
   };
   const refreshQuoteAction = () => {
-    const action = root.querySelector('#agenda-quote-action');
+    const action = document.querySelector('#agenda-quote-action');
     const context = bridgeContext();
     action.hidden = !context || !A().config.enabled || !allowed();
     const quoteId = context?.quoteId;
     const link = quoteId ? A().pendingDrafts.quoteLink(quoteId) : null;
     const appointment = link ? queryState.appointments.find((item) => item.id === link.appointmentId) : null;
-    root.querySelector('#agenda-quote-link').textContent = appointment
+    document.querySelector('#agenda-quote-link').textContent = appointment
       ? `${A().formatters.status[appointment.status] || 'Cita registrada'} · ${A().formatters.dateTime(appointment.schedule?.startAt)} · ${A().formatters.communication(appointment.communication)}`
       : link ? `${A().formatters.status[link.lastStatus] || 'Cita registrada'} · sincronización ${link.sync === 'recovered' ? 'recuperada' : 'confirmada'}` : '';
   };
@@ -258,6 +258,7 @@
   const sendDraft = async (draft) => {
     if (!navigator.onLine) {
       A().pendingDrafts.save({ ...draft, status: 'pending' });
+      form.sending = false;
       form.messageKind = 'warning'; form.message = 'Sin conexión: quedó Pendiente de enviar. Usa Reintentar cuando tengas red.';
       renderForm(); renderAgenda(); return;
     }
@@ -346,7 +347,8 @@
       const target = event.target.closest('[data-agenda-action]');
       if (target) runAction(target);
     });
-    root.querySelector('#agenda-header-button').addEventListener('click', openAgenda);
+    document.querySelector('#agenda-header-button').addEventListener('click', openAgenda);
+    document.querySelector('[data-agenda-action="quote"]').addEventListener('click', () => openForm(bridgeContext()));
     root.querySelector('#agenda-form').addEventListener('change', () => { syncForm(); if (form.step === 2) renderForm(); });
     root.querySelector('#agenda-form').addEventListener('submit', (event) => { event.preventDefault(); submitForm(); });
     A().auth.subscribe((next) => {

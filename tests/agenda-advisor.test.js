@@ -136,6 +136,15 @@ const test = async (name, callback) => {
     assert.match(ui, /Horario reservado provisionalmente/);
   });
 
+  await test('8b UI reubicada conserva CTA visible y borrador offline reintentable', () => {
+    const ui = fs.readFileSync(path.join(root, 'agenda/ui.js'), 'utf8');
+    assert.match(ui, /document\.querySelector\('#quote-summary'\)\s*\|\|\s*document\.querySelector\('#resultado-panel \.card'\)/);
+    assert.match(ui, /document\.querySelector\('#agenda-header-button'\)\.addEventListener\('click', openAgenda\)/);
+    assert.match(ui, /document\.querySelector\('\[data-agenda-action="quote"\]'\)\.addEventListener\('click'/);
+    assert.match(ui, /const action = document\.querySelector\('#agenda-quote-action'\)/);
+    assert.match(ui, /A\(\)\.pendingDrafts\.save\(\{ \.\.\.draft, status: 'pending' \}\);\s*form\.sending = false;/);
+  });
+
   await test('9 PWA v7.6 incluye shell Agenda local y no cachea Firebase externo', () => {
     const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
     assert.match(sw, /CACHE_NAME = 'cotizador-v7\.6'/);
