@@ -256,6 +256,12 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
 
         // Cargar carrito guardado al iniciar
         let quoteItems = [];
+        function newAgendaQuoteId() {
+            const value = window.crypto?.randomUUID
+                ? window.crypto.randomUUID().replace(/-/g, '')
+                : `${Date.now()}${Math.random().toString(36).slice(2)}`;
+            return `q_${value}`;
+        }
         try {
             const saved = localStorage.getItem(CARRITO_STORAGE_KEY);
             if (saved) {
@@ -267,6 +273,10 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
         // Guardar carrito automáticamente cada vez que cambie
         function persistirCarrito() {
             try {
+                if (quoteItems.length > 0) {
+                    const quoteId = quoteItems.find(item => item.quoteId)?.quoteId || newAgendaQuoteId();
+                    quoteItems.forEach(item => { if (!item.quoteId) item.quoteId = quoteId; });
+                }
                 localStorage.setItem(CARRITO_STORAGE_KEY, JSON.stringify(quoteItems));
             } catch(e) { console.warn('No se pudo guardar carrito:', e); }
         }
@@ -849,6 +859,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
 
             // Guardar cálculo actual para agregar a lista
             lastCalculation = {
+                quoteId: newAgendaQuoteId(),
                 producto: prodNombre,
                 medidas: medidasStr,
                 vidrio: esEspejo ? 'Espejo' : espesor,
@@ -882,6 +893,8 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                     observaciones: observaciones
                 }
             };
+
+            window.dispatchEvent(new CustomEvent('wilan:quote-ready', { detail: { source: 'calculation' } }));
 
             // Guardar en Historial
             guardarHistorial({
@@ -1274,6 +1287,7 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
 
             const qty = parseInt(document.getElementById('cantidad-item').value) || 1;
             let itemToAdd = { ...lastCalculation };
+            itemToAdd.quoteId = quoteItems[0]?.quoteId || itemToAdd.quoteId;
             itemToAdd.cantidad = qty;
             itemToAdd.precioUnitario = itemToAdd.precio;
             itemToAdd.precio = itemToAdd.precio * qty;
@@ -1281,6 +1295,7 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
             quoteItems.push(itemToAdd);
             persistirCarrito();
             renderQuote();
+            window.dispatchEvent(new CustomEvent('wilan:quote-ready', { detail: { source: 'cart' } }));
             toast(`Agregado: ${itemToAdd.producto}`, 'success');
 
             // Pizarra limpia de medidas para el siguiente item, conservando
@@ -1594,6 +1609,32 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
             }
         }
         
+
+        // Puente aditivo de solo lectura para Agenda. No altera cálculos,
+        // carrito, folios ni datos históricos del Cotizador.
+        window.WilanCotizadorAgendaBridge = Object.freeze({
+            getQuoteContext: function () {
+                const cartVisible = quoteItems.length > 0;
+                const items = cartVisible ? quoteItems : (lastCalculation ? [lastCalculation] : []);
+                if (!items.length) return null;
+                const discountInput = document.getElementById('quote-discount');
+                const discount = cartVisible ? (parseFloat(discountInput && discountInput.value) || 0) : 0;
+                const total = Math.max(0, items.reduce((sum, item) => sum + Number(item.precio || 0), 0) - discount);
+                const folioText = cartVisible ? (document.getElementById('quote-folio')?.innerText || '') : '';
+                return JSON.parse(JSON.stringify({
+                    quoteId: cartVisible ? quoteItems[0]?.quoteId : lastCalculation?.quoteId,
+                    items: items,
+                    total: total,
+                    folio: folioText.replace(/^#/, ''),
+                    customer: {
+                        name: clienteActual.nombre || '',
+                        phone: clienteActual.telefono || '',
+                        address: clienteActual.direccion || '',
+                        project: clienteActual.obra || ''
+                    }
+                }));
+            }
+        });
 
         // Iniciar la aplicación
         init();

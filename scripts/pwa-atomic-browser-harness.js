@@ -11,7 +11,9 @@ const { chromium } = require(playwrightPath);
 const baselines = path.join(lab, 'baselines');
 const profiles = path.join(lab, 'profiles');
 const evidence = path.join(lab, 'evidencias', 'pwa-atomic-browser-results.json');
-const servedFiles = ['index.html', 'app.js', 'aluminio.js', 'comparador.js', 'dashboard.js', 'iq.js', 'visual.js', 'styles.css', 'manifest.json', 'icon.png', 'sw.js'];
+const baselineFiles = ['index.html', 'app.js', 'aluminio.js', 'comparador.js', 'dashboard.js', 'iq.js', 'visual.js', 'styles.css', 'manifest.json', 'icon.png', 'sw.js'];
+const agendaFiles = ['agenda/agenda.css', 'agenda/config.js', 'agenda/formatters.js', 'agenda/availability.js', 'agenda/pendingDrafts.js', 'agenda/quoteSnapshot.js', 'agenda/firebase.js', 'agenda/auth.js', 'agenda/commands.js', 'agenda/queries.js', 'agenda/ui.js'];
+const servedFiles = [...baselineFiles, ...agendaFiles];
 const commits = { A: 'a23e827f628ee8a8678b2ad326ad72aa0d67ba66', B: '8f6351bf9a65b030c5e8744938324b3c68f488bb', Bridge: '04b7ed374a4d69bf86242b5a4e69e2b8c09a6170' };
 let active = 'Atomic';
 let injectedFailure = null;
@@ -20,14 +22,18 @@ function git(args, options = {}) { return execFileSync('git', args, { cwd: repo,
 function resetDir(directory) { fs.rmSync(directory, { recursive: true, force: true }); fs.mkdirSync(directory, { recursive: true }); }
 function copyCommit(commit, destination) {
   resetDir(destination);
-  for (const file of servedFiles) {
+  for (const file of baselineFiles) {
     const data = git(['show', `${commit}:${file}`]);
     const target = path.join(destination, file); fs.mkdirSync(path.dirname(target), { recursive: true }); fs.writeFileSync(target, data);
   }
 }
 function copyWorkingTree(destination) {
   resetDir(destination);
-  for (const file of servedFiles) fs.copyFileSync(path.join(repo, file), path.join(destination, file));
+  for (const file of servedFiles) {
+    const target = path.join(destination, file);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(path.join(repo, file), target);
+  }
 }
 function prepend(file, marker) { fs.writeFileSync(file, `${marker}\n${fs.readFileSync(file, 'utf8')}`); }
 
@@ -51,7 +57,7 @@ function prepareBaselines() {
   fs.cpSync(path.join(baselines, 'Atomic'), path.join(baselines, 'AtomicRetry'), { recursive: true });
   prepend(path.join(baselines, 'AtomicRetry', 'sw.js'), '// RETRY_AFTER_LEGACY_CLOSED');
   const cSw = path.join(baselines, 'C', 'sw.js');
-  fs.writeFileSync(cSw, fs.readFileSync(cSw, 'utf8').replace("const CACHE_NAME = 'cotizador-v7.5';", "const CACHE_NAME = 'cotizador-v7.6-audit';"));
+  fs.writeFileSync(cSw, fs.readFileSync(cSw, 'utf8').replace("const CACHE_NAME = 'cotizador-v7.6';", "const CACHE_NAME = 'cotizador-v7.7-audit';"));
 }
 
 function contentType(file) {
@@ -145,8 +151,8 @@ async function bridgeFlow(port, fromVersion, name) {
   await page.click('#pwa-update-later'); await page.waitForTimeout(400); const afterLater = await snapshot(page);
   assert.deepEqual(afterLater.fields, bridgeBeforeAtomic.fields); assert.equal(navigations, navBeforeLater);
   await page.evaluate(() => { sessionStorage.removeItem('wilan_pwa_update_dismissed_v1'); document.getElementById('pwa-update-notice').style.display = 'flex'; });
-  await page.click('#pwa-update-now'); await waitUntil(async () => (await snapshot(page)).caches.length === 1 && (await snapshot(page)).caches[0] === 'cotizador-v7.5'); await page.waitForTimeout(700);
-  const afterNow = await snapshot(page); assert.equal(navigations, navBeforeLater + 1); assert.equal(afterNow.localStorage.wilan_atomic_marker, 'preserve-me'); assert.deepEqual(afterNow.caches, ['cotizador-v7.5']); assert.equal(dialogs.length, 1); assert.equal(afterNow.canonicalFunction, true);
+  await page.click('#pwa-update-now'); await waitUntil(async () => (await snapshot(page)).caches.length === 1 && (await snapshot(page)).caches[0] === 'cotizador-v7.6'); await page.waitForTimeout(700);
+  const afterNow = await snapshot(page); assert.equal(navigations, navBeforeLater + 1); assert.equal(afterNow.localStorage.wilan_atomic_marker, 'preserve-me'); assert.deepEqual(afterNow.caches, ['cotizador-v7.6']); assert.equal(dialogs.length, 1); assert.equal(afterNow.canonicalFunction, true);
   await context.setOffline(true); await page.reload({ waitUntil: 'domcontentloaded' }); await page.waitForTimeout(500); await prepareQuote(page); const offline = await snapshot(page); assert.equal(offline.result, 'Total con IVA: $729.244');
   await context.close(); return { legacyBeforeBridge, legacyStillOpen, bridgeBeforeAtomic, waiting, afterLater, afterNow, offline, dialogs, consentedReloads: navigations - navBeforeLater };
 }
@@ -180,7 +186,7 @@ async function multipleTabs(port) {
 async function consistency(port) {
   const { context, page } = await installVersion(port, 'Bridge', 'consistency');
   page.on('dialog', dialog => dialog.accept()); await prepareQuote(page); await switchTo(port, 'Atomic'); await requestUpdate(page); await waitUntil(async () => (await snapshot(page)).prompt);
-  await page.click('#pwa-update-now'); await waitUntil(async () => (await snapshot(page)).caches.includes('cotizador-v7.5')); await page.waitForLoadState('networkidle').catch(() => {}); await page.waitForTimeout(1200);
+  await page.click('#pwa-update-now'); await waitUntil(async () => (await snapshot(page)).caches.includes('cotizador-v7.6')); await page.waitForLoadState('networkidle').catch(() => {}); await page.waitForTimeout(1200);
   await switchTo(port, 'C', { file: 'comparador.js', type: 'interrupt' }); await page.reload({ waitUntil: 'domcontentloaded' }); await page.waitForTimeout(700);
   const online = await page.evaluate(async () => ({ indexN: (await fetch('./index.html').then(r => r.text())).includes('INDEX_RELEASE=N'), appN: (await fetch('./app.js').then(r => r.text())).includes('APP_RELEASE=N'), comparadorN: (await fetch('./comparador.js').then(r => r.text())).includes('COMPARADOR_RELEASE=N') }));
   await context.setOffline(true); await page.reload({ waitUntil: 'domcontentloaded' }); await page.waitForTimeout(500);

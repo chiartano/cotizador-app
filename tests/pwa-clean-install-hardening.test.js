@@ -73,12 +73,15 @@ async function exerciseUpdateCheck(registration) {
     assert.equal(result.warnings[0][1], error);
   });
 
-  await test('5 sw.js permanece byte por byte igual a b0a3c5f', () => {
-    assert.equal(git(['hash-object', '--no-filters', 'sw.js']), git(['rev-parse', `${base}:sw.js`]));
+  await test('5 nueva version conserva hardening y usa shell v7.6', () => {
+    const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.6'/);
+    assert.match(sw, /await caches\.delete\(CACHE_NAME\)/);
+    assert.match(sw, /cache: 'reload'/);
   });
 
-  await test('6 archivos funcionales protegidos no cambian', () => {
-    const protectedFiles = ['sw.js', 'app.js', 'aluminio.js', 'comparador.js', 'dashboard.js', 'iq.js', 'visual.js', 'styles.css', 'manifest.json', 'icon.png', '_verify_tmp.js', 'tests/fase1-calculos.test.js'];
+  await test('6 motores monetarios protegidos no cambian', () => {
+    const protectedFiles = ['aluminio.js', 'comparador.js', 'dashboard.js', 'iq.js', 'visual.js', 'styles.css', 'manifest.json', 'icon.png', '_verify_tmp.js', 'tests/fase1-calculos.test.js'];
     assert.equal(git(['diff', '--name-only', base, '--', ...protectedFiles]), '');
   });
 

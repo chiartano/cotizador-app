@@ -6,11 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cotizador Divisiones</title>
     <meta name="theme-color" content="#1877f2">
+    <meta name="wilan-agenda-advisor-enabled" content="false">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icono.png">
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="agenda/agenda.css">
 </head>
 
 <body>
@@ -733,10 +735,20 @@
     <script src="dashboard.js"></script>
     <script src="iq.js"></script>
     <script src="visual.js"></script>
+    <script src="agenda/config.js"></script>
+    <script src="agenda/formatters.js"></script>
+    <script src="agenda/availability.js"></script>
+    <script src="agenda/pendingDrafts.js"></script>
+    <script src="agenda/quoteSnapshot.js"></script>
+    <script src="agenda/firebase.js"></script>
+    <script src="agenda/auth.js"></script>
+    <script src="agenda/commands.js"></script>
+    <script src="agenda/queries.js"></script>
+    <script src="agenda/ui.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
             const WILAN_PWA_PROTOCOL_VERSION = 1;
-            const WILAN_PWA_BRIDGE_VERSION = 'f0-bridge-v1';
+            const WILAN_PWA_BRIDGE_VERSION = 'agenda-advisor-v1';
             const UPDATE_CONSENT_KEY = 'wilan_pwa_update_consent_v1';
             const UPDATE_RELOAD_GUARD_KEY = 'wilan_pwa_update_reload_guard_v1';
             const UPDATE_DISMISSED_KEY = 'wilan_pwa_update_dismissed_v1';
@@ -753,7 +765,7 @@
                 const hasResult = resultText !== '' && resultText !== 'Total con IVA: $0';
                 const aluminumVisible = document.getElementById('alu-result')?.style.display !== 'none';
                 const quoteVisible = document.getElementById('quote-summary')?.style.display !== 'none';
-                const modalSelectors = ['#modal-config', '#modal-libreta', '#cmp-modal', '#dash-modal', '#viz-modal', '#alu-modal-config'];
+                const modalSelectors = ['#modal-config', '#modal-libreta', '#cmp-modal', '#dash-modal', '#viz-modal', '#alu-modal-config', '#agenda-drawer', '#agenda-form-layer'];
                 const modalOpen = modalSelectors.some(selector => {
                     const element = document.querySelector(selector);
                     return element && getComputedStyle(element).display !== 'none';
