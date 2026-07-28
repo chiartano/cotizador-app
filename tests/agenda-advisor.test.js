@@ -69,7 +69,7 @@ const test = async (name, callback) => {
     const schedule = context.WilanAgenda.availability.blocksForDate('2026-07-23')[0].schedule;
     const appointments = [{ status: 'confirmed', schedule }, { status: 'tentative', schedule }];
     assert.equal(context.WilanAgenda.availability.occupancy(appointments, schedule), 2);
-    assert.match(context.WilanAgenda.availability.availabilityText(2), /backend decide/);
+    assert.match(context.WilanAgenda.availability.availabilityText(2), /al guardar se comprobará de nuevo/);
     const queries = fs.readFileSync(path.join(root, 'agenda/queries.js'), 'utf8');
     assert.doesNotMatch(queries, /appointmentCommands|availabilityLedger|\/private\//);
   });
@@ -114,14 +114,14 @@ const test = async (name, callback) => {
     assert.equal(drafts.quoteLink('q_synthetic001').appointmentId, 'apt_synthetic0001');
   });
 
-  await test('7 comando usa v1.2, callable y no confia rol o payloadHash cliente', async () => {
+  await test('7 comando usa v1.3, callable y no confia rol o payloadHash cliente', async () => {
     const context = sandboxFor(); load(context, 'agenda/config.js');
     let captured = null;
     context.WilanAgenda.firebase = { adapter: { call: async (_name, payload) => { captured = payload; return { appointmentId: payload.command.appointmentId, revision: 1, status: 'confirmed' }; } } };
     load(context, 'agenda/commands.js');
     const result = await context.WilanAgenda.commands.send({ commandId: 'cmd_synthetic0002', appointmentId: 'apt_synthetic0002', expectedRevision: 0, type: 'createAppointment', payload: { synthetic: true } });
     assert.equal(result.ok, true);
-    assert.equal(captured.command.schema, 'appointment-command.v1.2');
+    assert.equal(captured.command.schema, 'appointment-command.v1.3');
     assert.equal(captured.workspaceId, 'wilan-main');
     assert.equal('role' in captured, false);
     assert.equal(captured.command.payloadHash, `sha256:${'0'.repeat(64)}`);
@@ -136,12 +136,12 @@ const test = async (name, callback) => {
     assert.match(ui, /resolveVisitFee/);
     assert.match(ui, /markCommunicated/);
     assert.match(ui, /rescheduleAppointment/);
-    assert.match(ui, /Horario reservado provisionalmente/);
+    assert.match(ui, /La cita quedó pendiente de confirmación/);
   });
 
   await test('8b UI reubicada conserva CTA visible y borrador offline reintentable', () => {
     const ui = fs.readFileSync(path.join(root, 'agenda/ui.js'), 'utf8');
-    assert.match(ui, /document\.querySelector\('#quote-summary'\)\s*\|\|\s*document\.querySelector\('#resultado-panel \.card'\)/);
+    assert.match(ui, /quoteSummary && quoteSummary\.style\.display !== 'none' \? quoteSummary : resultCard/);
     assert.match(ui, /document\.querySelector\('#agenda-header-button'\)\.addEventListener\('click', openAgenda\)/);
     assert.match(ui, /document\.querySelector\('\[data-agenda-action="quote"\]'\)\.addEventListener\('click'/);
     assert.match(ui, /const action = document\.querySelector\('#agenda-quote-action'\)/);
@@ -181,10 +181,10 @@ const test = async (name, callback) => {
     assert.match(ui, /No puedes ver citas ni agendar/);
   });
 
-  await test('9 PWA v7.8 incluye shell Agenda local y no cachea Firebase externo', () => {
+  await test('9 PWA v7.9 incluye shell Agenda local y no cachea Firebase externo', () => {
     const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.8'/);
-    for (const asset of ['agenda.css', 'config.js', 'firebase.js', 'commands.js', 'access.js', 'queries.js', 'ui.js']) assert.match(sw, new RegExp(asset.replace('.', '\\.')));
+    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.9'/);
+    for (const asset of ['agenda.css', 'config.js', 'phone.js', 'firebase.js', 'commands.js', 'access.js', 'queries.js', 'ui.js']) assert.match(sw, new RegExp(asset.replace('.', '\\.')));
     assert.doesNotMatch(sw, /gstatic|firebasejs/);
     assert.match(sw, /cache: 'reload'/);
   });
@@ -196,5 +196,19 @@ const test = async (name, callback) => {
     assert.match(sources, /wilan_agenda_advisor_v1/);
     const css = fs.readFileSync(path.join(root, 'agenda/agenda.css'), 'utf8');
     assert.doesNotMatch(css, /(?:^|})details summary/);
+  });
+
+  await test('11 teléfono internacional, semana y CTA inmediata quedan en el shell operativo', () => {
+    const context = sandboxFor();
+    context.WilanAgenda = {};
+    load(context, 'agenda/phone.js');
+    assert.deepEqual(JSON.parse(JSON.stringify(context.WilanAgenda.phone.inspect('+1 (305) 555-0199'))), { normalized: '+13055550199', ambiguous: false });
+    assert.deepEqual(JSON.parse(JSON.stringify(context.WilanAgenda.phone.inspect('44207946018'))), { normalized: '+44207946018', ambiguous: true });
+    assert.equal(context.WilanAgenda.phone.inspect('teléfono 3001234567'), null);
+    const ui = fs.readFileSync(path.join(root, 'agenda/ui.js'), 'utf8');
+    for (const text of ['¿Por qué vamos?', '¿Qué necesita el cliente?', 'Necesitan atención', 'No hay citas que necesiten atención.', 'Información guardada. Conéctate para actualizar.', 'Semana', 'Lista']) assert.match(ui, new RegExp(text.replace(/[?]/g, '\\?')));
+    assert.match(ui, /wilan:quote-ready/);
+    assert.match(ui, /!A\(\)\.availability\.INSTALL_DURATIONS\.includes\(Number\(form\.durationMinutes\)\)/);
+    assert.match(fs.readFileSync(path.join(root, 'app.js'), 'utf8'), /source: 'history'/);
   });
 })().catch((error) => { console.error(error.stack || error); process.exit(1); });

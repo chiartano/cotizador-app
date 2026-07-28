@@ -23,6 +23,8 @@
   let authState = { kind: 'unauthenticated' };
   let queryState = { appointments: [], overrides: [], loading: false };
   let accessMessage = '';
+  let selectedDay = '';
+  let agendaView = 'week';
 
   const authCopy = (kind) => ({
     loading: 'Preparando acceso seguro…', signing_in: 'Abriendo acceso Google…',
@@ -46,6 +48,7 @@
     container.innerHTML = `
       <button id="agenda-header-button" class="agenda-header-button" type="button" aria-label="Abrir Agenda">Agenda</button>
       <div id="agenda-quote-action" class="agenda-quote-action" hidden>
+        <div id="agenda-quote-compact"></div>
         <button type="button" data-agenda-action="quote">Agendar esta cotización</button>
         <span id="agenda-quote-link"></span>
       </div>
@@ -72,7 +75,7 @@
     document.body.appendChild(container);
     const headerActions = document.querySelector('header > div');
     if (headerActions) headerActions.prepend(container.querySelector('#agenda-header-button'));
-    const result = document.querySelector('#quote-summary') || document.querySelector('#resultado-panel .card');
+    const result = document.querySelector('#resultado-panel .card') || document.querySelector('#quote-summary');
     if (result) result.appendChild(container.querySelector('#agenda-quote-action'));
     return container;
   };
@@ -91,7 +94,7 @@
     const explanation = ['no_membership', 'request_withdrawn'].includes(authState.kind)
       ? '<p class="agenda-muted">Envía una solicitud para que el administrador la revise. La solicitud no concede acceso por sí sola.</p>'
       : authState.kind === 'request_pending'
-        ? '<p class="agenda-muted">No puedes ver citas ni agendar hasta que un operator apruebe la solicitud.</p>'
+        ? '<p class="agenda-muted">No puedes ver citas ni agendar hasta que una cuenta administradora apruebe la solicitud.</p>'
         : authState.kind === 'revoked'
           ? '<p class="agenda-muted">Las citas históricas se conservan, pero esta sesión ya no puede leerlas ni crear nuevas.</p>'
           : '';
@@ -107,19 +110,24 @@
   };
   const card = (appointment) => {
     const f = A().formatters;
-    const quote = appointment.quoteRef?.quoteId ? `<span class="agenda-chip">Cotización ${esc(appointment.quoteRef.folio || appointment.quoteRef.quoteId)}</span>` : '';
+    const quote = appointment.quoteRef?.quoteId ? `<span class="agenda-chip">${appointment.quoteRef.folio ? `Cotización ${esc(appointment.quoteRef.folio)}` : 'Cotización vinculada'}</span>` : '';
     const alternative = appointment.status === 'alternative_proposed'
-      ? '<p class="agenda-warning">Operator propuso alternativas. Coordina con operator; este contrato no permite que advisor las acepte.</p>' : '';
+      ? '<p class="agenda-warning">Se propuso otra fecha. Coordínala antes de confirmar al cliente.</p>' : '';
     const canReschedule = appointment.type === 'measure_visit'
       && !f.terminal(appointment) && appointment.operationsReview?.status !== 'pending';
     const canInform = appointment.type === 'measure_visit'
       && appointment.visitFee?.applicability === 'applies'
       && appointment.visitFee?.disclosure?.status === 'not_informed';
     const canCommunicate = ['ready', 'needs_recommunication'].includes(appointment.communication?.status);
+    const canArchive = queryState.config?.appointmentArchiveEnabled === true
+      && appointment.server?.createdByUid === authState.user?.uid
+      && !['completed', 'no_show'].includes(appointment.status)
+      && appointment.links?.client?.status !== 'linked'
+      && !['prospect_project_linked', 'project_linked'].includes(appointment.links?.commercial?.status);
     const generalReason = f.reason(appointment);
     return `<article class="agenda-card" data-appointment-id="${esc(appointment.id || appointment.appointmentId)}">
       <div class="agenda-card-top"><strong>${esc(f.types[appointment.type] || appointment.type)}</strong><span>${esc(f.status[appointment.status] || appointment.status)}</span></div>
-      <h3>${esc(appointment.contact?.name || 'Cliente sin nombre')}</h3>
+      <h3>${esc(appointment.contact?.name || appointment.contact?.phone || 'Cliente')}</h3>
       <p>${esc(appointment.contact?.phone || '')} · ${esc(short(appointment.location?.addressText))}</p>
       <p>${esc(f.needs[appointment.customerNeed?.category] || appointment.customerNeed?.detail || 'Necesidad por precisar')}</p>
       <p><strong>${esc(f.dateTime(appointment.schedule?.startAt))}</strong> · ${esc(appointment.durationMinutes)} min</p>
@@ -131,13 +139,76 @@
         ${canInform ? `<button type="button" data-agenda-action="inform-fee" data-id="${esc(appointment.id)}">Informar costo</button>` : ''}
         ${canCommunicate ? `<button type="button" data-agenda-action="communicate" data-id="${esc(appointment.id)}">Marcar comunicación</button>` : ''}
         ${canReschedule ? `<button type="button" data-agenda-action="reschedule" data-id="${esc(appointment.id)}">Reprogramar medida</button>` : ''}
+        ${canArchive ? `<button type="button" class="agenda-delete-action" data-agenda-action="archive" data-id="${esc(appointment.id)}">Eliminar cita</button>` : ''}
       </div>
     </article>`;
   };
   const section = (title, items, empty) => `<section class="agenda-section"><div class="agenda-section-title"><h3>${title}</h3><span>${items.length}</span></div>${items.length ? items.map(card).join('') : `<p class="agenda-muted">${empty}</p>`}</section>`;
+  const dateKey = (date) => date.toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+  const operationalDays = () => {
+    const first = queryState.rangeStart ? new Date(queryState.rangeStart) : new Date();
+    return Array.from({ length: 6 }, (_, index) => new Date(first.getTime() + index * 86400000));
+  };
+  const dayTitle = (date) => new Intl.DateTimeFormat('es-CO', {
+    timeZone: 'America/Bogota', weekday: 'short', day: 'numeric', month: 'short'
+  }).format(date);
+  const dayAppointments = (date) => queryState.appointments.filter((item) =>
+    dateKey(A().formatters.asDate(item.schedule?.startAt)) === dateKey(date));
+  const weekCard = (appointment) => {
+    const start = A().formatters.asDate(appointment.schedule?.startAt);
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit', hour12: false
+    }).format(start).split(':').map(Number);
+    const top = Math.max(0, (((parts[0] - 8) * 60 + parts[1]) / 60) * 56);
+    const height = Math.max(48, Number(appointment.durationMinutes || 60) / 60 * 56);
+    return `<button type="button" class="agenda-week-card" data-agenda-action="appointment-focus" data-id="${esc(appointment.id)}" style="top:${top}px;height:${height}px">
+      <strong>${esc(appointment.contact?.name || appointment.contact?.phone)}</strong>
+      <span>${esc(A().formatters.types[appointment.type] || 'Visita')}</span>
+      <small>${esc(A().formatters.dateTime(appointment.schedule?.startAt).split(',').pop() || '')}</small>
+    </button>`;
+  };
+  const freeBlocks = (date) => A().availability.blocksForDate(dateKey(date), {
+    saturdayException: A().queries.saturdayException()
+  }).map((block) => {
+    const occupied = A().availability.occupancy(queryState.appointments, block.schedule);
+    const startHour = Number(block.start.slice(0, 2));
+    const top = (startHour - 8) * 56;
+    const height = block.durationMinutes / 60 * 56;
+    return `<button type="button" class="agenda-free-slot" data-agenda-action="free-slot" data-date="${dateKey(date)}" data-block="${block.start}" style="top:${top}px;height:${height}px" ${occupied || !navigator.onLine ? 'disabled' : ''}>${occupied ? '' : navigator.onLine ? `${block.start} libre` : 'Sin conexión'}</button>`;
+  }).join('');
+  const renderOperationalAgenda = (content) => {
+    const days = operationalDays();
+    if (!selectedDay || !days.some((date) => dateKey(date) === selectedDay)) selectedDay = dateKey(days[0]);
+    const attention = queryState.appointments.filter(A().formatters.requiresResponse);
+    const activeDay = days.find((date) => dateKey(date) === selectedDay) || days[0];
+    const selectedItems = dayAppointments(activeDay);
+    const drafts = A().pendingDrafts.list();
+    const list = [...queryState.appointments].sort((left, right) =>
+      Date.parse(left.schedule?.startAt || 0) - Date.parse(right.schedule?.startAt || 0));
+    content.innerHTML = `${!navigator.onLine ? '<p class="agenda-offline">Información guardada. Conéctate para actualizar.</p>' : ''}
+      <div class="agenda-profile"><div><strong>Agenda semanal</strong><small>${esc(authState.user?.email || '')}</small></div><button type="button" data-agenda-action="logout">Salir</button></div>
+      <div class="agenda-toolbar"><button type="button" class="agenda-primary" data-agenda-action="direct">Nueva cita</button><span>${queryState.appointments.length} citas esta semana</span></div>
+      ${drafts.length ? `<section class="agenda-section"><div class="agenda-section-title"><h3>Pendientes de enviar</h3><span>${drafts.length}</span></div>${drafts.map((draft) => `<article class="agenda-draft"><div><strong>${esc(draft.form?.name || draft.form?.phone || 'Cita pendiente')}</strong><small>${['unknown', 'sending'].includes(draft.status) ? 'Resultado no confirmado' : 'Guardado en este dispositivo'}</small></div><button type="button" data-agenda-action="retry" data-command="${esc(draft.commandId)}">Reintentar</button></article>`).join('')}</section>` : ''}
+      <section class="agenda-attention"><div class="agenda-section-title"><div><h3>Necesitan atención</h3><p>Solo decisiones y comunicaciones pendientes.</p></div><span>${attention.length}</span></div>
+        ${attention.length ? attention.map((item) => `<button type="button" data-agenda-action="appointment-focus" data-id="${esc(item.id)}"><strong>${esc(item.contact?.name || item.contact?.phone)}</strong><small>${esc(A().formatters.status[item.status] || 'Revisar cita')} · ${esc(A().formatters.communication(item.communication))}</small></button>`).join('') : '<p class="agenda-empty-line">No hay citas que necesiten atención.</p>'}
+      </section>
+      <div class="agenda-week-nav"><button type="button" data-agenda-action="week-prev">‹</button><button type="button" data-agenda-action="week-today">Hoy</button><strong>${esc(dayTitle(days[0]))} – ${esc(dayTitle(days[5]))}</strong><button type="button" data-agenda-action="week-next">›</button></div>
+      <div class="agenda-view-tabs"><button type="button" data-agenda-action="view-week" class="${agendaView === 'week' ? 'active' : ''}">Semana</button><button type="button" data-agenda-action="view-list" class="${agendaView === 'list' ? 'active' : ''}">Lista</button></div>
+      ${agendaView === 'list' ? `<div class="agenda-list">${list.length ? list.map(card).join('') : '<p class="agenda-muted">No hay citas en este periodo.</p>'}</div>` : `
+        <div class="agenda-mobile-days">${days.map((date) => `<button type="button" data-agenda-action="select-day" data-date="${dateKey(date)}" class="${dateKey(date) === selectedDay ? 'active' : ''}">${esc(dayTitle(date))}</button>`).join('')}</div>
+        <div class="agenda-mobile-day">${selectedItems.length ? selectedItems.map(card).join('') : '<p class="agenda-muted">No hay citas este día.</p>'}
+          ${A().availability.blocksForDate(dateKey(activeDay), { saturdayException: A().queries.saturdayException() }).map((block) => {
+            const occupied = A().availability.occupancy(queryState.appointments, block.schedule);
+            return `<button type="button" class="agenda-mobile-slot" data-agenda-action="free-slot" data-date="${dateKey(activeDay)}" data-block="${block.start}" ${occupied || !navigator.onLine ? 'disabled' : ''}>${block.start}${block.end ? `–${block.end}` : ''} · ${occupied ? 'ocupado' : navigator.onLine ? 'Agendar' : 'sin conexión'}</button>`;
+          }).join('')}
+        </div>
+        <div class="agenda-week-grid"><div class="agenda-week-axis">${Array.from({ length: 10 }, (_, index) => `<span style="top:${index * 56}px">${index + 8}:00</span>`).join('')}</div>${days.map((date) => `<div class="agenda-week-column"><header>${esc(dayTitle(date))}</header><div class="agenda-week-body">${freeBlocks(date)}${dayAppointments(date).map(weekCard).join('')}</div></div>`).join('')}</div>`}
+    `;
+  };
   const renderAgenda = () => {
     if (!allowed()) return renderAuth();
     const content = root.querySelector('#agenda-content');
+    if (queryState.config?.agendaOperationalUxEnabled === true) return renderOperationalAgenda(content);
     const f = A().formatters;
     const appointments = [...queryState.appointments];
     const now = Date.now();
@@ -156,7 +227,18 @@
   const refreshQuoteAction = () => {
     const action = document.querySelector('#agenda-quote-action');
     const context = bridgeContext();
+    const quoteSummary = document.querySelector('#quote-summary');
+    const resultCard = document.querySelector('#resultado-panel .card');
+    const target = quoteSummary && quoteSummary.style.display !== 'none' ? quoteSummary : resultCard;
+    if (target && action.parentElement !== target) target.appendChild(action);
     action.hidden = !context || !A().config.enabled || !allowed();
+    const compact = document.querySelector('#agenda-quote-compact');
+    if (compact && context) {
+      const items = (context.items || []).slice(0, 4);
+      compact.innerHTML = `<strong>${context.folio ? `Cotización #${esc(context.folio)}` : 'Cotización actual'}</strong>
+        ${items.map((item) => `<span>${esc(item.producto || 'Producto')} · ${esc(item.medidas || '')}${item.vidrio ? ` · ${esc(item.vidrio)}` : ''}${item.color ? ` · ${esc(item.color)}` : ''}${item.cantidad ? ` · ${esc(item.cantidad)} und.` : ''}</span>`).join('')}
+        <b>${esc(A().formatters.money(context.total))}</b>`;
+    } else if (compact) compact.innerHTML = '';
     const quoteId = context?.quoteId;
     const link = quoteId ? A().pendingDrafts.quoteLink(quoteId) : null;
     const appointment = link ? queryState.appointments.find((item) => item.id === link.appointmentId) : null;
@@ -198,7 +280,7 @@
       form.phone = quoteContext.customer?.phone || '';
       form.address = quoteContext.customer?.address || '';
       form.detail = quoteContext.items.map((item) => item.producto).filter(Boolean).join(', ').slice(0, 1000);
-      form.need = quoteContext.items.length > 1 ? 'multiple_jobs' : /espejo/i.test(form.detail) ? 'mirror' : /ventana|puerta/i.test(form.detail) ? 'window_or_door' : 'bath_partition';
+      form.need = quoteContext.items.length > 1 ? 'other' : /espejo/i.test(form.detail) ? 'mirror' : /ventana|puerta/i.test(form.detail) ? 'window_or_door' : 'bath_partition';
     }
     const layer = root.querySelector('#agenda-form-layer');
     layer.hidden = false; layer.setAttribute('aria-hidden', 'false');
@@ -210,16 +292,22 @@
     const progress = `<div class="agenda-progress"><strong class="${form.step === 1 ? 'active' : ''}">1 Cliente y servicio</strong><span>→</span><strong class="${form.step === 2 ? 'active' : ''}">2 Horario</strong></div>`;
     if (form.step === 1) {
       node.innerHTML = `${progress}${form.direct ? '<p class="agenda-muted">Cita directa, sin fabricar una referencia de cotización.</p>' : '<p class="agenda-success">La cotización se adjuntará como snapshot inmutable.</p>'}
-        ${field('phone', 'Celular *', 'tel', 'inputmode="tel" autocomplete="tel"')}
-        ${field('name', 'Nombre')}${field('address', 'Dirección *')}
-        <label>Necesidad *<select name="need">${Object.entries(A().formatters.needs).map(([value, label]) => `<option value="${value}" ${form.need === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>
-        <label>Detalle<textarea name="detail" rows="2">${esc(form.detail)}</textarea></label>
-        <label>Tipo de cita<select name="type"><option value="measure_visit">Visita de medidas</option><option value="install_visit">Instalación provisional</option><option value="correction_visit">Corrección pendiente de operator</option><option value="warranty_visit">Garantía pendiente de operator</option></select></label>
+        ${field('phone', 'Teléfono del cliente *', 'tel', 'inputmode="tel" autocomplete="tel" placeholder="+57 300 123 4567"')}
+        ${A().phone.warning(form.phone) ? `<p class="agenda-phone-hint">${esc(A().phone.warning(form.phone))}</p>` : ''}
+        ${field('name', 'Nombre del cliente (opcional)', 'text', 'placeholder="Ej. Ana Rodríguez"')}<p class="agenda-muted">Si no lo sabes, puedes dejarlo vacío. La cita se mostrará con el número.</p>
+        ${field('address', 'Dirección *')}
+        <fieldset><legend>¿Qué necesita el cliente?</legend><div class="agenda-choice-grid">${[
+          ['bath_partition', 'División de baño'], ['window_or_door', 'Ventana/puerta'], ['mirror', 'Espejo'],
+          ['railing', 'Baranda'], ['glass_replacement', 'Cambio de vidrio'], ['general_maintenance', 'Mantenimiento general'], ['other', 'Otro']
+        ].map(([value, label]) => `<label class="agenda-choice"><input type="radio" name="need" value="${value}" ${form.need === value ? 'checked' : ''}> ${label}</label>`).join('')}</div></fieldset>
+        <label>Descripción ${form.need === 'other' ? '*' : '(opcional)'}<textarea name="detail" rows="2" placeholder="Describe brevemente lo que necesita">${esc(form.detail)}</textarea></label>
         <button type="button" class="agenda-primary agenda-full" data-agenda-action="next">Continuar</button>${messageHtml()}`;
-      node.elements.type.value = form.type;
       return;
     }
     const exception = A().queries.saturdayException();
+    if (form.type === 'install_visit' && !A().availability.INSTALL_DURATIONS.includes(Number(form.durationMinutes))) {
+      form.durationMinutes = A().availability.INSTALL_DURATIONS[0];
+    }
     const blocks = form.type === 'install_visit'
       ? A().availability.installBlocksForDate(form.date, form.durationMinutes)
       : A().availability.blocksForDate(form.date, { saturdayException: exception });
@@ -227,14 +315,18 @@
     const selected = blocks.find((block) => block.start === form.block);
     const occupied = selected ? A().availability.occupancy(queryState.appointments, selected.schedule) : 0;
     node.innerHTML = `${progress}
+      <fieldset><legend>¿Por qué vamos?</legend><div class="agenda-choice-grid">${[
+        ['measure_visit', 'Tomar medidas'], ['install_visit', 'Instalar'],
+        ['correction_visit', 'Mantenimiento o reparación'], ['warranty_visit', 'Revisar una garantía']
+      ].map(([value, label]) => `<label class="agenda-choice"><input type="radio" name="type" value="${value}" ${form.type === value ? 'checked' : ''}> ${label}</label>`).join('')}</div></fieldset>
       ${field('date', 'Fecha *', 'date')}
       <label>Bloque *<select name="block">${blocks.map((block) => `<option value="${block.start}" ${form.block === block.start ? 'selected' : ''}>${block.start}${block.end ? `–${block.end}` : ''}</option>`).join('')}</select></label>
-      ${form.type === 'install_visit' ? `<label>Duración<select name="durationMinutes">${A().availability.INSTALL_DURATIONS.map((minutes) => `<option value="${minutes}" ${Number(form.durationMinutes) === minutes ? 'selected' : ''}>${minutes / 60} horas</option>`).join('')}</select></label><p class="agenda-warning">La instalación quedará provisional hasta revisión de operator.</p>` : ''}
+      ${form.type === 'install_visit' ? `<label>Duración<select name="durationMinutes">${A().availability.INSTALL_DURATIONS.map((minutes) => `<option value="${minutes}" ${Number(form.durationMinutes) === minutes ? 'selected' : ''}>${minutes / 60} horas</option>`).join('')}</select></label><p class="agenda-warning">El horario quedará pendiente de confirmación.</p>` : ''}
       <p class="agenda-capacity level-${Math.min(occupied, 2)}">${esc(A().availability.availabilityText(occupied))}</p>
       ${form.type === 'measure_visit' ? `<fieldset><legend>Costo de visita</legend><label class="agenda-radio"><input type="radio" name="feeMode" value="informed" ${form.feeMode === 'informed' ? 'checked' : ''}> Informado</label><label class="agenda-radio"><input type="radio" name="feeMode" value="not_informed" ${form.feeMode === 'not_informed' ? 'checked' : ''}> Aún no informado</label>${form.feeMode === 'informed' ? `${field('feeAmount', 'Valor informado (COP) *', 'number', 'min="0" step="1" list="agenda-fee-options"')}<datalist id="agenda-fee-options"><option value="20000"></option><option value="30000"></option></datalist>` : '<p class="agenda-warning">La comunicación quedará bloqueada hasta informar el costo.</p>'}</fieldset>` : ''}
       <label>Nota general<textarea name="note" rows="2">${esc(form.note)}</textarea></label>
-      <div class="agenda-summary"><strong>Resumen</strong><span>${esc(A().formatters.types[form.type])} · ${esc(form.durationMinutes)} min</span><span>${esc(form.name || 'Sin nombre')} · ${esc(form.phone)}</span><span>${esc(form.address)}</span></div>
-      <div class="agenda-form-actions"><button type="button" class="agenda-secondary" data-agenda-action="back">Volver</button><button type="submit" class="agenda-primary" ${form.sending ? 'disabled' : ''}>${form.sending ? 'Esperando confirmación…' : 'Crear cita'}</button></div>${messageHtml()}`;
+      <div class="agenda-summary"><strong>Resumen</strong><span>${esc(A().formatters.types[form.type])} · ${esc(form.durationMinutes / 60)} h</span><span>${esc(form.name || form.phone)} · ${esc(form.phone)}</span><span>${esc(form.address)}</span></div>
+      <div class="agenda-form-actions"><button type="button" class="agenda-secondary" data-agenda-action="back">Volver</button><button type="submit" class="agenda-primary" ${form.sending ? 'disabled' : ''}>${form.sending ? 'Guardando…' : 'Guardar cita'}</button></div>${messageHtml()}`;
   };
   const messageHtml = () => form.message ? `<div class="agenda-message ${esc(form.messageKind)}" role="status">${esc(form.message)}</div>` : '';
   const syncForm = () => {
@@ -244,8 +336,9 @@
     form.feeAmount = Number(form.feeAmount);
   };
   const firstError = () => {
-    if (!/^\s*(?:\+?57)?3[0-9\s-]{9,}\s*$/.test(form.phone)) return 'Ingresa un celular colombiano válido.';
+    if (!A().phone.inspect(form.phone)) return 'Ingresa un teléfono válido de 7 a 15 dígitos.';
     if (form.address.trim().length < 5) return 'Ingresa una dirección clara.';
+    if (form.need === 'other' && form.detail.trim().length < 3) return 'Describe brevemente qué necesita el cliente.';
     return null;
   };
   const scheduleForForm = () => {
@@ -303,10 +396,10 @@
       form.message = result.result.deduplicated
         ? `La cita ya existía; recuperamos el mismo resultado sin duplicarla: ${A().formatters.status[result.result.status] || 'registrada'}.`
         : result.result.status === 'confirmed'
-          ? 'Cita confirmada por el backend.'
+          ? 'La cita quedó confirmada.'
           : result.result.status === 'tentative'
-            ? 'Horario reservado provisionalmente. Operator debe revisarlo antes de prometerlo al cliente.'
-            : `Cita registrada: ${A().formatters.status[result.result.status] || 'pendiente de revisión'}.`;
+            ? 'La cita quedó pendiente de confirmación.'
+            : `La cita quedó ${String(A().formatters.status[result.result.status] || 'pendiente de revisión').toLowerCase()}.`;
       renderForm(); renderAgenda(); refreshQuoteAction(); return;
     }
     A().pendingDrafts.save({ ...draft, status: result.error.uncertain ? 'unknown' : 'pending' });
@@ -320,7 +413,7 @@
     if (form.feeMode === 'informed' && (!Number.isInteger(form.feeAmount) || form.feeAmount < 0)) {
       form.message = 'El costo informado debe ser un entero en COP.'; form.messageKind = 'error'; renderForm(); return;
     }
-    form.sending = true; form.message = 'Esperando confirmación autoritativa del backend…'; form.messageKind = 'loading'; renderForm();
+    form.sending = true; form.message = 'Confirmando la cita y el horario…'; form.messageKind = 'loading'; renderForm();
     try { await sendDraft(await draftForForm()); }
     catch (_) { form.sending = false; form.message = 'El horario o snapshot no pudo validarse.'; form.messageKind = 'error'; renderForm(); }
   };
@@ -343,12 +436,38 @@
       const result = await A().access.send({
         type: action === 'request-access' ? 'requestAccess' : 'withdrawAccessRequest'
       });
-      accessMessage = result.ok ? 'Acción confirmada por el backend.' : result.error.message;
+      accessMessage = result.ok ? 'Acción confirmada.' : result.error.message;
       renderAuth();
       return;
     }
     if (action === 'direct') return openForm(null);
     if (action === 'quote') return openForm(bridgeContext());
+    if (action === 'view-week') { agendaView = 'week'; return renderAgenda(); }
+    if (action === 'view-list') { agendaView = 'list'; return renderAgenda(); }
+    if (action === 'select-day') { selectedDay = target.dataset.date; return renderAgenda(); }
+    if (action === 'week-prev' || action === 'week-next' || action === 'week-today') {
+      const base = action === 'week-today'
+        ? new Date()
+        : new Date(queryState.rangeStart || Date.now() + (action === 'week-next' ? 7 : -7) * 86400000);
+      if (action !== 'week-today') base.setUTCDate(base.getUTCDate() + (action === 'week-next' ? 7 : -7));
+      A().queries.setWeek(base);
+      return;
+    }
+    if (action === 'free-slot') {
+      if (!navigator.onLine) return;
+      openForm(null);
+      form.date = target.dataset.date;
+      form.block = target.dataset.block;
+      renderForm();
+      return;
+    }
+    if (action === 'appointment-focus') {
+      agendaView = 'list';
+      renderAgenda();
+      const appointmentNode = root.querySelector(`[data-appointment-id="${target.dataset.id}"]`);
+      appointmentNode?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      return;
+    }
     if (action === 'next') {
       syncForm(); const error = firstError();
       if (error) { form.message = error; form.messageKind = 'error'; return renderForm(); }
@@ -382,6 +501,35 @@
       const schedule = A().availability.blocksForDate(date, { saturdayException: A().queries.saturdayException() }).find((item) => item.start === hour)?.schedule;
       if (!schedule) return;
       reportActionResult(await A().commands.send({ appointmentId: appointment.id, expectedRevision: appointment.revision, type: 'rescheduleAppointment', payload: { newSchedule: schedule, reason: 'Reprogramación coordinada por advisor', customerCommunicationStatus: 'pending' } }));
+    }
+    if (action === 'archive') {
+      const choices = {
+        '1': 'created_by_mistake',
+        '2': 'synthetic_test',
+        '3': 'duplicate_customer',
+        '4': 'incorrect_information',
+        '5': 'other'
+      };
+      const selected = prompt('Motivo: 1 La agendé por error · 2 Era una prueba · 3 Cliente duplicado · 4 Fecha o información incorrecta · 5 Otra razón', '1');
+      const archiveReason = choices[selected];
+      if (!archiveReason) return;
+      const note = archiveReason === 'other' ? prompt('Describe brevemente la razón', '') : '';
+      if (archiveReason === 'other' && !String(note || '').trim()) return;
+      const customerCommunicationAcknowledged = appointment.communication?.status === 'communicated'
+        ? confirm('El cliente ya fue informado. ¿Confirmas que revisarás si necesita una aclaración?')
+        : false;
+      if (appointment.communication?.status === 'communicated' && !customerCommunicationAcknowledged) return;
+      if (!confirm('La cita dejará de aparecer, pero su historia y controles se conservarán. ¿Eliminar cita?')) return;
+      reportActionResult(await A().commands.send({
+        appointmentId: appointment.id,
+        expectedRevision: appointment.revision,
+        type: 'archiveAppointment',
+        payload: {
+          reason: archiveReason,
+          customerCommunicationAcknowledged,
+          ...(archiveReason === 'other' ? { note: String(note).trim() } : {})
+        }
+      }));
     }
   };
   const initialize = () => {

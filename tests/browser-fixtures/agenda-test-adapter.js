@@ -44,12 +44,14 @@
     const status = payload.type === 'measure_visit' && overlap === 0 ? 'confirmed' : 'tentative';
     const operationsReview = status === 'confirmed' ? { status: 'not_required' } : { status: 'pending', dueAt: new Date(Date.now() + 86400000).toISOString() };
     const appointment = {
-      id: command.appointmentId, appointmentId: command.appointmentId, revision: 1, status,
+      id: command.appointmentId, appointmentId: command.appointmentId, schema: 'appointment.v1.1', archived: false, revision: 1, status,
       type: payload.type, source: payload.source, contact: payload.contact, location: payload.location,
       customerNeed: payload.customerNeed, requestedAvailability: payload.requestedAvailability,
       durationMinutes: payload.durationMinutes, schedule: payload.schedule, operationsReview,
       visitFee: feeFor(payload), quoteRef: payload.quoteRef, immutableQuoteSnapshot: payload.immutableQuoteSnapshot,
-      communication: null, rescheduleHistory: [], createdAt: now(), updatedAt: now()
+      communication: null, rescheduleHistory: [], createdAt: now(), updatedAt: now(),
+      links: { client: { status: 'unlinked' }, commercial: { status: 'unlinked' } },
+      server: { createdByUid: uid }
     };
     appointment.communication = communicationFor(appointment);
     appointments.push(appointment);
@@ -68,6 +70,13 @@
       appointment.communication = { status: 'needs_recommunication' };
       appointment.status = 'confirmed';
     }
+    if (command.type === 'archiveAppointment') {
+      appointment.archived = true;
+      appointment.archivedAt = now();
+      appointment.archivedByUid = uid;
+      appointment.archiveReason = command.payload.reason;
+      appointment.previousStatus = appointment.status;
+    }
     return appointment;
   };
   const adapter = {
@@ -83,7 +92,7 @@
       } else if (/\/accessRequests\//.test(path)) {
         requestListeners.push(next);
         setTimeout(() => next(accessRequest ? JSON.parse(JSON.stringify(accessRequest)) : null), 0);
-      } else if (/agendaConfig/.test(path)) setTimeout(() => next({ serviceEnabled: true, advisorCreationEnabled: true }), 0);
+      } else if (/agendaConfig/.test(path)) setTimeout(() => next({ serviceEnabled: true, advisorCreationEnabled: true, agendaOperationalUxEnabled: true, appointmentArchiveEnabled: true }), 0);
       else setTimeout(() => next(null), 0);
       return () => {};
     },
@@ -93,6 +102,9 @@
         listeners.push(next); collectionListeners.set('appointments', listeners); setTimeout(() => next(JSON.parse(JSON.stringify(appointments))), 0);
       } else setTimeout(() => next([]), 0);
       return () => {};
+    },
+    subscribeQuery(path, _constraints, next) {
+      return this.subscribeCollection(path, next);
     },
     async call(name, request) {
       if (name === 'agendaAccessCommand') {

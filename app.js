@@ -897,17 +897,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             window.dispatchEvent(new CustomEvent('wilan:quote-ready', { detail: { source: 'calculation' } }));
 
             // Guardar en Historial
-            guardarHistorial({
-                producto: prodNombre,
-                medidas: medidasStr,
-                precio: precioCliente,
-                fecha: new Date(),
-                ...buildCanonicalProductMetadata(prodNombre, {
-                    espesor,
-                    hasLed: tieneLed,
-                    hasSandblasting: tieneSandblasting
-                })
-            });
+            guardarHistorial({ ...lastCalculation, fecha: new Date() });
 
             // Registrar también en el historial del dashboard (no rompe nada si no está cargado)
             if (typeof dash_registrar === 'function') {
@@ -1217,8 +1207,13 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
                 row.className = 'detail-row';
                 row.innerHTML = `
                     <div style="font-size:0.85rem; color:#333;"><b>${h.producto}</b><br><span style="color:#666; font-size:0.75rem;">${h.medidas} cm | ${h.fechaStr}</span></div>
-                    <div style="font-weight:bold; color:var(--accent-blue);">${fmtMoney(h.precio)}</div>
+                    <div style="text-align:right"><div style="font-weight:bold; color:var(--accent-blue);">${fmtMoney(h.precio)}</div><button type="button" class="agenda-history-quote" style="margin-top:4px;border:0;border-radius:6px;padding:5px 8px;background:#eef2ff;color:#4338ca;font-weight:700;cursor:pointer;">Agendar</button></div>
                 `;
+                row.querySelector('.agenda-history-quote').addEventListener('click', () => {
+                    lastCalculation = { ...h, quoteId: h.quoteId || newAgendaQuoteId() };
+                    window.dispatchEvent(new CustomEvent('wilan:quote-ready', { detail: { source: 'history' } }));
+                    window.WilanAgenda?.ui?.openForm?.(window.WilanCotizadorAgendaBridge?.getQuoteContext?.());
+                });
                 list.appendChild(row);
             });
         }

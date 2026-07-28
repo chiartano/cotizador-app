@@ -16,7 +16,7 @@
       CAPACITY_EXCEEDED: 'Ese horario acaba de llenarse. Conservamos tus datos para elegir otro.',
       SLOT_NOT_AVAILABLE: 'Ese horario no está disponible.',
       SERVICE_DISABLED: 'Agenda está pausada. No se guardó un comando nuevo.',
-      OPERATOR_ROLE_REQUIRED: 'Esta acción requiere operator.',
+      OPERATOR_ROLE_REQUIRED: 'Esta acción requiere autorización administrativa.',
       WORKSPACE_ACCESS_DENIED: 'Tu usuario no pertenece a este workspace.',
       MEMBER_INACTIVE: 'Tu acceso a Agenda está inactivo.',
       ROLE_NOT_ALLOWED: 'Tu perfil no está habilitado para Agenda.',
@@ -27,10 +27,15 @@
       UNKNOWN: 'No pudimos confirmar el resultado. Reintenta el mismo envío.',
       VISIT_FEE_DISCLOSURE_REQUIRED: 'Primero informa el costo de visita.',
       NETWORK_ERROR: 'No recibimos confirmación. Reintenta el mismo envío para recuperar el resultado.'
+      ,APPOINTMENT_ARCHIVE_DISABLED: 'Eliminar citas está pausado temporalmente.'
+      ,ARCHIVE_OWN_APPOINTMENT_REQUIRED: 'Solo puedes eliminar una cita que tú agendaste.'
+      ,ARCHIVE_OPERATOR_REQUIRED: 'Esta cita necesita revisión administrativa antes de eliminarla.'
+      ,ARCHIVE_SENSITIVE_LINK_OPERATOR_REQUIRED: 'Esta cita vinculada necesita revisión administrativa.'
+      ,ARCHIVE_COMMUNICATION_ACK_REQUIRED: 'Confirma que revisaste el impacto para el cliente.'
     };
     return { code, uncertain, message: messages[code] || 'No fue posible completar la acción.', raw: error };
   };
-  const send = async ({ commandId = newCommandId(), appointmentId, expectedRevision, type, payload }) => {
+  const send = async ({ commandId = newCommandId(), appointmentId, expectedRevision, type, payload, schema = 'appointment-command.v1.3' }) => {
     const adapter = global.WilanAgenda.firebase?.adapter;
     if (!adapter?.call) return { ok: false, commandId, error: classify({ details: { code: 'NETWORK_ERROR' } }) };
     const config = global.WilanAgenda.config;
@@ -39,7 +44,7 @@
         appId: config.appId,
         workspaceId: config.workspaceId,
         command: {
-          schema: 'appointment-command.v1.2', commandId, workspaceId: config.workspaceId,
+          schema, commandId, workspaceId: config.workspaceId,
           appointmentId, expectedRevision, type, payloadHash: ZERO_HASH, payload
         }
       });

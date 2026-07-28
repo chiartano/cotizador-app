@@ -11,7 +11,7 @@ En `localhost` se habilita para pruebas y usa Auth, Firestore y Functions Emulat
 ## Arquitectura y límites
 
 - Firebase real objetivo: `contabilidad-vidrio`; workspace: `wilan-main`; callable: `appointmentCommand` en `us-central1`.
-- Toda mutación usa `appointment-command.v1.2` por callable. El `payloadHash` enviado es marcador; el backend calcula el hash autoritativo.
+- La experiencia operativa usa `appointment-command.v1.3` por callable; el backend conserva compatibilidad de escritura con v1.2. El `payloadHash` enviado es marcador y el backend calcula el hash autoritativo.
 - Las únicas lecturas son la membresía propia, appointments compartidos, availability rules/overrides y configuración pública del workspace.
 - Nunca se leen `private`, `appointmentCommands`, `availabilityLedger`, cuentas, movimientos, clientes completos, proyectos ni finanzas.
 - Advisor puede crear, releer, informar el costo de una medición, marcar comunicación y reprogramar una medición elegible.
@@ -36,7 +36,7 @@ La referencia local confirmada conserva solo `appointmentId`, `initialCommandId`
 
 ## PWA
 
-El shell final es `cotizador-v7.8`. Conserva instalación atómica, descarga con `cache: reload`, verificación total, ACK de ventanas, consentimiento, guardia anti-loop, activación fail-closed y ausencia de escrituras runtime. Los módulos Agenda locales forman parte del shell; los SDK Firebase se cargan solo cuando el feature flag está activo. Si Firebase no está disponible, el Cotizador base continúa operando.
+El shell final de AG-UX-01 es `cotizador-v7.9`. Conserva instalación atómica, descarga con `cache: reload`, verificación total, ACK de ventanas, consentimiento, guardia anti-loop, activación fail-closed y ausencia de escrituras runtime. Los módulos Agenda locales forman parte del shell; los SDK Firebase se cargan solo cuando el feature flag está activo. Si Firebase no está disponible, el Cotizador base continúa operando.
 
 ## Preparación productiva — no ejecutar sin la compuerta humana
 

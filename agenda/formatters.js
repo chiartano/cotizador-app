@@ -2,24 +2,28 @@
   'use strict';
 
   const status = Object.freeze({
-    requested: 'Pendiente de horario',
-    tentative: 'Reservada provisionalmente',
-    alternative_proposed: 'Operator propuso otra fecha',
+    requested: 'Por coordinar',
+    tentative: 'Pendiente de confirmar',
+    alternative_proposed: 'Elegir otra fecha',
     confirmed: 'Confirmada',
     completed: 'Realizada',
     cancelled: 'Cancelada',
     no_show: 'Cliente no atendió'
   });
   const types = Object.freeze({
-    measure_visit: 'Visita de medidas',
-    install_visit: 'Instalación',
-    correction_visit: 'Corrección',
-    warranty_visit: 'Garantía'
+    measure_visit: 'Tomar medidas',
+    install_visit: 'Instalar',
+    correction_visit: 'Mantenimiento o reparación',
+    warranty_visit: 'Revisar una garantía'
   });
   const needs = Object.freeze({
     bath_partition: 'División de baño',
-    window_or_door: 'Ventana o puerta',
+    window_or_door: 'Ventana/puerta',
     mirror: 'Espejo',
+    railing: 'Baranda',
+    glass_replacement: 'Cambio de vidrio',
+    general_maintenance: 'Mantenimiento general',
+    other: 'Otro',
     correction_or_warranty: 'Corrección o garantía',
     multiple_jobs: 'Varios trabajos',
     unclear: 'Otro'
@@ -39,15 +43,15 @@
   const money = (value) => `$${Number(value || 0).toLocaleString('es-CO')}`;
   const fee = (value) => {
     if (!value || value.applicability === 'not_applicable') return 'No aplica';
-    if (value.applicability === 'pending_operator_review') return 'Pendiente de operator';
+    if (value.applicability === 'pending_operator_review') return 'Por definir';
     if (value.disclosure?.status === 'not_informed') return 'No informado';
     if (value.disclosure?.status === 'exception') return 'Excepción aprobada';
     if (value.disclosure?.status === 'informed') return money(value.disclosure.amount);
     return 'Pendiente';
   };
   const communication = (value) => ({
-    blocked: 'Bloqueada', pending: 'Pendiente', ready: 'Pendiente de comunicar',
-    communicated: 'Comunicada', needs_recommunication: 'Debe comunicarse otra vez'
+    blocked: 'Falta información', pending: 'Pendiente', ready: 'Pendiente de informar',
+    communicated: 'Cliente informado', needs_recommunication: 'Informar de nuevo'
   }[value?.status] || 'Sin dato');
   const reason = (appointment) => appointment?.cancellation?.reason || ({
     visit_fee_not_disclosed: 'Falta informar el costo de visita',
@@ -56,9 +60,10 @@
     other: 'Pendiente de gestión'
   }[appointment?.communication?.blockedReason] || '');
   const terminal = (appointment) => ['completed', 'cancelled', 'no_show'].includes(appointment?.status);
-  const requiresResponse = (appointment) => !terminal(appointment) && (
-    appointment.operationsReview?.status === 'pending' ||
-    ['tentative', 'alternative_proposed'].includes(appointment.status) ||
+  const requiresResponse = (appointment) => appointment?.archived !== true && !terminal(appointment) && (
+    (appointment.type === 'install_visit' && appointment.operationsReview?.status === 'pending') ||
+    (appointment.type === 'measure_visit' && appointment.capacity?.occupancyBefore >= 1 && appointment.status === 'tentative') ||
+    appointment.status === 'alternative_proposed' ||
     appointment.visitFee?.applicability === 'pending_operator_review' ||
     ['blocked', 'ready', 'needs_recommunication'].includes(appointment.communication?.status)
   );

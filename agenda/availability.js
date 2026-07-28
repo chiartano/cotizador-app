@@ -62,7 +62,7 @@
       && Date.parse(item.schedule?.endAt) > Date.parse(schedule.startAt);
   }).length;
   const availabilityText = (count) => count >= 2
-    ? 'Capacidad visible agotada; el backend decide al enviar.'
+    ? 'Este bloque aparece completo; al guardar se comprobará de nuevo.'
     : count === 1
       ? 'Hay una visita en este bloque; quedará provisional para revisión.'
       : 'Disponible según la Agenda visible.';

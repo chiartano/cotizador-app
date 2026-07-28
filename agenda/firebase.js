@@ -55,7 +55,16 @@
         signOut: () => auth.signOut(),
         call: async (name, payload) => (await functions.httpsCallable(name)(payload)).data,
         subscribeDoc: (path, next, error) => db.doc(path).onSnapshot((snapshot) => next(snapshot.exists ? { id: snapshot.id, ...snapshot.data() } : null), error),
-        subscribeCollection: (path, next, error) => db.collection(path).onSnapshot((snapshot) => next(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))), error)
+        subscribeCollection: (path, next, error) => db.collection(path).onSnapshot((snapshot) => next(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))), error),
+        subscribeQuery: (path, constraints, next, error) => {
+          let reference = db.collection(path);
+          (constraints || []).forEach((constraint) => {
+            if (constraint.where) reference = reference.where(...constraint.where);
+            else if (constraint.orderBy) reference = reference.orderBy(...constraint.orderBy);
+            else if (constraint.limit) reference = reference.limit(constraint.limit);
+          });
+          return reference.onSnapshot((snapshot) => next(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))), error);
+        }
       };
       global.WilanAgenda.firebase.adapter = adapter;
       return adapter;
