@@ -523,6 +523,52 @@ function cmp_usarOpcion(letra) {
 // =================================================================
 // COMPARTIR LA COMPARACIÓN POR WHATSAPP
 // =================================================================
+function buildComparisonCommercialMessage(a, b, contexto, snapshot) {
+    const diff = Math.abs(b.precioFinal - a.precioFinal);
+    const esMasCara = b.precioFinal > a.precioFinal;
+    const medidas = contexto === 'principal'
+        ? `${snapshot.ancho}×${snapshot.alto} cm`
+        : `${snapshot.w}×${snapshot.h} cm`;
+    const caracteristicas = resultado => {
+        let lines = '';
+        if (contexto === 'principal') {
+            if (String(resultado.producto).includes('Espejo')) {
+                lines += `✨ LED: ${snapshot.led ? 'incluido' : 'no incluido'}\n`;
+            } else {
+                if (snapshot.espesor) lines += `💎 Espesor: ${snapshot.espesor}\n`;
+                if (snapshot.color_acc) lines += `🎨 Acabado: ${snapshot.color_acc}\n`;
+            }
+            return lines;
+        }
+        const vidrio = typeof aluConfig !== 'undefined' && aluConfig.vidrios[snapshot.vid]
+            ? aluConfig.vidrios[snapshot.vid].label : snapshot.vid;
+        const acabado = typeof ALU_COLOR_LABELS !== 'undefined'
+            ? (ALU_COLOR_LABELS[snapshot.col] || snapshot.col) : snapshot.col;
+        return `💎 Vidrio: ${vidrio}\n🎨 Acabado: ${acabado}\n`;
+    };
+
+    let texto = `🔀 *COMPARACIÓN DE OPCIONES*\n`;
+    texto += `📐 Medidas: ${medidas}\n`;
+    texto += `━━━━━━━━━━━━━━━━━━━\n\n`;
+    texto += `*OPCIÓN A:* ${a.producto}\n`;
+    if (a.cfgAjustada) texto += `Configuración: ${a.cfgAjustada}\n`;
+    texto += caracteristicas(a);
+    texto += `💰 Precio: ${cmp_fmt(a.precioFinal)}, IVA incluido\n\n`;
+    texto += `*OPCIÓN B:* ${b.producto}\n`;
+    if (b.cfgAjustada) texto += `Configuración: ${b.cfgAjustada}\n`;
+    texto += caracteristicas(b);
+    texto += `💰 Precio: ${cmp_fmt(b.precioFinal)}, IVA incluido\n\n`;
+    texto += `━━━━━━━━━━━━━━━━━━━\n`;
+    if (diff < 1) {
+        texto += `📊 Precios prácticamente iguales\n`;
+    } else {
+        texto += `📊 Diferencia: ${cmp_fmt(diff)}`;
+        texto += esMasCara ? ` (B es más cara)\n` : ` (B ahorra)\n`;
+    }
+    texto += `🛡️ Garantía: 12 meses`;
+    return texto;
+}
+
 function cmp_compartir() {
     if (!cmp_resultadoA || !cmp_resultadoB ||
         cmp_resultadoA.error || cmp_resultadoB.error) {
@@ -532,31 +578,7 @@ function cmp_compartir() {
 
     const a = cmp_resultadoA;
     const b = cmp_resultadoB;
-    const diff = Math.abs(b.precioFinal - a.precioFinal);
-    const esMasCara = b.precioFinal > a.precioFinal;
-
-    let medidasStr = '';
-    if (cmp_contexto === 'principal') {
-        medidasStr = `${cmp_baseSnapshot.ancho}×${cmp_baseSnapshot.alto} cm`;
-    } else {
-        medidasStr = `${cmp_baseSnapshot.w}×${cmp_baseSnapshot.h} cm`;
-    }
-
-    let texto = `🔀 *COMPARACIÓN DE OPCIONES*\n`;
-    texto += `📐 Medidas: ${medidasStr}\n`;
-    texto += `━━━━━━━━━━━━━━━━━━━\n\n`;
-    texto += `*OPCIÓN A:* ${a.producto}\n`;
-    texto += `💰 Total con IVA: ${cmp_fmt(a.precioFinal)}\n\n`;
-    texto += `*OPCIÓN B:* ${b.producto}\n`;
-    texto += `💰 Total con IVA: ${cmp_fmt(b.precioFinal)}\n\n`;
-    texto += `━━━━━━━━━━━━━━━━━━━\n`;
-    if (diff < 1) {
-        texto += `📊 Precios prácticamente iguales\n`;
-    } else {
-        texto += `📊 Diferencia: ${cmp_fmt(diff)}`;
-        texto += esMasCara ? ` (B es más cara)\n` : ` (B ahorra)\n`;
-    }
-    texto += `\n📅 Validez: 15 días.`;
+    const texto = buildComparisonCommercialMessage(a, b, cmp_contexto, cmp_baseSnapshot);
 
     navigator.clipboard.writeText(texto)
         .then(() => toast('Texto copiado', 'info', 2000))

@@ -28,6 +28,61 @@ const VIZ_COLORS = {
     sketchStroke: '#1e40af'
 };
 
+function viz_isCurrent(d) {
+    if (!d) return false;
+    if (d.modo === 'aluminio') {
+        return typeof alu_isShareSnapshotCurrent === 'function'
+            && typeof aluLastCalc !== 'undefined'
+            && alu_isShareSnapshotCurrent(aluLastCalc);
+    }
+    return typeof main_isShareSnapshotCurrent === 'function'
+        && typeof lastCalculation !== 'undefined'
+        && main_isShareSnapshotCurrent(lastCalculation);
+}
+
+function viz_requireCurrent(d) {
+    if (viz_isCurrent(d)) return true;
+    if (typeof toast === 'function') {
+        toast(typeof STALE_SHARE_MESSAGE !== 'undefined'
+            ? STALE_SHARE_MESSAGE
+            : 'Los datos cambiaron después del último cálculo. Calcula nuevamente antes de compartir.', 'warn', 5000);
+    }
+    return false;
+}
+
+function viz_factLines(d) {
+    const facts = [];
+    if (d.familia === 'espejo') {
+        facts.push(`LED: ${d.led ? 'incluido' : 'no incluido'}`);
+    } else if (d.vidrio) {
+        facts.push(`${d.familia === 'division' ? 'Espesor' : 'Vidrio'}: ${d.vidrio}`);
+    }
+    if (d.color) facts.push(`Acabado: ${d.color}`);
+    if (d.extras && d.extras.length) d.extras.forEach(extra => facts.push(extra.replace('✓ ', '')));
+    facts.push(`Instalación: ${d.instalacion}`);
+    if (d.transporteIncluido) facts.push('Transporte: incluido');
+    facts.push('Garantía: 12 meses');
+    return facts;
+}
+
+function buildVisualCommercialText(d, clienteDetallado) {
+    let texto = `*COTIZACIÓN* 📋\n----------------------------\n`;
+    if (d.folio) texto += `🔖 N° ${d.folio}\n`;
+    if (d.cliente?.nombre) texto += `👤 Cliente: ${d.cliente.nombre}\n`;
+    if (clienteDetallado && d.cliente?.obra) texto += `📍 Obra: ${d.cliente.obra}\n`;
+    texto += `🪟 Producto: ${d.producto}\n`;
+    texto += `📏 Medidas: ${d.medidas}\n`;
+    viz_factLines(d).forEach(fact => { texto += `${fact}\n`; });
+    if (d.cantidad > 1) {
+        texto += `🔢 Cantidad: ${d.cantidad}\n`;
+        texto += `💰 Precio unitario: ${_viz_fmtMoney(d.precioUnitario)}\n`;
+        texto += `💰 Total: ${_viz_fmtMoney(d.precioFinal)}, IVA incluido\n`;
+    } else {
+        texto += `💰 Precio: ${_viz_fmtMoney(d.precioFinal)}, IVA incluido\n`;
+    }
+    return `${texto}----------------------------`;
+}
+
 // =================================================================
 // API PÚBLICA
 // =================================================================
@@ -37,20 +92,28 @@ function viz_generarParaPrincipal() {
         return;
     }
     const r = lastCalculation;
+    if (!viz_requireCurrent({ modo:'principal' })) return;
     const raw = r.raw;
+    const cantidad = r.shareInputSnapshot?.cantidad || 1;
+    const esEspejo = r.producto.includes('Espejo');
     const cliente = (typeof clienteActual !== 'undefined') ? clienteActual : { nombre:'', telefono:'', obra:'' };
     // r.precio ya incluye IVA (es el precioFinal del cálculo). NO volver a aplicar IVA.
     const datos = {
         folio: (typeof folioActual === 'function') ? folioActual() : '',
         cliente: cliente,
-        producto: r.producto,
+        producto: esEspejo ? 'Espejo Flotante' : r.producto,
         medidas: r.medidas,
-        vidrio: r.vidrio,
-        color: raw.color_acc,
+        vidrio: esEspejo ? '' : r.vidrio,
+        color: esEspejo ? '' : raw.color_acc,
         sandblasting: raw.sandblasting,
         led: raw.led,
         precioNeto: r.precio / (1 + ((typeof currentConfig !== 'undefined' ? currentConfig.globales.iva : 0.19) || 0.19)),
-        precioFinal: r.precio,
+        precioUnitario: r.precio,
+        precioFinal: r.precio * cantidad,
+        cantidad,
+        instalacion: 'incluida',
+        transporteIncluido: !!r.services?.transportIncluded,
+        familia: esEspejo ? 'espejo' : 'division',
         observaciones: raw.observaciones || '',
         modo: 'principal'
     };
@@ -63,6 +126,7 @@ function viz_generarParaAluminio() {
         return;
     }
     const r = aluLastCalc;
+    if (!viz_requireCurrent({ modo:'aluminio' })) return;
     const sysData = (typeof aluConfig !== 'undefined' && aluConfig.sistemas[r.sys]) ? aluConfig.sistemas[r.sys] : { nombre: r.sys };
     const cfgLbl = (typeof ALU_CONFIG_LABELS !== 'undefined' && ALU_CONFIG_LABELS[r.cfg]) ? ALU_CONFIG_LABELS[r.cfg].label : r.cfg;
     const vidLbl = (typeof aluConfig !== 'undefined' && aluConfig.vidrios[r.vid]) ? aluConfig.vidrios[r.vid].label : r.vid;
@@ -75,6 +139,7 @@ function viz_generarParaAluminio() {
         sketchSVG = previewBox.innerHTML;
     }
 
+    const cantidad = r.shareInputSnapshot?.cantidad || 1;
     const datos = {
         folio: (typeof folioActual === 'function') ? folioActual() : '',
         cliente: { nombre:'', telefono:'', obra:'' },     // Aluminio no tiene cliente persistente
@@ -88,7 +153,12 @@ function viz_generarParaAluminio() {
             r.incluirCF      ? '✓ Cuerpo fijo extra' : null
         ].filter(Boolean),
         precioNeto: r.precioVenta,
-        precioFinal: r.precioFinal,
+        precioUnitario: r.precioFinal,
+        precioFinal: r.precioFinal * cantidad,
+        cantidad,
+        instalacion: typeof alu_installationLabel === 'function' ? alu_installationLabel(r.tipoInst) : 'incluida',
+        transporteIncluido: r.transporte > 0,
+        familia: 'aluminio',
         sketchSVG: sketchSVG,
         modo: 'aluminio'
     };
@@ -153,11 +223,11 @@ function _viz_dibujarTarjeta(canvas, d) {
     const fechaTxt = _viz_fechaHoy();
     ctx.fillText(fechaTxt, VIZ_PAD, 180);
 
-    // Validez + folio (esquina derecha)
+    // Garantía + folio (esquina derecha)
     ctx.textAlign = 'right';
     ctx.font = '600 18px "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = VIZ_COLORS.accent;
-    ctx.fillText('Válido 8 días', VIZ_W - VIZ_PAD, 110);
+    ctx.fillText('Garantía: 12 meses', VIZ_W - VIZ_PAD, 110);
     if (d.folio) {
         ctx.font = '700 22px "Segoe UI", Roboto, sans-serif';
         ctx.fillStyle = VIZ_COLORS.textOnDark;
@@ -217,15 +287,18 @@ function _viz_dibujarTarjeta(canvas, d) {
     let yMeta = yProd + 12;
     ctx.fillText(`📏  ${d.medidas}`, cardX + 40, yMeta);
     yMeta += 38;
-    ctx.fillText(`💎  ${d.vidrio}`, cardX + 40, yMeta);
+    if (d.vidrio) ctx.fillText(`💎  ${d.vidrio}`, cardX + 40, yMeta);
     if (d.color) {
         yMeta += 38;
         ctx.fillText(`🎨  ${d.color}`, cardX + 40, yMeta);
     }
-    // Sandblasting / LED para principal
+    // Datos propios de la familia principal
     if (d.modo === 'principal') {
         if (d.sandblasting) { yMeta += 38; ctx.fillText('🌫️  Con sandblasting', cardX + 40, yMeta); }
-        if (d.led)          { yMeta += 38; ctx.fillText('✨  Luz LED incluida', cardX + 40, yMeta); }
+        if (d.familia === 'espejo') {
+            yMeta += 38;
+            ctx.fillText(`✨  LED ${d.led ? 'incluido' : 'no incluido'}`, cardX + 40, yMeta);
+        }
     }
     // Extras para aluminio
     if (d.modo === 'aluminio' && d.extras && d.extras.length) {
@@ -261,28 +334,30 @@ function _viz_dibujarTarjeta(canvas, d) {
 
     ctx.fillStyle = VIZ_COLORS.textLight;
     ctx.font = '500 22px "Segoe UI", Roboto, sans-serif';
-    ctx.fillText('Precio final con IVA', cardX + 40, precioY + 6);
+    ctx.fillText(d.cantidad > 1 ? `Total con IVA · Cantidad ${d.cantidad}` : 'Precio con IVA', cardX + 40, precioY + 6);
 
     ctx.fillStyle = VIZ_COLORS.bgTop;
     ctx.font = '900 76px "Segoe UI", Roboto, sans-serif';
     const precioTxt = _viz_fmtMoney(d.precioFinal);
     ctx.fillText(precioTxt, cardX + 40, precioY + 82);
+    if (d.cantidad > 1) {
+        ctx.fillStyle = VIZ_COLORS.textLight;
+        ctx.font = '500 20px "Segoe UI", Roboto, sans-serif';
+        ctx.fillText(`Precio unitario: ${_viz_fmtMoney(d.precioUnitario)}`, cardX + 40, precioY + 118);
+    }
 
     // -------- FOOTER --------
     // Banda dorada decorativa
     ctx.fillStyle = VIZ_COLORS.accent;
     ctx.fillRect(0, VIZ_H - 180, VIZ_W, 6);
 
-    // Texto incluye
+    // Hechos comerciales efectivos
     ctx.fillStyle = VIZ_COLORS.text;
     ctx.font = '700 24px "Segoe UI", Roboto, sans-serif';
-    ctx.fillText('✅ Incluye:', VIZ_PAD, VIZ_H - 130);
+    ctx.fillText('DETALLES', VIZ_PAD, VIZ_H - 130);
     ctx.fillStyle = VIZ_COLORS.textLight;
     ctx.font = '400 20px "Segoe UI", Roboto, sans-serif';
-    const incluye = (d.modo === 'aluminio')
-        ? 'Perfilería, vidrio, accesorios, herrajes, transporte e instalación. Garantía escrita 18 meses.'
-        : 'Vidrio templado de seguridad, accesorios acero inox 304, transporte, instalación y garantía escrita.';
-    const incluyeLines = _viz_wrapText(ctx, incluye, VIZ_W - 2 * VIZ_PAD);
+    const incluyeLines = _viz_wrapText(ctx, viz_factLines(d).join(' · '), VIZ_W - 2 * VIZ_PAD);
     let yI = VIZ_H - 100;
     incluyeLines.forEach(l => { ctx.fillText(l, VIZ_PAD, yI); yI += 26; });
 
@@ -498,6 +573,8 @@ function _viz_dibujarSVGEnCanvas(ctx, svgString, x, y, w, h) {
 async function viz_descargar() {
     const canvas = document.getElementById('viz-canvas');
     if (!canvas) return;
+    const d = window.__viz_datos || {};
+    if (!viz_requireCurrent(d)) return;
     try {
         // Esperar a que el sketch asíncrono esté pintado antes de exportar el PNG
         if (window.__viz_ready) await window.__viz_ready;
@@ -517,19 +594,13 @@ async function viz_compartirWhatsApp() {
     const canvas = document.getElementById('viz-canvas');
     if (!canvas) return;
     const d = window.__viz_datos || {};
+    if (!viz_requireCurrent(d)) return;
 
     // Esperar a que el sketch asíncrono esté pintado antes de exportar el PNG
     if (window.__viz_ready) await window.__viz_ready;
 
-    // Texto que acompaña la imagen
-    const cliente = d.cliente && d.cliente.nombre ? d.cliente.nombre : '';
-    let texto = `*COTIZACIÓN* 📋\n`;
-    if (d.folio) texto += `N° ${d.folio}\n`;
-    if (cliente) texto += `Cliente: ${cliente}\n`;
-    texto += `Producto: ${d.producto}\n`;
-    texto += `Medidas: ${d.medidas}\n`;
-    texto += `Precio con IVA: ${_viz_fmtMoney(d.precioFinal)}\n`;
-    texto += `\nVálido por 8 días. Ver imagen adjunta. 👆`;
+    // El texto y el PNG parten del mismo objeto de hechos comerciales.
+    const texto = buildVisualCommercialText(d, false);
 
     // Si está disponible Web Share API + archivos → compartir directo
     if (navigator.canShare && navigator.share) {
@@ -551,31 +622,15 @@ async function viz_compartirWhatsApp() {
     }
 
     // Fallback: descargar + abrir WhatsApp con el texto (usuario adjunta a mano)
-    viz_descargar();
-    setTimeout(() => {
-        if (typeof toast === 'function') toast('Imagen descargada. Adjúntala en WhatsApp 📎', 'info', 4000);
-        window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
-    }, 600);
+    await viz_descargar();
+    if (typeof toast === 'function') toast('Imagen descargada. Adjúntala en WhatsApp 📎', 'info', 4000);
+    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
 }
 
 function viz_copiarTextoCotizacion() {
     const d = window.__viz_datos || {};
-    const cliente = d.cliente && d.cliente.nombre ? d.cliente.nombre : '';
-    let texto = `*COTIZACIÓN* 📋\n----------------------------\n`;
-    if (d.folio) texto += `🔖 N° ${d.folio}\n`;
-    if (cliente) texto += `👤 Cliente: ${cliente}\n`;
-    if (d.cliente && d.cliente.obra) texto += `📍 Obra: ${d.cliente.obra}\n`;
-    texto += `🪟 Producto: ${d.producto}\n`;
-    texto += `📏 Medidas: ${d.medidas}\n`;
-    texto += `💎 Vidrio: ${d.vidrio}\n`;
-    if (d.color) texto += `🎨 Color: ${d.color}\n`;
-    if (d.modo === 'aluminio' && d.extras && d.extras.length) {
-        d.extras.forEach(ex => { texto += `${ex}\n`; });
-    }
-    if (d.modo === 'principal' && d.sandblasting) texto += `🌫️ Con sandblasting\n`;
-    if (d.modo === 'principal' && d.led) texto += `✨ Luz LED incluida\n`;
-    texto += `\n💰 *Precio con IVA: ${_viz_fmtMoney(d.precioFinal)}*\n`;
-    texto += `\nVálido 8 días. Garantía escrita.\n----------------------------`;
+    if (!viz_requireCurrent(d)) return;
+    const texto = buildVisualCommercialText(d, true);
 
     try {
         navigator.clipboard.writeText(texto);

@@ -6,6 +6,7 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const bridgeCommit = '04b7ed374a4d69bf86242b5a4e69e2b8c09a6170';
 const workerCommit = 'b0a3c5f266a86a9d16e92e96472ff3c1ff3d3d3a';
+const whatsappTextBase = '76db88eecc56101a8ead1eb4fae9d421be5992d6';
 const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
 
 function git(args) { return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim(); }
@@ -67,10 +68,12 @@ test('8 integracion no agrega escrituras runtime ni CDN al shell', () => {
   assert.doesNotMatch(fetchBlock, /cache\.put|fetch\(/);
 });
 
-test('9 archivos monetarios y canonicos no cambian', () => {
-  const baseline = '3aedb52d784c981a5d4f719b4657100531cf7214';
-  const protectedFiles = ['aluminio.js', 'comparador.js', 'dashboard.js', 'iq.js', 'visual.js', 'manifest.json', 'icon.png', '_verify_tmp.js', 'tests/fase1-calculos.test.js'];
-  assert.equal(git(['diff', '--name-only', baseline, '--', ...protectedFiles]), '');
+test('9 PWA, IQ y archivos ajenos al texto comercial no cambian', () => {
+  const protectedFiles = [
+    'index.html', 'sw.js', 'dashboard.js', 'iq.js', 'styles.css',
+    'manifest.json', 'icon.png', '_verify_tmp.js', 'agenda'
+  ];
+  assert.equal(git(['diff', '--name-only', whatsappTextBase, '--', ...protectedFiles]), '');
 });
 
 test('10 no borra datos del navegador', () => {

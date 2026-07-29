@@ -669,6 +669,122 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             });
         }
 
+        const STALE_SHARE_MESSAGE = 'Los datos cambiaron después del último cálculo. Calcula nuevamente antes de compartir.';
+
+        function main_getShareInputSnapshot() {
+            return {
+                producto: document.getElementById('producto').value,
+                ancho: document.getElementById('ancho').value,
+                ancho2: document.getElementById('ancho2').value,
+                alto: document.getElementById('alto').value,
+                espesor: document.getElementById('espesor').value,
+                acabado: document.getElementById('color_acc').value,
+                led: document.getElementById('check-espejo-led').checked,
+                cantidad: parseInt(document.getElementById('cantidad-item').value, 10) || 1,
+                descuento: parseFloat(document.getElementById('descuento_adicional').value) || 0,
+                transporte: parseFloat(document.getElementById('recargo_transporte').value) || 0
+            };
+        }
+
+        function main_isShareSnapshotCurrent(result) {
+            return !!(result && result.shareInputSnapshot)
+                && JSON.stringify(result.shareInputSnapshot) === JSON.stringify(main_getShareInputSnapshot());
+        }
+
+        function main_sharePriceLines(unitPrice, quantity) {
+            const qty = Math.max(1, parseInt(quantity, 10) || 1);
+            if (qty === 1) return `💰 *Precio:* ${fmtMoney(unitPrice)}, IVA incluido`;
+            return `🔢 *Cantidad:* ${qty}\n`
+                + `💰 *Precio unitario:* ${fmtMoney(unitPrice)}\n`
+                + `💰 *Total:* ${fmtMoney(unitPrice * qty)}, IVA incluido`;
+        }
+
+        function buildMainCommercialMessage(result, folio, fechaEnvio) {
+            const raw = result.raw || {};
+            const qty = result.shareInputSnapshot?.cantidad || 1;
+            const esEspejo = result.producto.includes('Espejo');
+            const medidas = result.producto.includes('División de baño L -')
+                ? `L(${raw.ancho} + ${raw.ancho2}) x ${raw.alto} cm`
+                : `${raw.ancho} x ${raw.alto} cm`;
+            let texto = `*COTIZACIÓN* 📄\n*N° ${folio}*  ·  ${fechaEnvio}\n----------------------------\n`;
+
+            if (esEspejo) {
+                texto += `🔹 *Producto:* Espejo Flotante\n`;
+                texto += `🔹 *Medidas:* ${medidas}\n`;
+                texto += `🔹 *LED:* ${raw.led ? 'incluido' : 'no incluido'}\n`;
+            } else {
+                texto += `🔹 *Producto:* ${result.producto}\n`;
+                texto += `🔹 *Medidas:* ${medidas}\n`;
+                texto += `🔹 *Espesor:* ${raw.espesor}${raw.sandblasting ? ' + sandblasting' : ''}\n`;
+                texto += `🔹 *Acabado:* ${String(raw.color_acc || '').toUpperCase()}\n`;
+            }
+
+            texto += `🔹 *Instalación:* incluida\n`;
+            if (result.services?.transportIncluded) texto += `🔹 *Transporte:* incluido\n`;
+            texto += `🔹 *Garantía:* 12 meses\n\n`;
+            texto += main_sharePriceLines(result.precio, qty);
+
+            if (!esEspejo && raw.promo_fija_corrediza_economica) {
+                const promoColor = raw.promo_fija_corrediza_economica_color || 'natural';
+                texto += `\n_Promoción por tiempo limitado para divisiones de hasta 130 cm de ancho, con alto de 180 cm o 190 cm, en vidrio 6 mm color ${promoColor}. Otras medidas o acabados se cotizan a la medida exacta._`;
+            }
+            return `${texto}\n----------------------------`;
+        }
+
+        function cartInstallationLabel(item) {
+            if (item.esAluminio && item.raw) {
+                const selected = String(item.raw.instalacion || '').toLowerCase();
+                return ['ninguna', 'sin instalación', 'no incluida'].includes(selected) ? 'no incluida' : 'incluida';
+            }
+            return 'incluida';
+        }
+
+        function buildCartCommercialMessage(items, options) {
+            const total = items.reduce((sum, item) => sum + item.precio, 0);
+            const discount = options.discount || 0;
+            let texto = `*PRESUPUESTO* 📋\n*N° ${options.folio}*  ·  ${options.fecha}\n----------------------------\n`;
+            const c = options.cliente || {};
+            if (c.nombre) texto += `👤 *Cliente:* ${c.nombre}\n`;
+            if (c.obra) texto += `🏠 *Obra:* ${c.obra}\n`;
+            if (c.direccion) texto += `📍 ${c.direccion}\n`;
+            if (c.telefono) texto += `📞 ${c.telefono}\n`;
+            if (c.nombre || c.obra || c.direccion || c.telefono) texto += `----------------------------\n`;
+
+            items.forEach((item, index) => {
+                const qty = Math.max(1, item.cantidad || 1);
+                const unit = item.precioUnitario || (item.precio / qty);
+                texto += `*${index + 1}. ${item.producto}*\n`;
+                texto += `   📏 Medidas: ${item.medidas} cm\n`;
+                if (item.esAluminio) {
+                    texto += `   💎 Vidrio: ${item.vidrio}\n`;
+                    if (item.raw?.color) texto += `   🎨 Acabado: ${ALU_COLOR_LABELS[item.raw.color] || item.raw.color}\n`;
+                } else if (item.producto.includes('Espejo')) {
+                    texto += `   ✨ LED: ${item.raw?.led ? 'incluido' : 'no incluido'}\n`;
+                } else {
+                    texto += `   💎 Espesor: ${item.vidrio}${item.sandblasting ? ' + sandblasting' : ''}\n`;
+                    if (item.color) texto += `   🎨 Acabado: ${item.color.toUpperCase()}\n`;
+                }
+                texto += `   🔢 Cantidad: ${qty}\n`;
+                texto += `   🛠️ Instalación: ${cartInstallationLabel(item)}\n`;
+                if ((item.esAluminio && item.raw?.transporte > 0) || item.services?.transportIncluded) {
+                    texto += `   🚚 Transporte: incluido\n`;
+                }
+                texto += `   💲 Precio unitario: ${fmtMoney(unit)}\n`;
+                texto += `   💲 Subtotal: ${fmtMoney(item.precio)}\n`;
+                if (item.observaciones) texto += `   📝 Nota: ${item.observaciones}\n`;
+                texto += `\n`;
+            });
+
+            texto += `----------------------------\n`;
+            if (discount > 0) {
+                texto += `💰 *Subtotal:* ${fmtMoney(total)}\n`;
+                texto += `📉 *Descuento:* -${fmtMoney(discount)}\n`;
+            }
+            texto += `💰 *TOTAL: ${fmtMoney(total - discount)}*, IVA incluido\n`;
+            texto += `🛡️ *Garantía:* 12 meses`;
+            return texto;
+        }
+
         // ==========================================
         // 3. LÓGICA DE NEGOCIO (EL CEREBRO)
         // ==========================================
@@ -867,6 +983,11 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 color: colorAcc,
                 precio: precioCliente, // Precio final con IVA incluido (el que se cobra al cliente)
                 observaciones: observaciones,
+                shareInputSnapshot: main_getShareInputSnapshot(),
+                services: {
+                    installationIncluded: true,
+                    transportIncluded: (costoTransporte + recargoTransporte) > 0
+                },
                 ...buildCanonicalProductMetadata(prodNombre, {
                     espesor,
                     hasLed: tieneLed,
@@ -1061,66 +1182,19 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
         }
 
         function compartir() {
-            const prod = document.getElementById('producto').value;
-            const ancho = document.getElementById('ancho').value;
-            const ancho2 = document.getElementById('ancho2').value;
-            const alto = document.getElementById('alto').value;
-            const esp = document.getElementById('espesor').value;
-            const color = document.getElementById('color_acc').value;
-            const tieneSandblasting = document.getElementById('check-sandblasting').checked;
-            const tieneLed = document.getElementById('check-espejo-led').checked;
-            const total = document.getElementById('res-precio-final').innerText.replace('Total con IVA: ', '');
+            if (!lastCalculation) {
+                toast('Calcula una cotización primero', 'warn');
+                return;
+            }
+            if (!main_isShareSnapshotCurrent(lastCalculation)) {
+                toast(STALE_SHARE_MESSAGE, 'warn', 5000);
+                return;
+            }
 
             // Folio: el envío individual también consume número (igual que el carrito).
             const folio = folioConsumir();
             const fechaEnvio = new Date().toLocaleDateString('es-CO', { day:'2-digit', month:'2-digit', year:'numeric' });
-
-            // Lógica de Garantía (12 meses para clásica, 18 para el resto)
-            const esClasica = prod.toLowerCase().includes('clásica') || prod.toLowerCase().includes('clasica');
-            const garantia = esClasica ? "12 meses" : "18 meses";
-
-            let txtVidrio = esp;
-            if (prod.includes("Espejo")) {
-                txtVidrio = "Espejo 4mm/5mm";
-                if (tieneLed) txtVidrio += " + LUZ LED ✨";
-            } else if (tieneSandblasting) {
-                txtVidrio += " + SANDBLASTING";
-            }
-
-            let medidasTxt = `${ancho} x ${alto} cm`;
-            if (prod.includes("División de baño L -")) {
-                medidasTxt = `L(${ancho} + ${ancho2}) x ${alto} cm`;
-            }
-
-            const promoColor = lastCalculation?.raw?.promo_fija_corrediza_economica_color || 'natural';
-            const notaPromo = lastCalculation?.raw?.promo_fija_corrediza_economica
-                ? `\n_Promocion por tiempo limitado para divisiones de hasta 130cm de ancho, con alto de 180cm o 190cm, en vidrio 6mm color ${promoColor}. Otras medidas o acabados se cotizan a la medida exacta._`
-                : "";
-
-            // Usamos códigos Unicode para los emojis para evitar errores de codificación (rombos negros)
-            let texto = `*COTIZACIÓN* \uD83D\uDCC4
-----------------------------
-\uD83D\uDD39 *Sistema:* ${prod}
-\uD83D\uDD39 *Medidas:* ${medidasTxt}
-\uD83D\uDD39 *Vidrio:* ${txtVidrio}`;
-
-            // Insertar el N\u00B0 de folio justo despu\u00E9s del t\u00EDtulo de la cotizaci\u00F3n.
-            texto = texto.replace('\n', `\n*N\u00B0 ${folio}*  \u00B7  ${fechaEnvio}\n`);
-
-            if (!prod.includes("Espejo")) {
-                texto += `\n\uD83D\uDD39 *Acabado:* ${color.toUpperCase()}`;
-            }
-
-            texto += `\n\n\u2705 *INCLUYE:*
-Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, transporte, instalación y garantía escrita por ${garantia}.
-
-\uD83D\uDCB0 *Precio:* ${total} (IVA incluido)${notaPromo}
-----------------------------`;
-
-            // IQ v5.0: a\u00F1adir las sugerencias opcionales que el vendedor haya marcado
-            if (typeof iq_getSugerenciasWAText === 'function') {
-                texto += iq_getSugerenciasWAText('main');
-            }
+            const texto = buildMainCommercialMessage(lastCalculation, folio, fechaEnvio);
 
             // Copiar al portapapeles y abrir WhatsApp
             navigator.clipboard.writeText(texto).then(() => toast(`Cotización ${folio} enviada`, 'success', 2500)).catch(err => console.error('Error al copiar', err));
@@ -1521,70 +1595,19 @@ Accesorios en acero inoxidable 304, vidrio templado de seguridad certificado, tr
         function compartirCompleto() {
             if (quoteItems.length === 0) return;
 
-            let total = quoteItems.reduce((sum, item) => sum + item.precio, 0);
             let discount = parseFloat(document.getElementById('quote-discount').value) || 0;
-            let final = total - discount;
 
             // Consumir el folio: este es el momento del envío, así que el número
             // queda fijado para esta cotización y el contador avanza.
             const folio = folioConsumir();
             const fechaEnvio = new Date().toLocaleDateString('es-CO', { day:'2-digit', month:'2-digit', year:'numeric' });
 
-            let texto = `*PRESUPUESTO* 📋\n`;
-            texto += `*N° ${folio}*  ·  ${fechaEnvio}\n`;
-            texto += `----------------------------\n`;
-
-            // Encabezado con datos del cliente (si están)
-            const c = clienteActual;
-            if (c.nombre || c.obra || c.telefono || c.direccion) {
-                if (c.nombre)    texto += `👤 *Cliente:* ${c.nombre}\n`;
-                if (c.obra)      texto += `🏠 *Obra:* ${c.obra}\n`;
-                if (c.direccion) texto += `📍 ${c.direccion}\n`;
-                if (c.telefono)  texto += `📞 ${c.telefono}\n`;
-                texto += `----------------------------\n`;
-            }
-
-            quoteItems.forEach((item, index) => {
-                texto += `*${index + 1}. ${item.producto}*`;
-                if (item.cantidad > 1) texto += ` (x${item.cantidad})`;
-                texto += `\n`;
-                texto += `   📏 ${item.medidas} cm\n`;
-
-                if (item.esAluminio) {
-                    // Items de aluminio: formato propio
-                    texto += `   💎 ${item.vidrio}\n`;
-                    if (item.raw && item.raw.color) {
-                        const colorLbl = ALU_COLOR_LABELS[item.raw.color] || item.raw.color;
-                        texto += `   🎨 Aluminio ${colorLbl}\n`;
-                    }
-                } else {
-                    // Items de divisiones / espejos
-                    let detallesVidrio = item.vidrio;
-                    if (item.sandblasting) detallesVidrio += " + Sand";
-                    if (item.raw && item.raw.led) detallesVidrio += " + LED ✨";
-                    texto += `   💎 ${detallesVidrio}\n`;
-                    if (!item.producto.includes("Espejo") && item.color) {
-                        texto += `   🎨 ${item.color.toUpperCase()}\n`;
-                    }
-                }
-                if (item.observaciones) {
-                    texto += `   📝 Nota: ${item.observaciones}\n`;
-                }
-                if (item.cantidad > 1) {
-                    texto += `   💲 ${fmtMoney(item.precioUnitario)} x ${item.cantidad} = ${fmtMoney(item.precio)}\n\n`;
-                } else {
-                    texto += `   💲 ${fmtMoney(item.precio)}\n\n`;
-                }
+            const texto = buildCartCommercialMessage(quoteItems, {
+                folio,
+                fecha: fechaEnvio,
+                cliente: clienteActual,
+                discount
             });
-
-            texto += `----------------------------\n`;
-            if (discount > 0) {
-                texto += `💰 *Subtotal:* ${fmtMoney(total)}\n`;
-                texto += `📉 *Descuento:* -${fmtMoney(discount)}\n`;
-            }
-            texto += `💰 *TOTAL: ${fmtMoney(final)}* (IVA incluido)\n`;
-            texto += `✅ Incluye transporte e instalación.\n`;
-            texto += `📅 Validez: 15 días.`;
 
             navigator.clipboard.writeText(texto).then(() => toast(`Cotización ${folio} enviada`, 'success', 2500)).catch(err => console.error('Error al copiar', err));
 

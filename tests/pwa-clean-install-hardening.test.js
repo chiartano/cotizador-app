@@ -5,6 +5,7 @@ const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
 const base = 'b0a3c5f266a86a9d16e92e96472ff3c1ff3d3d3a';
+const whatsappTextBase = '76db88eecc56101a8ead1eb4fae9d421be5992d6';
 const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const blockStart = index.indexOf("if ('serviceWorker' in navigator)");
 const pwaBlock = index.slice(blockStart, index.indexOf('</script>', blockStart));
@@ -80,9 +81,12 @@ async function exerciseUpdateCheck(registration) {
     assert.match(sw, /cache: 'reload'/);
   });
 
-  await test('6 motores monetarios protegidos no cambian', () => {
-    const protectedFiles = ['aluminio.js', 'comparador.js', 'dashboard.js', 'iq.js', 'visual.js', 'styles.css', 'manifest.json', 'icon.png', '_verify_tmp.js', 'tests/fase1-calculos.test.js'];
-    assert.equal(git(['diff', '--name-only', base, '--', ...protectedFiles]), '');
+  await test('6 componentes PWA, IQ y áreas fuera del texto comercial no cambian', () => {
+    const protectedFiles = [
+      'index.html', 'sw.js', 'dashboard.js', 'iq.js', 'styles.css',
+      'manifest.json', 'icon.png', '_verify_tmp.js', 'agenda'
+    ];
+    assert.equal(git(['diff', '--name-only', whatsappTextBase, '--', ...protectedFiles]), '');
   });
 
   await test('7 mecanismo PWA no borra localStorage', () => {

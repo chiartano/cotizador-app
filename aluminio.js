@@ -572,6 +572,64 @@
             return "$" + Math.round(num).toLocaleString('es-CO');
         }
 
+        function alu_getShareInputSnapshot() {
+            return {
+                sistema: aluState.sistema,
+                configuracion: aluState.config,
+                vidrio: aluState.vidrio,
+                acabado: aluState.color,
+                instalacion: aluState.instalacion,
+                ancho: document.getElementById('alu-ancho').value,
+                alto: document.getElementById('alu-alto').value,
+                cantidad: parseInt(document.getElementById('alu-cantidad').value, 10) || 1,
+                transporte: parseFloat(document.getElementById('alu-transporte').value) || 0,
+                descuento: parseFloat(document.getElementById('alu-descuento').value) || 0,
+                cuerpoFijo: document.getElementById('alu-extra-cf').checked,
+                cuerpoFijoAncho: document.getElementById('alu-cf-ancho').value,
+                cuerpoFijoAlto: document.getElementById('alu-cf-alto').value,
+                alfajia: document.getElementById('alu-extra-alfajia').checked,
+                mosquitero: document.getElementById('alu-extra-mosquitero').checked
+            };
+        }
+
+        function alu_isShareSnapshotCurrent(result) {
+            return !!(result && result.shareInputSnapshot)
+                && JSON.stringify(result.shareInputSnapshot) === JSON.stringify(alu_getShareInputSnapshot());
+        }
+
+        function alu_installationLabel(value) {
+            const selected = String(value || '').toLowerCase();
+            return ['ninguna', 'sin instalación', 'no incluida'].includes(selected) ? 'no incluida' : 'incluida';
+        }
+
+        function buildAluminumCommercialMessage(result) {
+            const sysData = aluConfig.sistemas[result.sys];
+            const cfgLbl = ALU_CONFIG_LABELS[result.cfg].label;
+            const vidLbl = aluConfig.vidrios[result.vid].label;
+            const colLbl = ALU_COLOR_LABELS[result.col];
+            const qty = result.shareInputSnapshot?.cantidad || 1;
+            let texto = `*COTIZACIÓN* 📋\n----------------------------\n`;
+            texto += `🪟 *Sistema:* ${sysData.nombre}\n`;
+            texto += `🔹 *Configuración:* ${cfgLbl}\n`;
+            texto += `📏 *Medidas:* ${result.w} × ${result.h} cm\n`;
+            texto += `🎨 *Acabado:* ${colLbl}\n`;
+            texto += `💎 *Vidrio:* ${vidLbl}\n`;
+            if (result.incluirCF) texto += `➕ Cuerpo fijo extra ${result.cfAncho}×${result.cfAlto} cm\n`;
+            if (result.incluirAlfajia) texto += `➕ Alfajía / poyo reforzado\n`;
+            if (result.incluirMosq) texto += `➕ Mosquitero\n`;
+            texto += `🛠️ *Instalación:* ${alu_installationLabel(result.tipoInst)}\n`;
+            if (result.transporte > 0) texto += `🚚 *Transporte:* incluido\n`;
+            texto += `🛡️ *Garantía:* 12 meses\n\n`;
+            if (qty === 1) {
+                texto += `💰 *Precio:* ${alu_fmt(result.precioFinal)}, IVA incluido\n`;
+            } else {
+                texto += `🔢 *Cantidad:* ${qty}\n`;
+                texto += `💰 *Precio unitario:* ${alu_fmt(result.precioFinal)}\n`;
+                texto += `💰 *Total:* ${alu_fmt(result.precioFinal * qty)}, IVA incluido\n`;
+            }
+            return `${texto}----------------------------`;
+        }
+
         // =================================================================
         // MOTOR DE CÁLCULO PRINCIPAL
         // =================================================================
@@ -933,6 +991,7 @@
                 baseGravable, ivaADeclarar, gananciaReal, margenReal,
                 mermaAltaUsada, descuento, totalMetros,
                 incluirCF, cfAncho, cfAlto, incluirAlfajia, incluirMosq,
+                shareInputSnapshot: alu_getShareInputSnapshot(),
                 ...alu_buildCanonicalMetadata(sys, cfg, vid)
             };
 
@@ -1069,28 +1128,13 @@
         function alu_compartirWA() {
             if (!aluLastCalc) { toast('Calcula primero', 'warn'); return; }
             const r = aluLastCalc;
-            const sysData = aluConfig.sistemas[r.sys];
-            const cfgLbl = ALU_CONFIG_LABELS[r.cfg].label;
-            const vidLbl = aluConfig.vidrios[r.vid].label;
-            const colLbl = ALU_COLOR_LABELS[r.col];
-
-            let texto = `*COTIZACIÓN* 📋\n----------------------------\n`;
-            texto += `🪟 *Sistema:* ${sysData.nombre}\n`;
-            texto += `🔹 *Diseño:* ${cfgLbl}\n`;
-            texto += `📏 *Medidas:* ${r.w} × ${r.h} cm\n`;
-            texto += `💎 *Vidrio:* ${vidLbl}\n`;
-            texto += `🎨 *Color aluminio:* ${colLbl}\n`;
-            if (r.incluirCF) texto += `➕ Cuerpo fijo extra ${r.cfAncho}×${r.cfAlto} cm\n`;
-            if (r.incluirAlfajia) texto += `➕ Alfajía / poyo reforzado\n`;
-            if (r.incluirMosq) texto += `➕ Mosquitero\n`;
-            texto += `\n✅ *INCLUYE:* Perfilería aluminio VIALCOR, vidrio, accesorios, herrajes, transporte e instalación. Garantía escrita 18 meses.\n\n`;
-            texto += `💰 *Precio total c/IVA:* ${alu_fmt(r.precioFinal)}\n`;
-            texto += `----------------------------`;
-
-            // IQ v5.0: añadir las sugerencias opcionales que el vendedor haya marcado
-            if (typeof iq_getSugerenciasWAText === 'function') {
-                texto += iq_getSugerenciasWAText('alu');
+            if (!alu_isShareSnapshotCurrent(r)) {
+                toast(typeof STALE_SHARE_MESSAGE !== 'undefined'
+                    ? STALE_SHARE_MESSAGE
+                    : 'Los datos cambiaron después del último cálculo. Calcula nuevamente antes de compartir.', 'warn', 5000);
+                return;
             }
+            const texto = buildAluminumCommercialMessage(r);
 
             try { navigator.clipboard.writeText(texto); } catch(e) {}
             window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
