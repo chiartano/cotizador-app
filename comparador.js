@@ -526,8 +526,16 @@ function cmp_usarOpcion(letra) {
 function buildComparisonCommercialMessage(a, b, contexto, snapshot) {
     const diff = Math.abs(b.precioFinal - a.precioFinal);
     const esMasCara = b.precioFinal > a.precioFinal;
+    const esDivisionL = contexto === 'principal'
+        && Number(snapshot.ancho2) > 0
+        && [a, b].some(resultado =>
+            resultado?.canonicalProductId === 'DB-ESC'
+            || resultado?.canonicalAttributes?.dimensionSchema === 'width_height_side2'
+        );
     const medidas = contexto === 'principal'
-        ? `${snapshot.ancho}×${snapshot.alto} cm`
+        ? (esDivisionL
+            ? `L(${snapshot.ancho} + ${snapshot.ancho2}) x ${snapshot.alto} cm`
+            : `${snapshot.ancho} x ${snapshot.alto} cm`)
         : `${snapshot.w}×${snapshot.h} cm`;
     const caracteristicas = resultado => {
         let lines = '';

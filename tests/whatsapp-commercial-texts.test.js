@@ -95,6 +95,31 @@ const comparator = functionsFrom(
    const ALU_COLOR_LABELS = {natural:'Natural'};`
 );
 
+function calculatePrincipalWithRealEngine(snapshot, product) {
+  const appSource = read('app.js');
+  const comparatorSource = read('comparador.js');
+  const defaultConfig = extractBetween(
+    appSource,
+    'const DEFAULT_CONFIG =',
+    'const LOGICA_ACCESORIOS ='
+  );
+  const accessoryLogic = extractBetween(
+    appSource,
+    'const LOGICA_ACCESORIOS =',
+    'const CANONICAL_PRODUCT_METADATA ='
+  );
+  const calculate = extractFunction(comparatorSource, 'cmp_calcularPrincipal');
+  return Function(`
+    ${defaultConfig}
+    ${accessoryLogic}
+    const currentConfig = DEFAULT_CONFIG;
+    const cmp_baseSnapshot = ${JSON.stringify(snapshot)};
+    const buildCanonicalProductMetadata = undefined;
+    ${calculate}
+    return cmp_calcularPrincipal(${JSON.stringify(product)});
+  `)();
+}
+
 function mainResult({
   producto,
   ancho = 80,
@@ -147,7 +172,7 @@ function assertNoForbidden(text) {
     /VIALCOR/i,
     /válid[oa].*(?:8|15) días/i,
     /Incluye transporte e instalación/i,
-    /canonicalProductId|familyId|variantId|mappingStatus/i
+    /canonicalProductId|familyId|variantId|mappingStatus|canonicalAttributes/i
   ];
   forbidden.forEach(pattern => assert.doesNotMatch(text, pattern));
 }
@@ -162,11 +187,39 @@ function test(name, callback) {
   }
 }
 
+const outsidePromoInput = {
+  producto:'División Corrediza Clásica',
+  ancho:131,
+  ancho2:0,
+  alto:180,
+  espesor:'6mm',
+  color_acc:'natural',
+  linea:'controlada',
+  desmonte:false,
+  sandblasting:false,
+  led:false,
+  recargo:0,
+  extra:0,
+  descuento:0
+};
+const outsidePromoCalculation = calculatePrincipalWithRealEngine(
+  outsidePromoInput,
+  outsidePromoInput.producto
+);
+
 const mainMatrix = [
   ['batiente', mainResult({producto:'División Batiente (Tradicional)', precio:747921})],
   ['clásica natural promo', mainResult({producto:'División Corrediza Clásica', espesor:'6mm', precio:650000, promo:true, promoColor:'natural'})],
   ['clásica negra promo', mainResult({producto:'División Corrediza Clásica', espesor:'6mm', color:'negro', precio:690000, promo:true, promoColor:'negro'})],
-  ['clásica fuera promo', mainResult({producto:'División Corrediza Clásica', ancho:140, espesor:'6mm', precio:805444})],
+  ['clásica fuera promo', mainResult({
+    producto:outsidePromoInput.producto,
+    ancho:outsidePromoInput.ancho,
+    alto:outsidePromoInput.alto,
+    espesor:outsidePromoInput.espesor,
+    color:outsidePromoInput.color_acc,
+    precio:outsidePromoCalculation.precioFinal,
+    promo:outsidePromoCalculation.promoFija
+  })],
   ['premium', mainResult({producto:'División Corrediza Premium', precio:1114303})],
   ['L', mainResult({producto:'División de baño L - Corrediza', ancho:90, ancho2:80, precio:1207935})],
   ['cortaviento', mainResult({producto:'Cortaviento / Oficina', precio:1183103})],
@@ -188,6 +241,25 @@ test('matriz principal usa plantillas por familia y precios auditados', () => {
     captureMessage(name, text);
     console.log(`message:${name}\n${text}\n`);
   }
+});
+
+test('frontera promocional 130/131 usa el motor real y el mensaje correcto', () => {
+  const at130 = calculatePrincipalWithRealEngine(
+    {...outsidePromoInput, ancho:130},
+    outsidePromoInput.producto
+  );
+  assert.equal(at130.precioFinal, 650000);
+  assert.equal(at130.promoFija, true);
+  assert.equal(Math.round(outsidePromoCalculation.precioFinal), 787433);
+  assert.equal(outsidePromoCalculation.promoFija, false);
+  const text = main.buildMainCommercialMessage(
+    mainMatrix.find(([name]) => name === 'clásica fuera promo')[1],
+    'F-OUT',
+    '29/07/2026'
+  );
+  assert.match(text, /Medidas:\* 131 x 180 cm/);
+  assert.match(text, /Precio:\* \$787\.433, IVA incluido/);
+  assert.doesNotMatch(text, /Promoción por tiempo limitado/);
 });
 
 test('cantidad dos informa unitario y total sin cambiar el precio unitario', () => {
@@ -273,6 +345,39 @@ test('comparador muestra características, IVA, diferencia y garantía sin valid
   assert.doesNotMatch(mirrorOption, /Espesor|Acabado|Vidrio/);
 });
 
+test('división L conserva 90 + 80 x 190 en individual, comparador, carrito y visual', () => {
+  const lFixture = mainMatrix.find(([name]) => name === 'L')[1];
+  const expectedGeometry = 'L(90 + 80) x 190 cm';
+  const individual = main.buildMainCommercialMessage(lFixture, 'F-L', '29/07/2026');
+  const lMetadata = {
+    canonicalProductId:'DB-ESC',
+    canonicalAttributes:{dimensionSchema:'width_height_side2'}
+  };
+  const comparison = comparator.buildComparisonCommercialMessage(
+    {...lMetadata, producto:'División de baño L - Corrediza', precioFinal:1207935},
+    {...lMetadata, producto:'División de baño L - Batiente', precioFinal:1400000},
+    'principal',
+    {producto:lFixture.producto, ancho:90, ancho2:80, alto:190, espesor:'8mm', color_acc:'natural', led:false}
+  );
+  const cart = main.buildCartCommercialMessage([
+    {...lFixture, medidas:'L(90 + 80) x 190', vidrio:'8mm', color:'natural',
+      cantidad:1, precioUnitario:lFixture.precio}
+  ], {folio:'F-LC', fecha:'29/07/2026', cliente:{}, discount:0});
+  const visualText = visual.buildVisualCommercialText({
+    modo:'principal', familia:'division', folio:'F-LV', cliente:{},
+    producto:lFixture.producto, medidas:expectedGeometry, vidrio:'8mm', color:'natural',
+    led:false, instalacion:'incluida', transporteIncluido:true, cantidad:1,
+    precioUnitario:lFixture.precio, precioFinal:lFixture.precio, extras:[]
+  }, false);
+  for (const [surface, text] of Object.entries({individual, comparison, cart, visual:visualText})) {
+    assert.match(text, /L\(90 \+ 80\) x 190 cm/, surface);
+  }
+  captureMessage('L-individual-focal', individual);
+  captureMessage('L-comparador-focal', comparison);
+  captureMessage('L-carrito-focal', cart);
+  captureMessage('L-visual-focal', visualText);
+});
+
 test('visual comparte exactamente los hechos propios de espejo', () => {
   const data = {
     modo:'principal', familia:'espejo', folio:'F-004', cliente:{nombre:'Cliente Ficticio'},
@@ -308,7 +413,31 @@ test('protección de resultado anterior compara todos los inputs relevantes', ()
   globalThis.values.producto.value = 'División Batiente (Tradicional)';
   globalThis.values.ancho.value = '81';
   assert.equal(snapshotFns.main_isShareSnapshotCurrent(result), false);
-  assert.ok(source.indexOf('main_isShareSnapshotCurrent(lastCalculation)') < source.indexOf('const folio = folioConsumir()', source.indexOf('function compartir()')));
+  const shareSource = extractFunction(source, 'compartir');
+  const validationIndex = shareSource.indexOf('main_isShareSnapshotCurrent(lastCalculation)');
+  const folioIndex = shareSource.indexOf('const folio = folioConsumir()');
+  assert.notEqual(validationIndex, -1, 'Debe existir la validación anti-stale');
+  assert.notEqual(folioIndex, -1, 'Debe existir el consumo de folio');
+  assert.ok(validationIndex < folioIndex, 'La validación debe ocurrir antes del consumo de folio');
+
+  const behavioral = Function('main_isShareSnapshotCurrent', `
+    let lastCalculation = ${JSON.stringify(result)};
+    const STALE_SHARE_MESSAGE = 'Los datos cambiaron después del último cálculo. Calcula nuevamente antes de compartir.';
+    const notices = [];
+    let consumedFolios = 0;
+    function toast(message) { notices.push(message); }
+    function folioConsumir() { consumedFolios += 1; return 'F-NO-DEBE-CONSUMIRSE'; }
+    ${shareSource}
+    return {
+      run: compartir,
+      state: () => ({notices:[...notices], consumedFolios})
+    };
+  `)(snapshotFns.main_isShareSnapshotCurrent);
+  behavioral.run();
+  assert.deepEqual(behavioral.state(), {
+    notices:['Los datos cambiaron después del último cálculo. Calcula nuevamente antes de compartir.'],
+    consumedFolios:0
+  });
   delete globalThis.values;
 });
 

@@ -6,7 +6,7 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const bridgeCommit = '04b7ed374a4d69bf86242b5a4e69e2b8c09a6170';
 const workerCommit = 'b0a3c5f266a86a9d16e92e96472ff3c1ff3d3d3a';
-const whatsappTextBase = '76db88eecc56101a8ead1eb4fae9d421be5992d6';
+const whatsappTextCandidate = '29b64b1e0849a6b36402ea52497b0485aaa3e9ca';
 const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
 
 function git(args) { return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim(); }
@@ -19,8 +19,11 @@ test('1 etapa 2 no modifica index.html', () => {
   assert.equal(git(['diff', '--name-only', bridgeCommit, workerCommit, '--', 'index.html']), '');
 });
 
-test('2 usa cache versionada v7.9 y shell critico cerrado', () => {
-  assert.match(sw, /const CACHE_NAME = 'cotizador-v7\.9'/);
+test('2 usa cache versionada v7.10 y shell critico cerrado', () => {
+  const candidateSw = git(['show', `${whatsappTextCandidate}:sw.js`]);
+  const expectedSw = candidateSw.replace("const CACHE_NAME = 'cotizador-v7.9';", "const CACHE_NAME = 'cotizador-v7.10';");
+  assert.equal(sw.replace(/\r\n/g, '\n').trim(), expectedSw.replace(/\r\n/g, '\n').trim());
+  assert.match(sw, /const CACHE_NAME = 'cotizador-v7\.10'/);
   for (const asset of ['index.html', 'app.js', 'aluminio.js', 'comparador.js', 'dashboard.js', 'iq.js', 'visual.js', 'styles.css', 'agenda/agenda.css', 'agenda/config.js', 'agenda/ui.js', 'manifest.json', 'icon.png']) assert.match(sw, new RegExp(asset.replace('.', '\\.')));
 });
 
@@ -70,10 +73,10 @@ test('8 integracion no agrega escrituras runtime ni CDN al shell', () => {
 
 test('9 PWA, IQ y archivos ajenos al texto comercial no cambian', () => {
   const protectedFiles = [
-    'index.html', 'sw.js', 'dashboard.js', 'iq.js', 'styles.css',
+    'index.html', 'dashboard.js', 'iq.js', 'styles.css',
     'manifest.json', 'icon.png', '_verify_tmp.js', 'agenda'
   ];
-  assert.equal(git(['diff', '--name-only', whatsappTextBase, '--', ...protectedFiles]), '');
+  assert.equal(git(['diff', '--name-only', whatsappTextCandidate, '--', ...protectedFiles]), '');
 });
 
 test('10 no borra datos del navegador', () => {
