@@ -136,7 +136,11 @@ const test = async (name, callback) => {
     assert.match(ui, /resolveVisitFee/);
     assert.match(ui, /markCommunicated/);
     assert.match(ui, /rescheduleAppointment/);
-    assert.match(ui, /La cita quedó pendiente de confirmación/);
+    assert.match(ui, /Cita guardada/);
+    assert.match(ui, /submissionLock \|\| form\.sending/);
+    assert.match(ui, /activeDraft = activeDraft \|\| await draftForForm/);
+    assert.match(ui, /<h3>Mis citas<\/h3>/);
+    assert.match(ui, /Recién guardada/);
   });
 
   await test('8b UI reubicada conserva CTA visible y borrador offline reintentable', () => {
@@ -181,9 +185,9 @@ const test = async (name, callback) => {
     assert.match(ui, /No puedes ver citas ni agendar/);
   });
 
-  await test('9 PWA v7.10 incluye shell Agenda local y no cachea Firebase externo', () => {
+  await test('9 PWA v7.11 incluye shell Agenda local y no cachea Firebase externo', () => {
     const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.10'/);
+    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.11'/);
     for (const asset of ['agenda.css', 'config.js', 'phone.js', 'firebase.js', 'commands.js', 'access.js', 'queries.js', 'ui.js']) assert.match(sw, new RegExp(asset.replace('.', '\\.')));
     assert.doesNotMatch(sw, /gstatic|firebasejs/);
     assert.match(sw, /cache: 'reload'/);

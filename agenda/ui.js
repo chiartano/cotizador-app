@@ -15,7 +15,7 @@
     step: 1, quote: null, direct: true, name: '', phone: '', address: '',
     need: 'bath_partition', detail: '', type: 'measure_visit', date: nextBusinessDay(),
     block: '09:00', durationMinutes: 120, feeMode: 'informed', feeAmount: 20000,
-    note: '', sending: false, message: '', messageKind: ''
+    note: '', sending: false, message: '', messageKind: '', receipt: null
   });
   let form = initialForm();
   let root = null;
@@ -25,6 +25,9 @@
   let accessMessage = '';
   let selectedDay = '';
   let agendaView = 'week';
+  let submissionLock = false;
+  let activeDraft = null;
+  let recentlyCreatedId = '';
 
   const authCopy = (kind) => ({
     loading: 'Preparando acceso seguro…', signing_in: 'Abriendo acceso Google…',
@@ -185,9 +188,18 @@
     const drafts = A().pendingDrafts.list();
     const list = [...queryState.appointments].sort((left, right) =>
       Date.parse(left.schedule?.startAt || 0) - Date.parse(right.schedule?.startAt || 0));
+    const mine = list.filter((item) => item.server?.createdByUid === authState.user?.uid);
+    const mineHtml = queryState.loading
+      ? '<p class="agenda-muted" role="status">Cargando tus citas…</p>'
+      : queryState.error
+        ? '<p class="agenda-warning" role="alert">No pudimos actualizar tus citas. Conservamos la última vista disponible.</p>'
+        : mine.length
+          ? mine.map((item) => `<button type="button" class="agenda-draft" data-agenda-action="appointment-focus" data-id="${esc(item.id)}"><div><strong>${esc(item.contact?.name || item.contact?.phone || 'Cliente')}</strong><small>${esc(A().formatters.types[item.type] || 'Visita')} · ${esc(A().formatters.dateTime(item.schedule?.startAt))} · ${esc(A().formatters.status[item.status] || item.status)}${item.id === recentlyCreatedId ? ' · Recién guardada' : ''}</small></div><span>Ver</span></button>`).join('')
+          : '<p class="agenda-muted">Aún no tienes citas en este periodo.</p>';
     content.innerHTML = `${!navigator.onLine ? '<p class="agenda-offline">Información guardada. Conéctate para actualizar.</p>' : ''}
       <div class="agenda-profile"><div><strong>Agenda semanal</strong><small>${esc(authState.user?.email || '')}</small></div><button type="button" data-agenda-action="logout">Salir</button></div>
       <div class="agenda-toolbar"><button type="button" class="agenda-primary" data-agenda-action="direct">Nueva cita</button><span>${queryState.appointments.length} citas esta semana</span></div>
+      <section class="agenda-section" aria-live="polite"><div class="agenda-section-title"><h3>Mis citas</h3><span>${mine.length}</span></div>${mineHtml}</section>
       ${drafts.length ? `<section class="agenda-section"><div class="agenda-section-title"><h3>Pendientes de enviar</h3><span>${drafts.length}</span></div>${drafts.map((draft) => `<article class="agenda-draft"><div><strong>${esc(draft.form?.name || draft.form?.phone || 'Cita pendiente')}</strong><small>${['unknown', 'sending'].includes(draft.status) ? 'Resultado no confirmado' : 'Guardado en este dispositivo'}</small></div><button type="button" data-agenda-action="retry" data-command="${esc(draft.commandId)}">Reintentar</button></article>`).join('')}</section>` : ''}
       <section class="agenda-attention"><div class="agenda-section-title"><div><h3>Necesitan atención</h3><p>Solo decisiones y comunicaciones pendientes.</p></div><span>${attention.length}</span></div>
         ${attention.length ? attention.map((item) => `<button type="button" data-agenda-action="appointment-focus" data-id="${esc(item.id)}"><strong>${esc(item.contact?.name || item.contact?.phone)}</strong><small>${esc(A().formatters.status[item.status] || 'Revisar cita')} · ${esc(A().formatters.communication(item.communication))}</small></button>`).join('') : '<p class="agenda-empty-line">No hay citas que necesiten atención.</p>'}
@@ -273,6 +285,8 @@
   };
   const openForm = (quoteContext) => {
     form = initialForm();
+    submissionLock = false;
+    activeDraft = null;
     if (quoteContext) {
       form.direct = !quoteContext.quoteId;
       form.quote = quoteContext.quoteId ? { quoteId: quoteContext.quoteId, context: quoteContext } : null;
@@ -289,6 +303,11 @@
   const field = (name, label, type = 'text', extra = '') => `<label>${label}<input name="${name}" type="${type}" value="${esc(form[name])}" ${extra}></label>`;
   const renderForm = () => {
     const node = root.querySelector('#agenda-form');
+    node.setAttribute('aria-busy', String(form.sending));
+    if (form.receipt) {
+      node.innerHTML = `<section class="agenda-message success" role="status"><small>Cita guardada</small><h3>${esc(form.receipt.date)} · ${esc(form.receipt.block)}</h3><p><strong>${esc(A().formatters.status[form.receipt.status] || form.receipt.status)}</strong> · ${esc(A().formatters.types[form.receipt.type] || 'Visita')}</p><p>El servidor confirmó el registro. Esto no envía mensajes al cliente.</p><button type="button" class="agenda-primary agenda-full" data-agenda-action="receipt-view" data-id="${esc(form.receipt.appointmentId)}">Ver cita</button></section>`;
+      return;
+    }
     const progress = `<div class="agenda-progress"><strong class="${form.step === 1 ? 'active' : ''}">1 Cliente y servicio</strong><span>→</span><strong class="${form.step === 2 ? 'active' : ''}">2 Horario</strong></div>`;
     if (form.step === 1) {
       node.innerHTML = `${progress}${form.direct ? '<p class="agenda-muted">Cita directa, sin fabricar una referencia de cotización.</p>' : '<p class="agenda-success">La cotización se adjuntará como snapshot inmutable.</p>'}
@@ -326,7 +345,7 @@
       ${form.type === 'measure_visit' ? `<fieldset><legend>Costo de visita</legend><label class="agenda-radio"><input type="radio" name="feeMode" value="informed" ${form.feeMode === 'informed' ? 'checked' : ''}> Informado</label><label class="agenda-radio"><input type="radio" name="feeMode" value="not_informed" ${form.feeMode === 'not_informed' ? 'checked' : ''}> Aún no informado</label>${form.feeMode === 'informed' ? `${field('feeAmount', 'Valor informado (COP) *', 'number', 'min="0" step="1" list="agenda-fee-options"')}<datalist id="agenda-fee-options"><option value="20000"></option><option value="30000"></option></datalist>` : '<p class="agenda-warning">La comunicación quedará bloqueada hasta informar el costo.</p>'}</fieldset>` : ''}
       <label>Nota general<textarea name="note" rows="2">${esc(form.note)}</textarea></label>
       <div class="agenda-summary"><strong>Resumen</strong><span>${esc(A().formatters.types[form.type])} · ${esc(form.durationMinutes / 60)} h</span><span>${esc(form.name || form.phone)} · ${esc(form.phone)}</span><span>${esc(form.address)}</span></div>
-      <div class="agenda-form-actions"><button type="button" class="agenda-secondary" data-agenda-action="back">Volver</button><button type="submit" class="agenda-primary" ${form.sending ? 'disabled' : ''}>${form.sending ? 'Guardando…' : 'Guardar cita'}</button></div>${messageHtml()}`;
+      <div class="agenda-form-actions"><button type="button" class="agenda-secondary" data-agenda-action="back" ${form.sending ? 'disabled' : ''}>Volver</button><button type="submit" class="agenda-primary" aria-busy="${form.sending}" ${form.sending ? 'disabled' : ''}>${form.sending ? 'Guardando…' : activeDraft ? 'Reintentar' : 'Guardar cita'}</button></div>${messageHtml()}`;
   };
   const messageHtml = () => form.message ? `<div class="agenda-message ${esc(form.messageKind)}" role="status">${esc(form.message)}</div>` : '';
   const syncForm = () => {
@@ -393,13 +412,12 @@
     if (result.ok) {
       A().pendingDrafts.confirm(draft.commandId, result.result, draft.quoteId);
       form.sending = false; form.messageKind = 'success';
-      form.message = result.result.deduplicated
-        ? `La cita ya existía; recuperamos el mismo resultado sin duplicarla: ${A().formatters.status[result.result.status] || 'registrada'}.`
-        : result.result.status === 'confirmed'
-          ? 'La cita quedó confirmada.'
-          : result.result.status === 'tentative'
-            ? 'La cita quedó pendiente de confirmación.'
-            : `La cita quedó ${String(A().formatters.status[result.result.status] || 'pendiente de revisión').toLowerCase()}.`;
+      form.message = 'Cita guardada';
+      recentlyCreatedId = result.result.appointmentId;
+      if (activeDraft?.commandId === draft.commandId) {
+        form.receipt = { appointmentId: result.result.appointmentId, status: result.result.status, type: draft.form.type, date: draft.form.date, block: draft.form.block };
+        activeDraft = null;
+      }
       renderForm(); renderAgenda(); refreshQuoteAction(); return;
     }
     A().pendingDrafts.save({ ...draft, status: result.error.uncertain ? 'unknown' : 'pending' });
@@ -407,15 +425,23 @@
     renderForm(); renderAgenda();
   };
   const submitForm = async () => {
+    if (submissionLock || form.sending) return;
     syncForm();
     const error = firstError();
     if (error) { form.message = error; form.messageKind = 'error'; renderForm(); return; }
     if (form.feeMode === 'informed' && (!Number.isInteger(form.feeAmount) || form.feeAmount < 0)) {
       form.message = 'El costo informado debe ser un entero en COP.'; form.messageKind = 'error'; renderForm(); return;
     }
-    form.sending = true; form.message = 'Confirmando la cita y el horario…'; form.messageKind = 'loading'; renderForm();
-    try { await sendDraft(await draftForForm()); }
-    catch (_) { form.sending = false; form.message = 'El horario o snapshot no pudo validarse.'; form.messageKind = 'error'; renderForm(); }
+    submissionLock = true;
+    form.sending = true; form.message = 'Guardando la cita…'; form.messageKind = 'loading'; renderForm();
+    try {
+      activeDraft = activeDraft || await draftForForm();
+      await sendDraft(activeDraft);
+    } catch (_) {
+      form.sending = false; form.message = 'El horario o snapshot no pudo validarse. Reintenta sin volver a llenar el formulario.'; form.messageKind = 'error'; renderForm();
+    } finally {
+      submissionLock = false;
+    }
   };
 
   const findAppointment = (id) => queryState.appointments.find((item) => item.id === id);
@@ -427,6 +453,14 @@
     const action = target.dataset.agendaAction;
     if (action === 'close') return closeAgenda();
     if (action === 'form-close') return closeForm();
+    if (action === 'receipt-view') {
+      closeForm();
+      openAgenda();
+      agendaView = 'list';
+      renderAgenda();
+      root.querySelector(`[data-appointment-id="${target.dataset.id}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      return;
+    }
     if (action === 'login') return A().auth.signIn();
     if (action === 'logout') return A().auth.signOut();
     if (action === 'switch-account') return A().auth.signOut();

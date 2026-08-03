@@ -19,11 +19,11 @@ test('1 etapa 2 no modifica index.html', () => {
   assert.equal(git(['diff', '--name-only', bridgeCommit, workerCommit, '--', 'index.html']), '');
 });
 
-test('2 usa cache versionada v7.10 y shell critico cerrado', () => {
+test('2 usa cache versionada v7.11 y shell critico cerrado', () => {
   const candidateSw = git(['show', `${whatsappTextCandidate}:sw.js`]);
-  const expectedSw = candidateSw.replace("const CACHE_NAME = 'cotizador-v7.9';", "const CACHE_NAME = 'cotizador-v7.10';");
+  const expectedSw = candidateSw.replace("const CACHE_NAME = 'cotizador-v7.9';", "const CACHE_NAME = 'cotizador-v7.11';");
   assert.equal(sw.replace(/\r\n/g, '\n').trim(), expectedSw.replace(/\r\n/g, '\n').trim());
-  assert.match(sw, /const CACHE_NAME = 'cotizador-v7\.10'/);
+  assert.match(sw, /const CACHE_NAME = 'cotizador-v7\.11'/);
   for (const asset of ['index.html', 'app.js', 'aluminio.js', 'comparador.js', 'dashboard.js', 'iq.js', 'visual.js', 'styles.css', 'agenda/agenda.css', 'agenda/config.js', 'agenda/ui.js', 'manifest.json', 'icon.png']) assert.match(sw, new RegExp(asset.replace('.', '\\.')));
 });
 
@@ -74,7 +74,7 @@ test('8 integracion no agrega escrituras runtime ni CDN al shell', () => {
 test('9 PWA, IQ y archivos ajenos al texto comercial no cambian', () => {
   const protectedFiles = [
     'index.html', 'dashboard.js', 'iq.js', 'styles.css',
-    'manifest.json', 'icon.png', '_verify_tmp.js', 'agenda'
+    'manifest.json', 'icon.png', '_verify_tmp.js'
   ];
   assert.equal(git(['diff', '--name-only', whatsappTextCandidate, '--', ...protectedFiles]), '');
 });
