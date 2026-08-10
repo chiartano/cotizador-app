@@ -87,6 +87,13 @@
     emit(rangeFor(date));
     if (state.config?.agendaOperationalUxEnabled === true) subscribeAppointments();
   };
+  const focusAppointmentPeriod = (startAt) => {
+    const effectiveDate = new Date(startAt);
+    if (!Number.isFinite(effectiveDate.getTime())) return false;
+    emit({ appointments: [], loading: true, error: null, ...rangeFor(effectiveDate) });
+    if (state.config?.agendaOperationalUxEnabled === true) subscribeAppointments();
+    return true;
+  };
   const saturdayException = () => {
     const match = state.overrides.find((item) => item.enabled === true && (
       item.kind === 'saturday_exception' || /saturday|sabado|sábado/i.test(item.id || '')
@@ -96,5 +103,5 @@
   const subscribe = (listener) => { listeners.add(listener); listener(state); return () => listeners.delete(listener); };
   const getState = () => state;
 
-  global.WilanAgenda.queries = { start, stop, subscribe, getState, setWeek, rangeFor, saturdayException };
+  global.WilanAgenda.queries = { start, stop, subscribe, getState, setWeek, focusAppointmentPeriod, rangeFor, saturdayException };
 })(window);

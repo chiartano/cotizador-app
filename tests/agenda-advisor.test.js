@@ -141,6 +141,25 @@ const test = async (name, callback) => {
     assert.match(ui, /activeDraft = activeDraft \|\| await draftForForm/);
     assert.match(ui, /<h3>Mis citas<\/h3>/);
     assert.match(ui, /Recién guardada/);
+    assert.match(ui, /focusAppointmentPeriod\(result\.result\.startAt\)/);
+    assert.match(ui, /No se ha enviado un mensaje al cliente\./);
+    assert.match(ui, /recentlyCreatedTimer = global\.setTimeout\([\s\S]*15000/);
+  });
+
+  await test('8a guardado enfoca la semana efectiva persistida incluso fuera de la semana actual', () => {
+    const context = sandboxFor(); context.WilanAgenda = {};
+    load(context, 'agenda/queries.js');
+    const queries = context.WilanAgenda.queries;
+    assert.equal(queries.focusAppointmentPeriod('2026-08-10T14:00:00.000Z'), true);
+    assert.equal(queries.getState().rangeStart, '2026-08-10T05:00:00.000Z');
+    assert.equal(queries.getState().rangeEnd, '2026-08-17T05:00:00.000Z');
+    assert.equal(queries.getState().loading, true);
+    assert.equal(queries.focusAppointmentPeriod('2026-08-05T14:00:00.000Z'), true);
+    assert.equal(queries.getState().rangeStart, '2026-08-03T05:00:00.000Z');
+    assert.equal(queries.focusAppointmentPeriod('2026-07-30T14:00:00.000Z'), true);
+    assert.equal(queries.getState().rangeStart, '2026-07-27T05:00:00.000Z');
+    assert.equal(queries.focusAppointmentPeriod('not-a-date'), false);
+    assert.equal(queries.getState().rangeStart, '2026-07-27T05:00:00.000Z');
   });
 
   await test('8b UI reubicada conserva CTA visible y borrador offline reintentable', () => {
@@ -185,9 +204,9 @@ const test = async (name, callback) => {
     assert.match(ui, /No puedes ver citas ni agendar/);
   });
 
-  await test('9 PWA v7.11 incluye shell Agenda local y no cachea Firebase externo', () => {
+  await test('9 PWA v7.12 incluye shell Agenda local y no cachea Firebase externo', () => {
     const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.11'/);
+    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.12'/);
     for (const asset of ['agenda.css', 'config.js', 'phone.js', 'firebase.js', 'commands.js', 'access.js', 'queries.js', 'ui.js']) assert.match(sw, new RegExp(asset.replace('.', '\\.')));
     assert.doesNotMatch(sw, /gstatic|firebasejs/);
     assert.match(sw, /cache: 'reload'/);

@@ -28,6 +28,7 @@
   let submissionLock = false;
   let activeDraft = null;
   let recentlyCreatedId = '';
+  let recentlyCreatedTimer = null;
 
   const authCopy = (kind) => ({
     loading: 'Preparando acceso seguro…', signing_in: 'Abriendo acceso Google…',
@@ -148,6 +149,19 @@
   };
   const section = (title, items, empty) => `<section class="agenda-section"><div class="agenda-section-title"><h3>${title}</h3><span>${items.length}</span></div>${items.length ? items.map(card).join('') : `<p class="agenda-muted">${empty}</p>`}</section>`;
   const dateKey = (date) => date.toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+  const timeKey = (date) => date.toLocaleTimeString('es-CO', {
+    timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit', hour12: false
+  });
+  const markRecentlyCreated = (appointmentId) => {
+    recentlyCreatedId = appointmentId;
+    if (recentlyCreatedTimer) global.clearTimeout(recentlyCreatedTimer);
+    recentlyCreatedTimer = global.setTimeout(() => {
+      if (recentlyCreatedId !== appointmentId) return;
+      recentlyCreatedId = '';
+      recentlyCreatedTimer = null;
+      if (agendaOpen) renderAgenda();
+    }, 15000);
+  };
   const operationalDays = () => {
     const first = queryState.rangeStart ? new Date(queryState.rangeStart) : new Date();
     return Array.from({ length: 6 }, (_, index) => new Date(first.getTime() + index * 86400000));
@@ -305,7 +319,7 @@
     const node = root.querySelector('#agenda-form');
     node.setAttribute('aria-busy', String(form.sending));
     if (form.receipt) {
-      node.innerHTML = `<section class="agenda-message success" role="status"><small>Cita guardada</small><h3>${esc(form.receipt.date)} · ${esc(form.receipt.block)}</h3><p><strong>${esc(A().formatters.status[form.receipt.status] || form.receipt.status)}</strong> · ${esc(A().formatters.types[form.receipt.type] || 'Visita')}</p><p>El servidor confirmó el registro. Esto no envía mensajes al cliente.</p><button type="button" class="agenda-primary agenda-full" data-agenda-action="receipt-view" data-id="${esc(form.receipt.appointmentId)}">Ver cita</button></section>`;
+      node.innerHTML = `<section class="agenda-message success" role="status"><small>Cita guardada</small><h3>${esc(form.receipt.date)} · ${esc(form.receipt.block)}</h3><p><strong>${esc(A().formatters.status[form.receipt.status] || form.receipt.status)}</strong> · ${esc(A().formatters.types[form.receipt.type] || 'Visita')}</p><p>El servidor confirmó el registro. No se ha enviado un mensaje al cliente.</p><button type="button" class="agenda-primary agenda-full" data-agenda-action="receipt-view" data-id="${esc(form.receipt.appointmentId)}">Ver cita</button></section>`;
       return;
     }
     const progress = `<div class="agenda-progress"><strong class="${form.step === 1 ? 'active' : ''}">1 Cliente y servicio</strong><span>→</span><strong class="${form.step === 2 ? 'active' : ''}">2 Horario</strong></div>`;
@@ -413,9 +427,21 @@
       A().pendingDrafts.confirm(draft.commandId, result.result, draft.quoteId);
       form.sending = false; form.messageKind = 'success';
       form.message = 'Cita guardada';
-      recentlyCreatedId = result.result.appointmentId;
+      markRecentlyCreated(result.result.appointmentId);
+      const effectiveStart = A().formatters.asDate(result.result.startAt);
+      if (effectiveStart) {
+        selectedDay = dateKey(effectiveStart);
+        agendaView = 'list';
+        A().queries.focusAppointmentPeriod(result.result.startAt);
+      }
       if (activeDraft?.commandId === draft.commandId) {
-        form.receipt = { appointmentId: result.result.appointmentId, status: result.result.status, type: draft.form.type, date: draft.form.date, block: draft.form.block };
+        form.receipt = {
+          appointmentId: result.result.appointmentId,
+          status: result.result.status,
+          type: draft.form.type,
+          date: effectiveStart ? dateKey(effectiveStart) : draft.form.date,
+          block: effectiveStart ? timeKey(effectiveStart) : draft.form.block,
+        };
         activeDraft = null;
       }
       renderForm(); renderAgenda(); refreshQuoteAction(); return;
