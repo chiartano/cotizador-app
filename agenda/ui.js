@@ -235,20 +235,22 @@
     if (!allowed()) return renderAuth();
     const content = root.querySelector('#agenda-content');
     if (queryState.config?.agendaOperationalUxEnabled === true) return renderOperationalAgenda(content);
-    const f = A().formatters;
-    const appointments = [...queryState.appointments];
-    const now = Date.now();
-    const response = appointments.filter(f.requiresResponse);
-    const upcoming = appointments.filter((item) => !f.terminal(item) && (f.asDate(item.schedule?.startAt)?.getTime() || 0) >= now)
-      .sort((a, b) => (f.asDate(a.schedule?.startAt)?.getTime() || 0) - (f.asDate(b.schedule?.startAt)?.getTime() || 0));
-    const recent = appointments.filter((item) => f.terminal(item) || (f.asDate(item.schedule?.startAt)?.getTime() || 0) < now).slice(-12).reverse();
+    const mine = queryState.appointments
+      .filter((item) => item.archived !== true && item.server?.createdByUid === authState.user?.uid)
+      .sort((left, right) => Date.parse(left.schedule?.startAt || 0) - Date.parse(right.schedule?.startAt || 0));
+    const mineHtml = queryState.loading
+      ? '<p class="agenda-muted" role="status">Cargando tus citas…</p>'
+      : queryState.error
+        ? '<p class="agenda-warning" role="alert">No pudimos cargar tus citas. Recarga para volver a intentarlo.</p>'
+        : mine.length
+          ? mine.map((item) => `<button type="button" class="agenda-draft" data-agenda-action="appointment-focus" data-id="${esc(item.id)}"><div><strong>${esc(A().formatters.dateTime(item.schedule?.startAt))}</strong><small>${esc(A().formatters.types[item.type] || 'Visita')} · ${esc(A().formatters.status[item.status] || item.status)}${item.id === recentlyCreatedId ? ' · Recién guardada' : ''}</small></div><span>Ver</span></button>`).join('')
+          : '<p class="agenda-muted">Aún no tienes citas.</p>';
     const drafts = A().pendingDrafts.list();
     content.innerHTML = `<div class="agenda-profile"><div><strong>Perfil ${esc(authState.kind)}</strong><small>${esc(authState.user?.email || '')}</small></div><button type="button" data-agenda-action="logout">Salir</button></div>
-      <div class="agenda-toolbar"><button type="button" class="agenda-primary" data-agenda-action="direct">Nueva cita</button><span>${appointments.length} citas compartidas</span></div>
+      <div class="agenda-toolbar"><button type="button" class="agenda-primary" data-agenda-action="direct">Nueva cita</button><span>${mine.length} citas propias</span></div>
+      <section class="agenda-section" aria-live="polite"><div class="agenda-section-title"><h3>Mis citas</h3><span>${mine.length}</span></div>${mineHtml}</section>
       ${drafts.length ? `<section class="agenda-section"><div class="agenda-section-title"><h3>Pendientes de enviar</h3><span>${drafts.length}</span></div>${drafts.map((draft) => `<article class="agenda-draft"><div><strong>${esc(draft.form?.name || draft.form?.phone || 'Cita pendiente')}</strong><small>${['unknown', 'sending'].includes(draft.status) ? 'Resultado no confirmado; no puede eliminarse' : 'Nunca enviado; guardado en este dispositivo'}</small></div><button type="button" data-agenda-action="retry" data-command="${esc(draft.commandId)}">Reintentar</button>${draft.status === 'pending' ? `<button type="button" data-agenda-action="delete-draft" data-command="${esc(draft.commandId)}">Eliminar</button>` : ''}</article>`).join('')}</section>` : ''}
-      ${section('Requieren respuesta', response, 'No hay decisiones pendientes.')}
-      ${section('Próximas', upcoming, 'No hay citas próximas.')}
-      ${section('Recientes', recent, 'Aún no hay citas recientes.')}`;
+    `;
   };
   const refreshQuoteAction = () => {
     const action = document.querySelector('#agenda-quote-action');

@@ -2,9 +2,11 @@
   'use strict';
   const params = new URLSearchParams(global.location.search);
   const profile = params.get('profile') || 'advisor';
+  const operationalUx = params.get('operational') !== '0';
   const appointments = [];
   const commands = new Map();
   const collectionListeners = new Map();
+  const queryListeners = [];
   const now = () => new Date().toISOString();
   const memberListeners = [];
   const requestListeners = [];
@@ -24,7 +26,20 @@
       : null;
   const emitMember = () => memberListeners.forEach((listener) => listener(memberValue()));
   const emitRequest = () => requestListeners.forEach((listener) => listener(accessRequest ? JSON.parse(JSON.stringify(accessRequest)) : null));
-  const emitAppointments = () => (collectionListeners.get('appointments') || []).forEach((listener) => listener(JSON.parse(JSON.stringify(appointments))));
+  const fieldValue = (source, field) => field.split('.').reduce((value, key) => value?.[key], source);
+  const matches = (appointment, constraints) => (constraints || []).every((constraint) => {
+    if (!constraint.where) return true;
+    const [field, operator, expected] = constraint.where;
+    const actual = fieldValue(appointment, field);
+    if (operator === '==') return actual === expected;
+    if (operator === '>=') return actual >= expected;
+    if (operator === '<') return actual < expected;
+    return true;
+  });
+  const emitAppointments = () => {
+    (collectionListeners.get('appointments') || []).forEach((listener) => listener(JSON.parse(JSON.stringify(appointments))));
+    queryListeners.forEach(({ constraints, next }) => next(JSON.parse(JSON.stringify(appointments.filter((item) => matches(item, constraints))))));
+  };
   const error = (code) => Promise.reject({ details: { code }, code: `functions/${code.toLowerCase().replace(/_/g, '-')}` });
   const feeFor = (payload) => payload.type === 'install_visit'
     ? { applicability: 'not_applicable', disclosure: { status: 'not_required' }, settlement: { status: 'not_applicable' } }
@@ -92,7 +107,7 @@
       } else if (/\/accessRequests\//.test(path)) {
         requestListeners.push(next);
         setTimeout(() => next(accessRequest ? JSON.parse(JSON.stringify(accessRequest)) : null), 0);
-      } else if (/agendaConfig/.test(path)) setTimeout(() => next({ serviceEnabled: true, advisorCreationEnabled: true, agendaOperationalUxEnabled: true, appointmentArchiveEnabled: true }), 0);
+      } else if (/agendaConfig/.test(path)) setTimeout(() => next({ serviceEnabled: true, advisorCreationEnabled: true, agendaOperationalUxEnabled: operationalUx, appointmentArchiveEnabled: true }), 0);
       else setTimeout(() => next(null), 0);
       return () => {};
     },
@@ -103,8 +118,15 @@
       } else setTimeout(() => next([]), 0);
       return () => {};
     },
-    subscribeQuery(path, _constraints, next) {
-      return this.subscribeCollection(path, next);
+    subscribeQuery(path, constraints, next) {
+      if (!/\/appointments$/.test(path)) { setTimeout(() => next([]), 0); return () => {}; }
+      const subscription = { constraints, next };
+      queryListeners.push(subscription);
+      setTimeout(() => next(JSON.parse(JSON.stringify(appointments.filter((item) => matches(item, constraints))))), 0);
+      return () => {
+        const index = queryListeners.indexOf(subscription);
+        if (index >= 0) queryListeners.splice(index, 1);
+      };
     },
     async call(name, request) {
       if (name === 'agendaAccessCommand') {
@@ -170,5 +192,9 @@
       emitRequest();
       emitMember();
     },
+    addSyntheticAppointment(appointment) {
+      appointments.push(JSON.parse(JSON.stringify(appointment)));
+      emitAppointments();
+    }
   };
 })(window);

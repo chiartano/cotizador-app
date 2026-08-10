@@ -40,6 +40,23 @@
     stopAppointments();
     if (!adapter || !root) return;
     const onError = (error) => emit({ error, loading: false });
+    const auth = global.WilanAgenda.auth.getState();
+    if (state.config?.agendaOperationalUxEnabled !== true && auth.kind === 'advisor') {
+      const uid = auth.user?.uid;
+      if (!uid || !adapter.subscribeQuery) {
+        emit({ appointments: [], error: new Error('ADVISOR_APPOINTMENTS_QUERY_UNAVAILABLE'), loading: false });
+        return;
+      }
+      let legacy = [];
+      let current = [];
+      const publishMine = () => emit({ appointments: merge(legacy, current), loading: false, error: null });
+      const own = { where: ['server.createdByUid', '==', uid] };
+      appointmentSubscriptions = [
+        adapter.subscribeQuery(`${root}/appointments`, [own, { where: ['schema', '==', 'appointment.v1'] }], (rows) => { legacy = rows; publishMine(); }, onError),
+        adapter.subscribeQuery(`${root}/appointments`, [own, { where: ['archived', '==', false] }], (rows) => { current = rows; publishMine(); }, onError)
+      ];
+      return;
+    }
     if (state.config?.agendaOperationalUxEnabled !== true || !adapter.subscribeQuery) {
       appointmentSubscriptions = [adapter.subscribeCollection(`${root}/appointments`, (appointments) => {
         emit({ appointments: appointments.filter((item) => item.archived !== true), loading: false, error: null });
@@ -90,8 +107,13 @@
   const focusAppointmentPeriod = (startAt) => {
     const effectiveDate = new Date(startAt);
     if (!Number.isFinite(effectiveDate.getTime())) return false;
-    emit({ appointments: [], loading: true, error: null, ...rangeFor(effectiveDate) });
-    if (state.config?.agendaOperationalUxEnabled === true) subscribeAppointments();
+    const nextRange = rangeFor(effectiveDate);
+    if (state.config?.agendaOperationalUxEnabled === true) {
+      emit({ appointments: [], loading: true, error: null, ...nextRange });
+      subscribeAppointments();
+    } else {
+      emit(nextRange);
+    }
     return true;
   };
   const saturdayException = () => {

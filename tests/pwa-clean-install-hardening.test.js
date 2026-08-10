@@ -74,12 +74,12 @@ async function exerciseUpdateCheck(registration) {
     assert.equal(result.warnings[0][1], error);
   });
 
-  await test('5 nueva version conserva hardening y usa shell v7.12', () => {
+  await test('5 nueva version conserva hardening y usa shell v7.13', () => {
     const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
     const candidateSw = git(['show', `${whatsappTextCandidate}:sw.js`]);
-    const expectedSw = candidateSw.replace("const CACHE_NAME = 'cotizador-v7.9';", "const CACHE_NAME = 'cotizador-v7.12';");
+    const expectedSw = candidateSw.replace("const CACHE_NAME = 'cotizador-v7.9';", "const CACHE_NAME = 'cotizador-v7.13';");
     assert.equal(sw.replace(/\r\n/g, '\n').trim(), expectedSw.replace(/\r\n/g, '\n').trim());
-    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.12'/);
+    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.13'/);
     assert.match(sw, /await caches\.delete\(CACHE_NAME\)/);
     assert.match(sw, /cache: 'reload'/);
   });
