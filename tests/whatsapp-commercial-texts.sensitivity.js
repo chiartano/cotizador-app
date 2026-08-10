@@ -60,7 +60,7 @@ function commercialInvariantErrors(dir) {
   if (!files['app.js'].includes('const AJUSTE_COMERCIAL = 1.05;')) {
     errors.push('precio principal alterado');
   }
-  if (!files['sw.js'].includes("const CACHE_NAME = 'cotizador-v7.13';")) {
+  if (!files['sw.js'].includes("const CACHE_NAME = 'cotizador-v7.14';")) {
     errors.push('sw.js fuera de la versión autorizada');
   }
   const pwaTest = files['tests/pwa-atomic-update.test.js'];
@@ -70,7 +70,7 @@ function commercialInvariantErrors(dir) {
   if (guardStart === -1 || !guard.includes("'index.html'")) {
     errors.push('guarda PWA debilitada para index.html');
   }
-  if (!pwaTest.includes("candidateSw.replace(\"const CACHE_NAME = 'cotizador-v7.9';\", \"const CACHE_NAME = 'cotizador-v7.13';\")")) {
+  if (!pwaTest.includes("candidateSw.replace(\"const CACHE_NAME = 'cotizador-v7.9';\", \"const CACHE_NAME = 'cotizador-v7.14';\")")) {
     errors.push('guarda PWA debilitada para sw.js');
   }
   return errors;
@@ -141,8 +141,8 @@ const mutations = [
   {
     name:'modificar sw.js fuera del empaquetado',
     file:'sw.js',
-    search:"const CACHE_NAME = 'cotizador-v7.13';",
-    replacement:"const CACHE_NAME = 'cotizador-v7.13-mutado';"
+    search:"const CACHE_NAME = 'cotizador-v7.14';",
+    replacement:"const CACHE_NAME = 'cotizador-v7.14-mutado';"
   },
   {
     name:'debilitar guarda PWA de index.html',

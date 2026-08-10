@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'cotizador-';
-const CACHE_NAME = 'cotizador-v7.13';
+const CACHE_NAME = 'cotizador-v7.14';
 const CLIENT_PROTOCOL_VERSION = 1;
 const CLIENT_ACK_TIMEOUT_MS = 2000;
 

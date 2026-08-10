@@ -102,6 +102,8 @@ const appointment = (id, overrides = {}) => ({
   assert.equal(advanced.querySubscriptions.length, 4, 'Advanced focus must retain its weekly resubscription');
 
   const ui = fs.readFileSync(path.join(root, 'agenda/ui.js'), 'utf8');
+  assert.match(ui, /authState\.kind === 'advisor'\) return renderAdvisorAgenda/);
+  assert.match(ui, /data-agenda-calendar="week"/);
   assert.match(ui, /agendaOperationalUxEnabled === true\) return renderOperationalAgenda/);
   assert.match(ui, /<h3>Mis citas<\/h3>/);
   assert.match(ui, /Cargando tus citas/);

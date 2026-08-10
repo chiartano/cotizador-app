@@ -162,10 +162,17 @@
       if (agendaOpen) renderAgenda();
     }, 15000);
   };
-  const operationalDays = () => {
-    const first = queryState.rangeStart ? new Date(queryState.rangeStart) : new Date();
+  const calendarDays = (rangeStart) => {
+    const first = rangeStart ? new Date(rangeStart) : new Date();
     return Array.from({ length: 6 }, (_, index) => new Date(first.getTime() + index * 86400000));
   };
+  const operationalDays = () => calendarDays(queryState.rangeStart);
+  const advisorCalendarModel = (appointments, rangeStart) => calendarDays(rangeStart).map((date) => ({
+    date,
+    key: dateKey(date),
+    items: appointments.filter((item) =>
+      dateKey(A().formatters.asDate(item.schedule?.startAt)) === dateKey(date))
+  }));
   const dayTitle = (date) => new Intl.DateTimeFormat('es-CO', {
     timeZone: 'America/Bogota', weekday: 'short', day: 'numeric', month: 'short'
   }).format(date);
@@ -193,6 +200,47 @@
     const height = block.durationMinutes / 60 * 56;
     return `<button type="button" class="agenda-free-slot" data-agenda-action="free-slot" data-date="${dateKey(date)}" data-block="${block.start}" style="top:${top}px;height:${height}px" ${occupied || !navigator.onLine ? 'disabled' : ''}>${occupied ? '' : navigator.onLine ? `${block.start} libre` : 'Sin conexión'}</button>`;
   }).join('');
+  const advisorCalendarEntry = (appointment) => {
+    const start = A().formatters.asDate(appointment.schedule?.startAt);
+    return `<button type="button" class="agenda-calendar-entry" data-agenda-action="appointment-focus" data-id="${esc(appointment.id)}">
+      <time>${esc(timeKey(start))}</time>
+      <span><strong>${esc(A().formatters.types[appointment.type] || 'Visita')}</strong><small>${esc(A().formatters.status[appointment.status] || appointment.status)}</small></span>
+      <small>${esc(appointment.contact?.name || appointment.contact?.phone || 'Cliente')}</small>
+    </button>`;
+  };
+  const renderAdvisorAgenda = (content) => {
+    const days = operationalDays();
+    if (!selectedDay || !days.some((date) => dateKey(date) === selectedDay)) selectedDay = dateKey(days[0]);
+    const activeDay = days.find((date) => dateKey(date) === selectedDay) || days[0];
+    const mine = queryState.appointments
+      .filter((item) => item.archived !== true && item.server?.createdByUid === authState.user?.uid)
+      .sort((left, right) => Date.parse(left.schedule?.startAt || 0) - Date.parse(right.schedule?.startAt || 0));
+    const calendar = advisorCalendarModel(mine, queryState.rangeStart);
+    const itemsForDay = (date) => calendar.find((day) => day.key === dateKey(date))?.items || [];
+    const feedback = queryState.loading
+      ? '<p class="agenda-muted" role="status">Cargando tus citas…</p>'
+      : queryState.error
+        ? '<p class="agenda-warning" role="alert">No pudimos actualizar tus citas. Conservamos la última vista disponible.</p>'
+        : '';
+    const drafts = A().pendingDrafts.list();
+    const selectedItems = itemsForDay(activeDay);
+    content.innerHTML = `${!navigator.onLine ? '<p class="agenda-offline">Información guardada. Conéctate para actualizar.</p>' : ''}
+      <div class="agenda-profile"><div><strong>Calendario de mis citas</strong><small>${esc(authState.user?.email || '')}</small></div><button type="button" data-agenda-action="logout">Salir</button></div>
+      <div class="agenda-toolbar"><button type="button" class="agenda-primary" data-agenda-action="direct">Nueva cita</button><span>${mine.length} citas propias</span></div>
+      ${feedback}
+      <div class="agenda-week-nav"><button type="button" aria-label="Semana anterior" data-agenda-action="week-prev">‹</button><button type="button" data-agenda-action="week-today">Hoy</button><strong>${esc(dayTitle(days[0]))} – ${esc(dayTitle(days[5]))}</strong><button type="button" aria-label="Semana siguiente" data-agenda-action="week-next">›</button></div>
+      <div class="agenda-view-tabs"><button type="button" data-agenda-action="view-week" class="${agendaView === 'week' ? 'active' : ''}" aria-pressed="${agendaView === 'week'}">Calendario</button><button type="button" data-agenda-action="view-list" class="${agendaView === 'list' ? 'active' : ''}" aria-pressed="${agendaView === 'list'}">Lista</button></div>
+      ${agendaView === 'list' ? `<section class="agenda-section" aria-live="polite"><div class="agenda-section-title"><h3>Mis citas</h3><span>${mine.length}</span></div><div class="agenda-list">${mine.length ? mine.map(card).join('') : '<p class="agenda-muted">Aún no tienes citas.</p>'}</div></section>` : `
+        <div class="agenda-advisor-week" data-agenda-calendar="week">${days.map((date) => {
+          const items = itemsForDay(date);
+          return `<section class="agenda-calendar-day" data-date="${dateKey(date)}"><header><strong>${esc(dayTitle(date))}</strong><span>${items.length}</span></header>${items.length ? items.map(advisorCalendarEntry).join('') : '<p>Sin citas</p>'}</section>`;
+        }).join('')}</div>
+        <div class="agenda-mobile-days">${days.map((date) => `<button type="button" data-agenda-action="select-day" data-date="${dateKey(date)}" class="${dateKey(date) === selectedDay ? 'active' : ''}">${esc(dayTitle(date))}</button>`).join('')}</div>
+        <section class="agenda-mobile-day agenda-advisor-mobile"><div class="agenda-section-title"><h3>${esc(dayTitle(activeDay))}</h3><span>${selectedItems.length}</span></div>${selectedItems.length ? selectedItems.map(advisorCalendarEntry).join('') : '<p class="agenda-muted">No hay citas este día.</p>'}</section>
+      `}
+      ${drafts.length ? `<section class="agenda-section"><div class="agenda-section-title"><h3>Pendientes de enviar</h3><span>${drafts.length}</span></div>${drafts.map((draft) => `<article class="agenda-draft"><div><strong>${esc(draft.form?.name || draft.form?.phone || 'Cita pendiente')}</strong><small>${['unknown', 'sending'].includes(draft.status) ? 'Resultado no confirmado; no puede eliminarse' : 'Nunca enviado; guardado en este dispositivo'}</small></div><button type="button" data-agenda-action="retry" data-command="${esc(draft.commandId)}">Reintentar</button>${draft.status === 'pending' ? `<button type="button" data-agenda-action="delete-draft" data-command="${esc(draft.commandId)}">Eliminar</button>` : ''}</article>`).join('')}</section>` : ''}
+    `;
+  };
   const renderOperationalAgenda = (content) => {
     const days = operationalDays();
     if (!selectedDay || !days.some((date) => dateKey(date) === selectedDay)) selectedDay = dateKey(days[0]);
@@ -234,6 +282,7 @@
   const renderAgenda = () => {
     if (!allowed()) return renderAuth();
     const content = root.querySelector('#agenda-content');
+    if (authState.kind === 'advisor') return renderAdvisorAgenda(content);
     if (queryState.config?.agendaOperationalUxEnabled === true) return renderOperationalAgenda(content);
     const mine = queryState.appointments
       .filter((item) => item.archived !== true && item.server?.createdByUid === authState.user?.uid)
@@ -623,7 +672,14 @@
     A().auth.start();
   };
 
-  A().ui = { initialize, openAgenda, openForm, renderAgenda, _state: () => ({ form, authState, queryState }) };
+  A().ui = {
+    initialize,
+    openAgenda,
+    openForm,
+    renderAgenda,
+    _state: () => ({ form, authState, queryState }),
+    _calendar: { days: calendarDays, model: advisorCalendarModel, time: timeKey }
+  };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialize, { once: true });
   else initialize();
 })(window);

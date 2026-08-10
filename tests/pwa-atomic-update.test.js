@@ -19,11 +19,11 @@ test('1 etapa 2 no modifica index.html', () => {
   assert.equal(git(['diff', '--name-only', bridgeCommit, workerCommit, '--', 'index.html']), '');
 });
 
-test('2 usa cache versionada v7.13 y shell critico cerrado', () => {
+test('2 usa cache versionada v7.14 y shell critico cerrado', () => {
   const candidateSw = git(['show', `${whatsappTextCandidate}:sw.js`]);
-  const expectedSw = candidateSw.replace("const CACHE_NAME = 'cotizador-v7.9';", "const CACHE_NAME = 'cotizador-v7.13';");
+  const expectedSw = candidateSw.replace("const CACHE_NAME = 'cotizador-v7.9';", "const CACHE_NAME = 'cotizador-v7.14';");
   assert.equal(sw.replace(/\r\n/g, '\n').trim(), expectedSw.replace(/\r\n/g, '\n').trim());
-  assert.match(sw, /const CACHE_NAME = 'cotizador-v7\.13'/);
+  assert.match(sw, /const CACHE_NAME = 'cotizador-v7\.14'/);
   for (const asset of ['index.html', 'app.js', 'aluminio.js', 'comparador.js', 'dashboard.js', 'iq.js', 'visual.js', 'styles.css', 'agenda/agenda.css', 'agenda/config.js', 'agenda/ui.js', 'manifest.json', 'icon.png']) assert.match(sw, new RegExp(asset.replace('.', '\\.')));
 });
 
