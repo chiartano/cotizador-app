@@ -5,6 +5,7 @@
   const params = new URLSearchParams(global.location?.search || '');
   const explicit = params.get('agendaAdvisor');
   const releaseEnabled = global.document?.querySelector?.('meta[name="wilan-agenda-advisor-enabled"]')?.content === 'true';
+  const quoteBridgeReleaseEnabled = global.document?.querySelector?.('meta[name="wilan-quote-bridge-enabled"]')?.content === 'true';
   const emulator = localHost && params.get('agendaEmulator') !== '0';
   const productionFirebase = Object.freeze({
     apiKey: 'AIzaSyAhLwVdU9vWghBC0ieu5FUmgOfPZsYaTUw',
@@ -27,6 +28,7 @@
   global.WilanAgenda.config = Object.freeze({
     schema: 'wilan-agenda-advisor-config.v1',
     enabled: releaseEnabled || (localHost && explicit !== '0'),
+    quoteBridgeEnabled: quoteBridgeReleaseEnabled || emulator,
     emulator,
     appId: emulator ? 'app_agenda_demo' : 'contabilidad-vidrio',
     workspaceId: emulator ? 'workspace_agenda_demo' : 'wilan-main',

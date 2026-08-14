@@ -7,6 +7,7 @@
     <title>Cotizador Divisiones</title>
     <meta name="theme-color" content="#1877f2">
     <meta name="wilan-agenda-advisor-enabled" content="true">
+    <meta name="wilan-quote-bridge-enabled" content="true">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icono.png">
@@ -747,10 +748,11 @@
     <script src="agenda/access.js"></script>
     <script src="agenda/queries.js"></script>
     <script src="agenda/ui.js"></script>
+    <script src="agenda/quoteToCrm.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
             const WILAN_PWA_PROTOCOL_VERSION = 1;
-            const WILAN_PWA_BRIDGE_VERSION = 'agenda-advisor-v1';
+            const WILAN_PWA_BRIDGE_VERSION = 'agenda-advisor-quote-crm-v1';
             const UPDATE_CONSENT_KEY = 'wilan_pwa_update_consent_v1';
             const UPDATE_RELOAD_GUARD_KEY = 'wilan_pwa_update_reload_guard_v1';
             const UPDATE_DISMISSED_KEY = 'wilan_pwa_update_dismissed_v1';

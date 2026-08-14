@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'cotizador-';
-const CACHE_NAME = 'cotizador-v7.14';
+const CACHE_NAME = 'cotizador-v7.15';
 const CLIENT_PROTOCOL_VERSION = 1;
 const CLIENT_ACK_TIMEOUT_MS = 2000;
 
@@ -25,6 +25,7 @@ const CRITICAL_ASSETS = [
   './agenda/access.js',
   './agenda/queries.js',
   './agenda/ui.js',
+  './agenda/quoteToCrm.js',
   './manifest.json',
   './icon.png'
 ];
