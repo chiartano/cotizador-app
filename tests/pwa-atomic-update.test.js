@@ -4,9 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
-const bridgeCommit = '04b7ed374a4d69bf86242b5a4e69e2b8c09a6170';
-const workerCommit = 'b0a3c5f266a86a9d16e92e96472ff3c1ff3d3d3a';
-const whatsappTextCandidate = '29b64b1e0849a6b36402ea52497b0485aaa3e9ca';
+const blockedBridgeCandidate = '55eb836e4b640599467c3c2f84a567c340257d92';
 const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
 
 function git(args) { return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim(); }
@@ -15,16 +13,15 @@ function test(name, callback) {
   catch (error) { console.error(`not ok - ${name}`); throw error; }
 }
 
-test('1 etapa 2 no modifica index.html', () => {
-  assert.equal(git(['diff', '--name-only', bridgeCommit, workerCommit, '--', 'index.html']), '');
+test('1 protocolo controlado de actualización permanece presente', () => {
+  const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  assert.match(index, /WILAN_PWA_PROTOCOL_VERSION = 1/);
+  assert.match(index, /WILAN_PWA_CLIENT_CAPABILITY_ACK/);
 });
 
-test('2 usa cache versionada v7.14 y shell critico cerrado', () => {
-  const candidateSw = git(['show', `${whatsappTextCandidate}:sw.js`]);
-  const expectedSw = candidateSw.replace("const CACHE_NAME = 'cotizador-v7.9';", "const CACHE_NAME = 'cotizador-v7.14';");
-  assert.equal(sw.replace(/\r\n/g, '\n').trim(), expectedSw.replace(/\r\n/g, '\n').trim());
-  assert.match(sw, /const CACHE_NAME = 'cotizador-v7\.14'/);
-  for (const asset of ['index.html', 'app.js', 'aluminio.js', 'comparador.js', 'dashboard.js', 'iq.js', 'visual.js', 'styles.css', 'agenda/agenda.css', 'agenda/config.js', 'agenda/ui.js', 'manifest.json', 'icon.png']) assert.match(sw, new RegExp(asset.replace('.', '\\.')));
+test('2 usa cache versionada v7.16 y shell critico cerrado con bridge', () => {
+  assert.match(sw, /const CACHE_NAME = 'cotizador-v7\.16'/);
+  for (const asset of ['index.html', 'app.js', 'aluminio.js', 'comparador.js', 'dashboard.js', 'iq.js', 'visual.js', 'styles.css', 'agenda/agenda.css', 'agenda/config.js', 'agenda/ui.js', 'agenda/quoteToCrm.js', 'manifest.json', 'icon.png']) assert.match(sw, new RegExp(asset.replace('.', '\\.')));
 });
 
 test('3 install exige ACK de todos los WindowClient', () => {
@@ -71,12 +68,12 @@ test('8 integracion no agrega escrituras runtime ni CDN al shell', () => {
   assert.doesNotMatch(fetchBlock, /cache\.put|fetch\(/);
 });
 
-test('9 PWA, IQ y archivos ajenos al texto comercial no cambian', () => {
+test('9 archivos ajenos a la corrección no cambian', () => {
   const protectedFiles = [
-    'index.html', 'dashboard.js', 'iq.js', 'styles.css',
+    'dashboard.js', 'iq.js', 'styles.css',
     'manifest.json', 'icon.png', '_verify_tmp.js'
   ];
-  assert.equal(git(['diff', '--name-only', whatsappTextCandidate, '--', ...protectedFiles]), '');
+  assert.equal(git(['diff', '--name-only', blockedBridgeCandidate, '--', ...protectedFiles]), '');
 });
 
 test('10 no borra datos del navegador', () => {

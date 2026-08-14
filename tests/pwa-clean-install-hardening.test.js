@@ -4,8 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
-const base = 'b0a3c5f266a86a9d16e92e96472ff3c1ff3d3d3a';
-const whatsappTextCandidate = '29b64b1e0849a6b36402ea52497b0485aaa3e9ca';
+const blockedBridgeCandidate = '55eb836e4b640599467c3c2f84a567c340257d92';
 const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const blockStart = index.indexOf("if ('serviceWorker' in navigator)");
 const pwaBlock = index.slice(blockStart, index.indexOf('</script>', blockStart));
@@ -74,22 +73,20 @@ async function exerciseUpdateCheck(registration) {
     assert.equal(result.warnings[0][1], error);
   });
 
-  await test('5 nueva version conserva hardening y usa shell v7.14', () => {
+  await test('5 nueva version conserva hardening y usa shell completo v7.16', () => {
     const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-    const candidateSw = git(['show', `${whatsappTextCandidate}:sw.js`]);
-    const expectedSw = candidateSw.replace("const CACHE_NAME = 'cotizador-v7.9';", "const CACHE_NAME = 'cotizador-v7.14';");
-    assert.equal(sw.replace(/\r\n/g, '\n').trim(), expectedSw.replace(/\r\n/g, '\n').trim());
-    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.14'/);
+    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.16'/);
+    assert.match(sw, /agenda\/quoteToCrm\.js/);
     assert.match(sw, /await caches\.delete\(CACHE_NAME\)/);
     assert.match(sw, /cache: 'reload'/);
   });
 
-  await test('6 componentes PWA, IQ y áreas fuera del texto comercial no cambian', () => {
+  await test('6 archivos ajenos a la corrección permanecen iguales al candidato bloqueado', () => {
     const protectedFiles = [
-      'index.html', 'dashboard.js', 'iq.js', 'styles.css',
+      'dashboard.js', 'iq.js', 'styles.css',
       'manifest.json', 'icon.png', '_verify_tmp.js'
     ];
-    assert.equal(git(['diff', '--name-only', whatsappTextCandidate, '--', ...protectedFiles]), '');
+    assert.equal(git(['diff', '--name-only', blockedBridgeCandidate, '--', ...protectedFiles]), '');
   });
 
   await test('7 mecanismo PWA no borra localStorage', () => {

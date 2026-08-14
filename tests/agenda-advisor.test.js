@@ -90,12 +90,15 @@ const test = async (name, callback) => {
 
   await test('5b quoteId nace en el modelo local y se conserva al agendar y agrupar el carrito', () => {
     const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+    const aluminum = fs.readFileSync(path.join(root, 'aluminio.js'), 'utf8');
     const ui = fs.readFileSync(path.join(root, 'agenda/ui.js'), 'utf8');
     assert.match(app, /quoteId:\s*newAgendaQuoteId\(\)/);
     assert.match(app, /quoteItems\.find\(item\s*=>\s*item\.quoteId\)\?\.quoteId\s*\|\|\s*newAgendaQuoteId\(\)/);
     assert.match(app, /quoteItems\.forEach\(item\s*=>\s*\{\s*if\s*\(!item\.quoteId\)\s*item\.quoteId\s*=\s*quoteId/);
     assert.match(app, /itemToAdd\.quoteId\s*=\s*quoteItems\[0\]\?\.quoteId\s*\|\|\s*itemToAdd\.quoteId/);
     assert.match(app, /quoteId:\s*cartVisible\s*\?\s*quoteItems\[0\]\?\.quoteId\s*:\s*lastCalculation\?\.quoteId/);
+    assert.match(aluminum, /quoteId:\s*quoteItems\[0\]\?\.quoteId\s*\|\|\s*newAgendaQuoteId\(\)/);
+    assert.match(aluminum, /shareInputSnapshot:\s*r\.shareInputSnapshot/);
     assert.match(ui, /form\.direct\s*=\s*!quoteContext\.quoteId/);
     assert.match(ui, /quoteContext\.quoteId\s*\?\s*\{\s*quoteId:\s*quoteContext\.quoteId/);
     assert.doesNotMatch(ui, /quoteContext\.quoteId\s*\|\|\s*A\(\)\.quoteSnapshot\.newQuoteId/);
@@ -204,9 +207,9 @@ const test = async (name, callback) => {
     assert.match(ui, /No puedes ver citas ni agendar/);
   });
 
-  await test('9 PWA v7.15 incluye shell Agenda y puente CRM locales, sin cachear Firebase externo', () => {
+  await test('9 PWA v7.16 incluye shell Agenda y puente CRM locales, sin cachear Firebase externo', () => {
     const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.15'/);
+    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.16'/);
     assert.match(sw, /agenda\/quoteToCrm\.js/);
     for (const asset of ['agenda.css', 'config.js', 'phone.js', 'firebase.js', 'commands.js', 'access.js', 'queries.js', 'ui.js']) assert.match(sw, new RegExp(asset.replace('.', '\\.')));
     assert.doesNotMatch(sw, /gstatic|firebasejs/);

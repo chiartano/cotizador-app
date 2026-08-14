@@ -12,9 +12,11 @@ const baselines = path.join(lab, 'baselines');
 const profiles = path.join(lab, 'profiles');
 const evidence = path.join(lab, 'evidencias', 'pwa-atomic-browser-results.json');
 const baselineFiles = ['index.html', 'app.js', 'aluminio.js', 'comparador.js', 'dashboard.js', 'iq.js', 'visual.js', 'styles.css', 'manifest.json', 'icon.png', 'sw.js'];
-const agendaFiles = ['agenda/agenda.css', 'agenda/config.js', 'agenda/phone.js', 'agenda/formatters.js', 'agenda/availability.js', 'agenda/pendingDrafts.js', 'agenda/quoteSnapshot.js', 'agenda/firebase.js', 'agenda/auth.js', 'agenda/commands.js', 'agenda/access.js', 'agenda/queries.js', 'agenda/ui.js'];
+const agendaFiles = ['agenda/agenda.css', 'agenda/config.js', 'agenda/phone.js', 'agenda/formatters.js', 'agenda/availability.js', 'agenda/pendingDrafts.js', 'agenda/quoteSnapshot.js', 'agenda/firebase.js', 'agenda/auth.js', 'agenda/commands.js', 'agenda/access.js', 'agenda/queries.js', 'agenda/ui.js', 'agenda/quoteToCrm.js'];
 const servedFiles = [...baselineFiles, ...agendaFiles];
-const commits = { A: 'a23e827f628ee8a8678b2ad326ad72aa0d67ba66', B: '8f6351bf9a65b030c5e8744938324b3c68f488bb', Bridge: '04b7ed374a4d69bf86242b5a4e69e2b8c09a6170' };
+const publishedAgendaFiles = agendaFiles.filter(file => file !== 'agenda/quoteToCrm.js');
+const CURRENT_CACHE = 'cotizador-v7.16';
+const commits = { A: 'a23e827f628ee8a8678b2ad326ad72aa0d67ba66', B: '8f6351bf9a65b030c5e8744938324b3c68f488bb', Bridge: '04b7ed374a4d69bf86242b5a4e69e2b8c09a6170', Published: '2fdde0cd20c97726b82e66f37c68b55db16e6731' };
 let active = 'Atomic';
 let injectedFailure = null;
 
@@ -23,6 +25,13 @@ function resetDir(directory) { fs.rmSync(directory, { recursive: true, force: tr
 function copyCommit(commit, destination) {
   resetDir(destination);
   for (const file of baselineFiles) {
+    const data = git(['show', `${commit}:${file}`]);
+    const target = path.join(destination, file); fs.mkdirSync(path.dirname(target), { recursive: true }); fs.writeFileSync(target, data);
+  }
+}
+function copyCommitFiles(commit, destination, files) {
+  resetDir(destination);
+  for (const file of files) {
     const data = git(['show', `${commit}:${file}`]);
     const target = path.join(destination, file); fs.mkdirSync(path.dirname(target), { recursive: true }); fs.writeFileSync(target, data);
   }
@@ -42,6 +51,7 @@ function prepareBaselines() {
   copyCommit(commits.A, path.join(baselines, 'A'));
   copyCommit(commits.B, path.join(baselines, 'B'));
   copyCommit(commits.Bridge, path.join(baselines, 'Bridge'));
+  copyCommitFiles(commits.Published, path.join(baselines, 'Published'), [...baselineFiles, ...publishedAgendaFiles]);
   copyWorkingTree(path.join(baselines, 'Atomic'));
   fs.cpSync(path.join(baselines, 'Bridge'), path.join(baselines, 'Incompatible'), { recursive: true });
   const incompatibleIndex = path.join(baselines, 'Incompatible', 'index.html');
@@ -57,7 +67,7 @@ function prepareBaselines() {
   fs.cpSync(path.join(baselines, 'Atomic'), path.join(baselines, 'AtomicRetry'), { recursive: true });
   prepend(path.join(baselines, 'AtomicRetry', 'sw.js'), '// RETRY_AFTER_LEGACY_CLOSED');
   const cSw = path.join(baselines, 'C', 'sw.js');
-  fs.writeFileSync(cSw, fs.readFileSync(cSw, 'utf8').replace("const CACHE_NAME = 'cotizador-v7.13';", "const CACHE_NAME = 'cotizador-v7.13-audit';"));
+  fs.writeFileSync(cSw, fs.readFileSync(cSw, 'utf8').replace(`const CACHE_NAME = '${CURRENT_CACHE}';`, `const CACHE_NAME = '${CURRENT_CACHE}-audit';`));
 }
 
 function contentType(file) {
@@ -111,6 +121,7 @@ async function snapshot(page) {
     return {
       fields: Object.fromEntries(['ancho', 'alto', 'observaciones'].map(id => [id, document.getElementById(id)?.value ?? null])),
       result: document.getElementById('res-precio-final')?.innerText || '',
+      quoteTotal: document.getElementById('quote-total')?.innerText || '',
       prompt: !!document.getElementById('pwa-update-notice') && getComputedStyle(document.getElementById('pwa-update-notice')).display !== 'none',
       caches: await caches.keys(), localStorage: Object.fromEntries(Object.entries(localStorage)), sessionStorage: Object.fromEntries(Object.entries(sessionStorage)),
       workers: { installing: registration?.installing?.state || null, waiting: registration?.waiting?.state || null, active: registration?.active?.state || null },
@@ -151,10 +162,26 @@ async function bridgeFlow(port, fromVersion, name) {
   await page.click('#pwa-update-later'); await page.waitForTimeout(400); const afterLater = await snapshot(page);
   assert.deepEqual(afterLater.fields, bridgeBeforeAtomic.fields); assert.equal(navigations, navBeforeLater);
   await page.evaluate(() => { sessionStorage.removeItem('wilan_pwa_update_dismissed_v1'); document.getElementById('pwa-update-notice').style.display = 'flex'; });
-  await page.click('#pwa-update-now'); await waitUntil(async () => (await snapshot(page)).caches.length === 1 && (await snapshot(page)).caches[0] === 'cotizador-v7.13'); await page.waitForTimeout(700);
-  const afterNow = await snapshot(page); assert.equal(navigations, navBeforeLater + 1); assert.equal(afterNow.localStorage.wilan_atomic_marker, 'preserve-me'); assert.deepEqual(afterNow.caches, ['cotizador-v7.13']); assert.equal(dialogs.length, 1); assert.equal(afterNow.canonicalFunction, true);
+  await page.click('#pwa-update-now'); await waitUntil(async () => (await snapshot(page)).caches.length === 1 && (await snapshot(page)).caches[0] === CURRENT_CACHE); await page.waitForTimeout(700);
+  const afterNow = await snapshot(page); assert.equal(navigations, navBeforeLater + 1); assert.equal(afterNow.localStorage.wilan_atomic_marker, 'preserve-me'); assert.deepEqual(afterNow.caches, [CURRENT_CACHE]); assert.equal(dialogs.length, 1); assert.equal(afterNow.canonicalFunction, true);
   await context.setOffline(true); await page.reload({ waitUntil: 'domcontentloaded' }); await page.waitForTimeout(500); await prepareQuote(page); const offline = await snapshot(page); assert.equal(offline.result, 'Total con IVA: $729.244');
   await context.close(); return { legacyBeforeBridge, legacyStillOpen, bridgeBeforeAtomic, waiting, afterLater, afterNow, offline, dialogs, consentedReloads: navigations - navBeforeLater };
+}
+
+async function publishedUpgrade(port) {
+  const { context, page } = await installVersion(port, 'Published', 'published-v714');
+  const dialogs = []; page.on('dialog', async dialog => { dialogs.push(dialog.message()); await dialog.accept(); });
+  await prepareQuote(page); await page.evaluate(() => agregarItem()); const before = await snapshot(page);
+  await switchTo(port, 'Atomic'); await requestUpdate(page); await waitUntil(async () => (await snapshot(page)).prompt);
+  await page.click('#pwa-update-now');
+  await waitUntil(async () => (await snapshot(page)).caches.length === 1 && (await snapshot(page)).caches[0] === CURRENT_CACHE);
+  await page.waitForTimeout(700);
+  const after = await snapshot(page);
+  assert.equal(after.localStorage.wilan_atomic_marker, 'preserve-me');
+  assert.deepEqual(after.caches, [CURRENT_CACHE]);
+  assert.equal(after.quoteTotal, before.quoteTotal);
+  assert.equal(dialogs.length, 1);
+  await context.close(); return { before, after, dialogs };
 }
 
 async function incompatibleClient(port) {
@@ -186,7 +213,7 @@ async function multipleTabs(port) {
 async function consistency(port) {
   const { context, page } = await installVersion(port, 'Bridge', 'consistency');
   page.on('dialog', dialog => dialog.accept()); await prepareQuote(page); await switchTo(port, 'Atomic'); await requestUpdate(page); await waitUntil(async () => (await snapshot(page)).prompt);
-  await page.click('#pwa-update-now'); await waitUntil(async () => (await snapshot(page)).caches.includes('cotizador-v7.13')); await page.waitForLoadState('networkidle').catch(() => {}); await page.waitForTimeout(1200);
+  await page.click('#pwa-update-now'); await waitUntil(async () => (await snapshot(page)).caches.includes(CURRENT_CACHE)); await page.waitForLoadState('networkidle').catch(() => {}); await page.waitForTimeout(1200);
   await switchTo(port, 'C', { file: 'comparador.js', type: 'interrupt' }); await page.reload({ waitUntil: 'domcontentloaded' }); await page.waitForTimeout(700);
   const online = await page.evaluate(async () => ({ indexN: (await fetch('./index.html').then(r => r.text())).includes('INDEX_RELEASE=N'), appN: (await fetch('./app.js').then(r => r.text())).includes('APP_RELEASE=N'), comparadorN: (await fetch('./comparador.js').then(r => r.text())).includes('COMPARADOR_RELEASE=N') }));
   await context.setOffline(true); await page.reload({ waitUntil: 'domcontentloaded' }); await page.waitForTimeout(500);
@@ -197,16 +224,32 @@ async function consistency(port) {
 
 async function monetaryBrowser(port) {
   const { context, page } = await installVersion(port, 'Atomic', 'monetary');
+  const installed = await snapshot(page); assert.deepEqual(installed.caches, [CURRENT_CACHE]);
+  assert.equal(await page.evaluate(() => fetch('./agenda/quoteToCrm.js').then(response => response.ok)), true);
   async function division(label, width, height, color) { await page.selectOption('#producto', { label }); await page.evaluate(() => verificarProducto()); await page.fill('#ancho', String(width)); await page.fill('#alto', String(height)); await page.selectOption('#espesor', '6mm'); await page.selectOption('#color_acc', color); await page.evaluate(() => calcular()); return page.locator('#res-precio-final').innerText(); }
-  const base = await division('División Batiente (Tradicional)', 120, 150, 'natural'); const natural = await division('División Corrediza Clásica', 120, 180, 'natural'); const black = await division('División Corrediza Clásica', 120, 180, 'negro'); const outside = await division('División Corrediza Clásica', 131, 180, 'natural');
+  const base = await division('División Batiente (Tradicional)', 120, 150, 'natural');
+  await page.evaluate(() => { document.getElementById('cliente-nombre').value = 'Cliente sintético O2'; onClienteChange(); agregarItem(); });
+  await division('División Batiente (Tradicional)', 120, 150, 'natural'); await page.evaluate(() => agregarItem());
+  const bridgeMoney = await page.evaluate(() => {
+    const quoteContext = window.WilanCotizadorAgendaBridge.getQuoteContext();
+    const payload = window.WilanAgenda.quoteToCrm.buildPayload(quoteContext, '2026-08-14T12:00:00.000Z');
+    return { visible: document.getElementById('quote-total').innerText, contextTotal: Math.round(quoteContext.total), payloadTotal: payload.quote.total, payloadDiscount: payload.quote.discount, itemSubtotal: payload.items.reduce((sum, item) => sum + item.totalPrice, 0) };
+  });
+  assert.deepEqual(bridgeMoney, { visible: '$1.458.487', contextTotal: 1458487, payloadTotal: 1458487, payloadDiscount: 0, itemSubtotal: 1458487 });
+  await page.evaluate(() => { quoteItems = []; persistirCarrito(); renderQuote(); });
+  const natural = await division('División Corrediza Clásica', 120, 180, 'natural'); const black = await division('División Corrediza Clásica', 120, 180, 'negro'); const outside = await division('División Corrediza Clásica', 131, 180, 'natural');
   await page.evaluate(() => abrirVistaAluminio()); await page.fill('#alu-ancho', '120'); await page.fill('#alu-alto', '100'); await page.evaluate(() => alu_calcular()); const aluminum = await page.locator('#alu-precio-iva').innerText();
   assert.equal(base, 'Total con IVA: $729.244'); assert.equal(natural, 'Total con IVA: $650.000'); assert.equal(black, 'Total con IVA: $690.000'); assert.equal(outside, 'Total con IVA: $787.433'); assert.match(aluminum, /768\.853/);
-  await context.close(); return { base, natural, black, outside, aluminum };
+  await context.close(); return { cache: installed.caches, bridgeOk: true, bridgeMoney, base, natural, black, outside, aluminum };
 }
 
 (async () => {
   prepareBaselines(); const port = await new Promise(resolve => server.listen(0, '127.0.0.1', () => resolve(server.address().port)));
-  const results = { legacyA: await legacyDirect(port, 'A', 'legacy-direct-a'), legacyB: await legacyDirect(port, 'B', 'legacy-direct-b'), bridgeA: await bridgeFlow(port, 'A', 'bridge-a'), bridgeB: await bridgeFlow(port, 'B', 'bridge-b'), incompatible: await incompatibleClient(port), failures: [], multipleTabs: await multipleTabs(port) };
+  if (process.env.WILAN_PWA_SCENARIO === 'monetary') {
+    const results = { monetary: await monetaryBrowser(port) };
+    fs.writeFileSync(evidence, JSON.stringify(results, null, 2)); server.close(); console.log(`ok - navegador real: ${evidence}`); return;
+  }
+  const results = { legacyA: await legacyDirect(port, 'A', 'legacy-direct-a'), legacyB: await legacyDirect(port, 'B', 'legacy-direct-b'), bridgeA: await bridgeFlow(port, 'A', 'bridge-a'), bridgeB: await bridgeFlow(port, 'B', 'bridge-b'), publishedV714: await publishedUpgrade(port), incompatible: await incompatibleClient(port), failures: [], multipleTabs: await multipleTabs(port) };
   results.failures.push(await failedInstall(port, { file: 'app.js', type: '404' }, 'fail-404'));
   results.failures.push(await failedInstall(port, { file: 'styles.css', type: '500' }, 'fail-500'));
   results.failures.push(await failedInstall(port, { file: 'visual.js', type: 'interrupt' }, 'fail-interrupt'));

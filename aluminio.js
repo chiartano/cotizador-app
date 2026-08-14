@@ -1147,6 +1147,7 @@
             const sysData = aluConfig.sistemas[r.sys];
             const cfgLbl = ALU_CONFIG_LABELS[r.cfg].label;
             const item = {
+                quoteId: quoteItems[0]?.quoteId || newAgendaQuoteId(),
                 producto: `${sysData.nombre} (${cfgLbl})`,
                 medidas: `${r.w}×${r.h}`,
                 vidrio: aluConfig.vidrios[r.vid].label,
@@ -1160,6 +1161,7 @@
                 variantId: r.variantId,
                 mappingStatus: r.mappingStatus,
                 canonicalAttributes: r.canonicalAttributes,
+                shareInputSnapshot: r.shareInputSnapshot,
                 raw: {
                     producto: sysData.nombre,
                     ancho: r.w, alto: r.h,

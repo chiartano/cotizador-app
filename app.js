@@ -976,6 +976,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             // Guardar cálculo actual para agregar a lista
             lastCalculation = {
                 quoteId: newAgendaQuoteId(),
+                cantidad: 1,
                 producto: prodNombre,
                 medidas: medidasStr,
                 vidrio: esEspejo ? 'Espejo' : espesor,
@@ -1636,12 +1637,16 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 const items = cartVisible ? quoteItems : (lastCalculation ? [lastCalculation] : []);
                 if (!items.length) return null;
                 const discountInput = document.getElementById('quote-discount');
-                const discount = cartVisible ? (parseFloat(discountInput && discountInput.value) || 0) : 0;
-                const total = Math.max(0, items.reduce((sum, item) => sum + Number(item.precio || 0), 0) - discount);
+                const requestedDiscount = cartVisible ? Math.max(0, parseFloat(discountInput && discountInput.value) || 0) : 0;
+                const subtotal = items.reduce((sum, item) => sum + Number(item.precio || 0), 0);
+                const total = Math.max(0, subtotal - requestedDiscount);
+                const discount = subtotal - total;
                 const folioText = cartVisible ? (document.getElementById('quote-folio')?.innerText || '') : '';
                 return JSON.parse(JSON.stringify({
                     quoteId: cartVisible ? quoteItems[0]?.quoteId : lastCalculation?.quoteId,
                     items: items,
+                    subtotal: subtotal,
+                    discount: discount,
                     total: total,
                     folio: folioText.replace(/^#/, ''),
                     customer: {
