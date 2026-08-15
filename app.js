@@ -544,6 +544,11 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             checkVersion();
             // Llenar select de productos
             const selProd = document.getElementById('producto');
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.text = 'Selecciona el producto';
+            placeholder.selected = true;
+            selProd.appendChild(placeholder);
             Object.keys(currentConfig.productos).forEach(p => {
                 let opt = document.createElement('option');
                 opt.value = p;
@@ -572,6 +577,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             document.getElementById('group-espejo-led').style.display = esEspejo ? 'flex' : 'none';
             document.getElementById('group-espesor').style.display = esEspejo ? 'none' : 'block';
             document.getElementById('group-color-acc').style.display = esEspejo ? 'none' : 'block';
+            document.getElementById('group-glass-finish').style.display = esEspejo ? 'none' : 'block';
 
             document.getElementById('col-ancho2').style.display = esLEspecial ? 'block' : 'none';
             document.getElementById('lbl-ancho').innerText = esLEspecial ? "Lado 1 (cm)" : "Ancho (cm)";
@@ -580,8 +586,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             // residual oculto (p.ej. 90) que contamine cálculos posteriores.
             if (!esLEspecial) document.getElementById('ancho2').value = '';
 
-            // Si es espejo, desmarcar sandblasting visualmente (opcional)
-            if (esEspejo) document.getElementById('check-sandblasting').checked = false;
+            if (esEspejo) document.getElementById('glass_finish').value = '';
         }
 
         // Generar formulario de configuración dinámico
@@ -679,6 +684,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 alto: document.getElementById('alto').value,
                 espesor: document.getElementById('espesor').value,
                 acabado: document.getElementById('color_acc').value,
+                glassFinish: document.getElementById('glass_finish').value,
                 led: document.getElementById('check-espejo-led').checked,
                 cantidad: parseInt(document.getElementById('cantidad-item').value, 10) || 1,
                 descuento: parseFloat(document.getElementById('descuento_adicional').value) || 0,
@@ -794,6 +800,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             let ancho2 = parseFloat(document.getElementById('ancho2').value) || 0;
             let alto = parseFloat(document.getElementById('alto').value);
             const anchoCmOriginal = ancho;
+            const ancho2CmOriginal = ancho2;
             const altoCmOriginal = alto;
 
             if (!ancho || !alto) {
@@ -816,7 +823,19 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             const mercado = parseFloat(document.getElementById('mercado').value) || 0;
             const colorAcc = document.getElementById('color_acc').value;
             const tieneDesmonte = document.getElementById('check-desmonte').checked;
-            const tieneSandblasting = document.getElementById('check-sandblasting').checked;
+            const glassFinish = document.getElementById('glass_finish').value;
+            const esEspejoSeleccionado = prodNombre.includes("Espejo");
+            const missingCritical = [
+                !prodNombre ? 'producto' : '',
+                !esEspejoSeleccionado && !espesor ? 'espesor del vidrio' : '',
+                !esEspejoSeleccionado && !glassFinish ? 'acabado del vidrio' : '',
+                !esEspejoSeleccionado && !colorAcc ? 'color de accesorios/herrajes' : ''
+            ].filter(Boolean);
+            if (missingCritical.length) {
+                toast(`Falta definir ${missingCritical[0]}`, 'warn', 5000);
+                return;
+            }
+            const tieneSandblasting = glassFinish === 'sandblasted';
             const tieneLed = document.getElementById('check-espejo-led').checked;
             const recargoTransporte = parseFloat(document.getElementById('recargo_transporte').value) || 0;
             const extraAcc = parseFloat(document.getElementById('extra_acc').value) || 0;
@@ -845,7 +864,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             if (esLEspecial) anchoCalculo += ancho2;
 
             const area = anchoCalculo * alto;
-            const esEspejo = prodNombre.includes("Espejo");
+            const esEspejo = esEspejoSeleccionado;
 
             // 1. Costo Vidrio
             let costoVidrioBase = 0;
@@ -973,6 +992,24 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 `L(${Math.round(ancho * 100)}+${Math.round(ancho2 * 100)})x${Math.round(alto * 100)}` : 
                 `${Math.round(ancho * 100)}x${Math.round(alto * 100)}`;
 
+            const canonicalMetadata = buildCanonicalProductMetadata(prodNombre, {
+                espesor,
+                hasLed: tieneLed,
+                hasSandblasting: tieneSandblasting
+            });
+            const productSpec = window.WilanAgenda?.productSpec?.buildMain({
+                metadata: canonicalMetadata,
+                productName: prodNombre,
+                widthCm: anchoCmOriginal,
+                secondaryWidthCm: ancho2CmOriginal,
+                heightCm: altoCmOriginal,
+                thickness: espesor,
+                hardwareColor: colorAcc,
+                glassFinish,
+                hasLed: tieneLed,
+                quantity: 1
+            });
+
             // Guardar cálculo actual para agregar a lista
             lastCalculation = {
                 quoteId: newAgendaQuoteId(),
@@ -989,21 +1026,19 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                     installationIncluded: true,
                     transportIncluded: (costoTransporte + recargoTransporte) > 0
                 },
-                ...buildCanonicalProductMetadata(prodNombre, {
-                    espesor,
-                    hasLed: tieneLed,
-                    hasSandblasting: tieneSandblasting
-                }),
+                ...canonicalMetadata,
+                ...(productSpec ? { productSpec } : {}),
                 // Datos crudos para edición
                 raw: {
-                    ancho: Math.round(ancho * 100),
-                    ancho2: Math.round(ancho2 * 100),
-                    alto: Math.round(alto * 100),
+                    ancho: anchoCmOriginal,
+                    ancho2: ancho2CmOriginal,
+                    alto: altoCmOriginal,
                     producto: prodNombre,
                     espesor: espesor,
                     linea: linea,
                     mercado: mercado,
                     color_acc: colorAcc,
+                    glass_finish: glassFinish,
                     desmonte: tieneDesmonte,
                     led: tieneLed,
                     sandblasting: tieneSandblasting,
@@ -1061,6 +1096,14 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             };
 
             mostrarResultados(precioCliente, precioCliente, detalles, margen, mercado);
+            const productSpecSummary = window.WilanAgenda?.productSpec?.summary(productSpec);
+            const productSpecBox = document.getElementById('main-product-spec-summary');
+            if (productSpecBox) {
+                productSpecBox.style.display = productSpecSummary ? 'block' : 'none';
+                productSpecBox.innerHTML = productSpecSummary
+                    ? `<b>${productSpecSummary.critical || 'Especificación pendiente'}</b>${productSpecSummary.secondary ? `<div>${productSpecSummary.secondary}</div>` : ''}${productSpecSummary.status !== 'complete' ? `<div style="color:#b45309;font-weight:700;">⚠️ ${productSpecSummary.missing.length ? `Falta definir ${productSpecSummary.missing.join(', ')}` : 'Requiere revisión canónica manual'}</div>` : ''}`
+                    : '';
+            }
 
             // IQ v5.0: análisis inteligente post-cálculo (no rompe nada si iq.js no carga)
             if (typeof iq_analizarPrincipal === 'function') iq_analizarPrincipal();
@@ -1244,9 +1287,9 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             document.getElementById('producto').selectedIndex = 0;
             document.getElementById('espesor').selectedIndex = 0;
             document.getElementById('color_acc').selectedIndex = 0;
+            document.getElementById('glass_finish').selectedIndex = 0;
             document.getElementById('linea').selectedIndex = 0;
             document.getElementById('check-desmonte').checked = false;
-            document.getElementById('check-sandblasting').checked = false;
             document.getElementById('check-espejo-led').checked = false;
             verificarProducto();
         }
@@ -1361,6 +1404,11 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             itemToAdd.cantidad = qty;
             itemToAdd.precioUnitario = itemToAdd.precio;
             itemToAdd.precio = itemToAdd.precio * qty;
+            if (itemToAdd.productSpec && window.WilanAgenda?.productSpec) {
+                const attributes = JSON.parse(JSON.stringify(itemToAdd.productSpec.attributes));
+                attributes.dimensions.quantity = window.WilanAgenda.productSpec.confirmed(qty, 'unit');
+                itemToAdd.productSpec = window.WilanAgenda.productSpec.create(itemToAdd.productSpec.identity, attributes);
+            }
 
             quoteItems.push(itemToAdd);
             persistirCarrito();
@@ -1399,6 +1447,12 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 let obsHtml = item.observaciones ? `<div style="color:#d32f2f; font-style:italic; margin-top:4px;">📝 ${item.observaciones}</div>` : '';
                 let ledHtml = (item.raw && item.raw.led) ? `<span style="color:#fbc02d; font-weight:bold; margin-left:5px;">+ LED ✨</span>` : '';
                 let aluBadge = item.esAluminio ? `<span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-size:0.7em; margin-left:5px; font-weight:700;">🪟 ALU</span>` : '';
+                const specSummary = window.WilanAgenda?.productSpec?.summary(item.productSpec);
+                const specHtml = specSummary
+                    ? `<div style="margin-top:5px; font-weight:800; color:#111827;">${specSummary.critical || 'Especificación pendiente'}</div>
+                       ${specSummary.secondary ? `<div style="font-size:0.78rem; color:#4b5563;">${specSummary.secondary}</div>` : ''}
+                       ${specSummary.status !== 'complete' ? `<div style="margin-top:4px; color:#b45309; font-weight:700;">⚠️ ${specSummary.missing.length ? `Falta definir ${specSummary.missing.join(', ')}` : 'Requiere revisión canónica manual'}</div>` : ''}`
+                    : '';
 
                 // Línea de detalles distinta según el tipo de producto
                 let detallesLinea;
@@ -1419,6 +1473,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                     </div>
                     <div class="quote-details">
                         ${detallesLinea}
+                        ${specHtml}
                         ${obsHtml}
                     </div>
                     <div style="text-align:right; margin-top:8px; padding-top:8px; border-top:1px dashed #eee;">
@@ -1516,6 +1571,9 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 aluState.vidrio      = item.raw.espesor || '6mm';
                 aluState.color       = item.raw.color   || 'natural';
                 aluState.instalacion = item.raw.instalacion || 'basica';
+                aluSpecConfirmed = item.productSpec
+                    ? { sistema: true, config: true, vidrio: true, color: true }
+                    : { sistema: false, config: false, vidrio: false, color: false };
 
                 // Borrar el item del carrito antes de editar (se vuelve a agregar después)
                 borrarItem(index, true);
@@ -1560,6 +1618,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             document.getElementById('alto').value = item.raw.alto;
             document.getElementById('espesor').value = item.raw.espesor;
             document.getElementById('color_acc').value = item.raw.color_acc;
+            document.getElementById('glass_finish').value = item.raw.glass_finish || '';
             document.getElementById('linea').value = item.raw.linea;
             document.getElementById('mercado').value = item.raw.mercado || '';
             document.getElementById('recargo_transporte').value = item.raw.recargo || '';
@@ -1567,7 +1626,6 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             document.getElementById('descuento_adicional').value = item.raw.descuento || '';
             document.getElementById('observaciones').value = item.raw.observaciones || '';
             document.getElementById('check-desmonte').checked = item.raw.desmonte;
-            document.getElementById('check-sandblasting').checked = item.raw.sandblasting;
             document.getElementById('check-espejo-led').checked = item.raw.led || false;
             verificarProducto();
 

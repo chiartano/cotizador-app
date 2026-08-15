@@ -226,6 +226,7 @@
             color:   'natural',
             instalacion: 'basica'
         };
+        let aluSpecConfirmed = { sistema: false, config: false, vidrio: false, color: false };
         let aluLastCalc = null;     // resultado del último cálculo
 
         // ---------- PERSISTENCIA ----------
@@ -474,7 +475,7 @@
             cs.innerHTML = '';
             Object.keys(aluConfig.sistemas).forEach(k => {
                 const s = aluConfig.sistemas[k];
-                const sel = (k === aluState.sistema) ? 'selected' : '';
+                const sel = (aluSpecConfirmed.sistema && k === aluState.sistema) ? 'selected' : '';
                 cs.innerHTML += `<div class="alu-chip ${sel}" onclick="alu_setSistema('${k}')">
                     ${s.icono} <b>${k}</b>
                     <span class="alu-chip-sub">${s.tipoLabel}</span>
@@ -485,10 +486,13 @@
             const cc = document.getElementById('alu-config-chips');
             cc.innerHTML = '';
             const validas = aluConfig.configsValidas[aluState.sistema] || [];
-            if (!validas.includes(aluState.config)) aluState.config = validas[0];
+            if (!validas.includes(aluState.config)) {
+                aluState.config = validas[0];
+                aluSpecConfirmed.config = false;
+            }
             validas.forEach(c => {
                 const lbl = ALU_CONFIG_LABELS[c];
-                const sel = (c === aluState.config) ? 'selected' : '';
+                const sel = (aluSpecConfirmed.config && c === aluState.config) ? 'selected' : '';
                 cc.innerHTML += `<div class="alu-chip ${sel}" onclick="alu_setConfig('${c}')">
                     <b>${lbl.label}</b>
                     <span class="alu-chip-sub">${lbl.sub}</span>
@@ -500,7 +504,7 @@
             cv.innerHTML = '';
             Object.keys(aluConfig.vidrios).forEach(k => {
                 const v = aluConfig.vidrios[k];
-                const sel = (k === aluState.vidrio) ? 'selected' : '';
+                const sel = (aluSpecConfirmed.vidrio && k === aluState.vidrio) ? 'selected' : '';
                 cv.innerHTML += `<div class="alu-chip ${sel}" onclick="alu_setVidrio('${k}')" style="flex:1 1 47%;">
                     <b>${k}</b>
                     <span class="alu-chip-sub">${v.label.replace(k,'').trim()}</span>
@@ -511,7 +515,7 @@
             const ck = document.getElementById('alu-color-chips');
             ck.innerHTML = '';
             Object.keys(ALU_COLOR_LABELS).forEach(k => {
-                const sel = (k === aluState.color) ? 'selected' : '';
+                const sel = (aluSpecConfirmed.color && k === aluState.color) ? 'selected' : '';
                 ck.innerHTML += `<div class="alu-chip ${sel}" onclick="alu_setColor('${k}')" style="flex:1 1 30%;">
                     <b style="font-size:0.82rem;">${ALU_COLOR_LABELS[k]}</b>
                 </div>`;
@@ -542,10 +546,10 @@
         }
 
         // Setters (chips clickeables)
-        function alu_setSistema(s) { aluState.sistema = s; alu_renderUI(); alu_actualizarCamposExtra(); }
-        function alu_setConfig(c)  { aluState.config = c;  alu_renderUI(); alu_actualizarCamposExtra(); }
-        function alu_setVidrio(v)  { aluState.vidrio = v;  alu_renderUI(); }
-        function alu_setColor(c)   { aluState.color = c;   alu_renderUI(); }
+        function alu_setSistema(s) { aluState.sistema = s; aluSpecConfirmed.sistema = true; aluSpecConfirmed.config = false; alu_renderUI(); alu_actualizarCamposExtra(); }
+        function alu_setConfig(c)  { aluState.config = c; aluSpecConfirmed.config = true; alu_renderUI(); alu_actualizarCamposExtra(); }
+        function alu_setVidrio(v)  { aluState.vidrio = v; aluSpecConfirmed.vidrio = true; alu_renderUI(); }
+        function alu_setColor(c)   { aluState.color = c; aluSpecConfirmed.color = true; alu_renderUI(); }
         function alu_setInstalacion(i) { aluState.instalacion = i; alu_renderUI(); }
 
         // Mostrar/ocultar campos adicionales según la configuración elegida
@@ -640,6 +644,12 @@
             if (!w || !h) { toast('Falta ingresar Ancho y Alto', 'warn'); return; }
             if (w < 10 || h < 10) {
                 if (!confirm(`Las medidas (${w}×${h} cm) parecen pequeñas. ¿Continuar?`)) return;
+            }
+            const missingSpec = Object.entries(aluSpecConfirmed).find(([, confirmedValue]) => !confirmedValue)?.[0];
+            if (missingSpec) {
+                const labels = { sistema: 'sistema/modelo', config: 'configuración', vidrio: 'tipo de vidrio', color: 'color de perfilería' };
+                toast(`Falta definir ${labels[missingSpec]}`, 'warn', 5000);
+                return;
             }
 
             const sys = aluState.sistema;
@@ -982,6 +992,19 @@
             const margen = margenReal;
 
             // ---- 11. GUARDAR Y RENDERIZAR ----
+            const canonicalMetadata = alu_buildCanonicalMetadata(sys, cfg, vid);
+            const productSpec = window.WilanAgenda?.productSpec?.buildAluminum({
+                metadata: canonicalMetadata,
+                system: sys,
+                configuration: cfg,
+                glassKey: vid,
+                glassLabel: aluConfig.vidrios[vid].label,
+                frameColor: ALU_COLOR_LABELS[col],
+                widthCm: w,
+                heightCm: h,
+                quantity: parseInt(document.getElementById('alu-cantidad').value, 10) || 1,
+                extras: { fixedBody: incluirCF, alfajia: incluirAlfajia, mosquitoScreen: incluirMosq }
+            });
             aluLastCalc = {
                 sys, cfg, vid, col, tipoInst, w, h, numNaves, numMoviles, numHojas,
                 numBasculantes, basculanteAlto, hojaBatAncho,
@@ -992,7 +1015,8 @@
                 mermaAltaUsada, descuento, totalMetros,
                 incluirCF, cfAncho, cfAlto, incluirAlfajia, incluirMosq,
                 shareInputSnapshot: alu_getShareInputSnapshot(),
-                ...alu_buildCanonicalMetadata(sys, cfg, vid)
+                ...canonicalMetadata,
+                ...(productSpec ? { productSpec } : {})
             };
 
             // Si el comparador está usando este motor en modo silencioso,
@@ -1029,6 +1053,17 @@
             document.getElementById('alu-result').style.display = 'block';
             document.getElementById('alu-precio-iva').innerText = alu_fmt(r.precioFinal);
             document.getElementById('alu-precio-neto').innerText = alu_fmt(r.precioVenta);
+            const specSummary = window.WilanAgenda?.productSpec?.summary(r.productSpec);
+            let specBox = document.getElementById('alu-product-spec-summary');
+            if (!specBox) {
+                specBox = document.createElement('div');
+                specBox.id = 'alu-product-spec-summary';
+                specBox.style.cssText = 'margin:12px 0;padding:10px;border-radius:10px;background:#f8fafc;border:1px solid #cbd5e1;font-size:.85rem;';
+                document.getElementById('alu-result').prepend(specBox);
+            }
+            specBox.innerHTML = specSummary
+                ? `<b>${specSummary.critical || 'Especificación pendiente'}</b>${specSummary.secondary ? `<div>${specSummary.secondary}</div>` : ''}${specSummary.status !== 'complete' ? `<div style="color:#b45309;font-weight:700;">⚠️ ${specSummary.missing.length ? `Falta definir ${specSummary.missing.join(', ')}` : 'Requiere revisión canónica manual'}</div>` : ''}`
+                : '';
 
             // Badges
             const bM = document.getElementById('alu-badge-merma');
@@ -1146,6 +1181,11 @@
             const cantidad = parseInt(document.getElementById('alu-cantidad').value) || 1;
             const sysData = aluConfig.sistemas[r.sys];
             const cfgLbl = ALU_CONFIG_LABELS[r.cfg].label;
+            let itemProductSpec = r.productSpec ? JSON.parse(JSON.stringify(r.productSpec)) : null;
+            if (itemProductSpec && window.WilanAgenda?.productSpec) {
+                itemProductSpec.attributes.dimensions.quantity = window.WilanAgenda.productSpec.confirmed(cantidad, 'unit');
+                itemProductSpec = window.WilanAgenda.productSpec.create(itemProductSpec.identity, itemProductSpec.attributes);
+            }
             const item = {
                 quoteId: quoteItems[0]?.quoteId || newAgendaQuoteId(),
                 producto: `${sysData.nombre} (${cfgLbl})`,
@@ -1161,6 +1201,7 @@
                 variantId: r.variantId,
                 mappingStatus: r.mappingStatus,
                 canonicalAttributes: r.canonicalAttributes,
+                ...(itemProductSpec ? { productSpec: itemProductSpec } : {}),
                 shareInputSnapshot: r.shareInputSnapshot,
                 raw: {
                     producto: sysData.nombre,

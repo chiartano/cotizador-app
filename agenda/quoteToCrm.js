@@ -2,7 +2,7 @@
   'use strict';
 
   const A = () => global.WilanAgenda;
-  const RELEASE = 'cotizador-v7.17';
+  const RELEASE = 'cotizador-v7.18';
   const STORAGE_KEY = 'wilan_quote_to_crm_v2';
   const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{2,159}$/;
   const MAPPING = new Set(['map_with_attributes', 'map_with_variant', 'split_required', 'review_manual', 'unmapped']);
@@ -43,6 +43,9 @@
     ...(raw.ancho2 !== undefined ? { secondaryWidthCm: raw.ancho2 } : {}),
     ...(raw.alto !== undefined ? { heightCm: raw.alto } : {}),
     ...(raw.espesor !== undefined ? { thickness: raw.espesor } : {}),
+    ...(raw.glass_finish !== undefined ? { glassFinish: text(raw.glass_finish, 160) } : {}),
+    ...(raw.color_acc !== undefined ? { hardwareColor: text(raw.color_acc, 160) } : {}),
+    ...(raw.color !== undefined ? { frameColor: text(raw.color, 160) } : {}),
     ...(raw.sistema !== undefined ? { aluminumSystem: text(raw.sistema, 160) } : {}),
     ...(raw.config !== undefined ? { aluminumConfiguration: text(raw.config, 160) } : {}),
     ...(raw.led !== undefined ? { hasLed: Boolean(raw.led) } : {}),
@@ -81,6 +84,7 @@
       variantId: item.variantId == null ? null : text(item.variantId, 160),
       mappingStatus: item.mappingStatus,
       canonicalAttributes: clone(item.canonicalAttributes),
+      ...(object(item.productSpec) ? { productSpec: clone(item.productSpec) } : {}),
       ...(item.vidrio ? { glass: text(item.vidrio, 200) } : {}),
       ...(item.color ? { color: text(item.color, 200) } : {}),
       ...(item.observaciones ? { observations: text(item.observaciones, 2000) } : {}),
@@ -104,6 +108,8 @@
     const alerts = list(context.items.flatMap((item) => [
       item.mappingStatus === 'split_required' ? 'El producto requiere separación canónica' : '',
       item.mappingStatus === 'review_manual' ? 'El producto requiere revisión manual' : '',
+      item.productSpec?.completeness?.status === 'incomplete' ? 'La especificación del producto está incompleta' : '',
+      item.productSpec?.completeness?.status === 'manual_review' ? 'La especificación requiere revisión canónica manual' : '',
       item.raw.promoDescuentoIgnorado ? 'El descuento general no aplica a una promoción fija' : '',
     ]));
     return {

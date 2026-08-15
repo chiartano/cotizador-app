@@ -15,6 +15,7 @@ window.window = window;
 const context = vm.createContext(window);
 const load = (file) => vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8'), context, { filename: file });
 load('agenda/config.js');
+load('agenda/productSpec.js');
 let commandSequence = 0;
 context.WilanAgenda.commands = {
   newCommandId: () => `cmd_synthetic_quote_${String(++commandSequence).padStart(3, '0')}`,
@@ -26,6 +27,10 @@ const item = (overrides = {}) => ({
   producto: 'División sintética', medidas: '120 x 190 cm', cantidad: 1, precio: 600000,
   vidrio: '6 mm', color: 'natural', canonicalProductId: null, familyId: 'DB', variantId: null,
   mappingStatus: 'split_required', canonicalAttributes: { leaves: 2 },
+  productSpec: context.WilanAgenda.productSpec.buildMain({
+    metadata: { canonicalProductId: null, familyId: 'DB', variantId: null, mappingStatus: 'split_required', canonicalAttributes: { leaves: 2 } },
+    productName: 'División sintética', widthCm: 120, heightCm: 190, thickness: '6mm', hardwareColor: 'negro', glassFinish: 'sandblasted', quantity: 2,
+  }),
   shareInputSnapshot: { producto: 'division_batiente', ancho: 120, alto: 190 },
   raw: { ancho: 120, alto: 190 }, ...overrides,
 });
@@ -45,9 +50,25 @@ const quote = (overrides = {}) => ({
   );
   assert.equal(standard.items[0].unitPrice, 300000);
   assert.equal(standard.items[0].totalPrice, 600000);
-  assert.equal(standard.identity.sourceVersion, 'cotizador-v7.17');
+  assert.equal(standard.identity.sourceVersion, 'cotizador-v7.18');
   assert.equal(standard.schemaVersion, 'quote-to-crm.v1.1');
   assert.equal(standard.quote.moneySemantics, 'display-lines-independent-total.v1');
+  assert.deepEqual(JSON.parse(JSON.stringify(standard.items[0].productSpec)), JSON.parse(JSON.stringify(quote().items[0].productSpec)));
+
+  const frozenSpec = context.WilanAgenda.productSpec.buildAluminum({
+    metadata: { canonicalProductId: 'VEN-5020', familyId: 'VEN', variantId: 'VEN-5020-2H', mappingStatus: 'map_with_variant', canonicalAttributes: { aluminumSystem: '5020', aluminumConfig: '2N', glassThickness: 4 } },
+    system: '5020', configuration: '2N', glassKey: 'Frozen 4mm', glassLabel: 'Frozen 4mm esmerilado (baño/cocina)', frameColor: 'Blanco / Negro', widthCm: 120, heightCm: 190,
+  });
+  const frozenItem = item({
+    producto: 'VC5020 Corrediza (2 Naves)', medidas: '120×190', vidrio: 'Frozen 4mm esmerilado (baño/cocina)', color: 'Blanco / Negro',
+    canonicalProductId: 'VEN-5020', familyId: 'VEN', variantId: 'VEN-5020-2H', mappingStatus: 'map_with_variant',
+    canonicalAttributes: { aluminumSystem: '5020', aluminumConfig: '2N', glassThickness: 4 }, productSpec: frozenSpec,
+    raw: { ancho: 120, alto: 190, sistema: '5020', config: '2N', espesor: 'Frozen 4mm', color: 'blanco_negro' },
+  });
+  const frozenPayload = bridge.buildPayload(quote({ quoteId: 'q_frozen_exact', items: [frozenItem] }), '2026-08-15T12:00:00.000Z');
+  assert.deepEqual(JSON.parse(JSON.stringify(frozenPayload.items[0].productSpec)), JSON.parse(JSON.stringify(frozenSpec)));
+  assert.equal(frozenPayload.items[0].productSpec.attributes.glass.finish.value, 'FROZEN');
+  assert.doesNotMatch(JSON.stringify(frozenPayload.items[0].productSpec), /TRANSPARENT/);
 
   const fractional = 729243.529;
   const monetary = quote({

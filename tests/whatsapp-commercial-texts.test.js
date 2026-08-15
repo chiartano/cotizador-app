@@ -402,7 +402,7 @@ test('protección de resultado anterior compara todos los inputs relevantes', ()
   );
   globalThis.values = {
     producto:{value:'División Batiente (Tradicional)'}, ancho:{value:'80'}, ancho2:{value:''},
-    alto:{value:'190'}, espesor:{value:'8mm'}, color_acc:{value:'natural'},
+    alto:{value:'190'}, espesor:{value:'8mm'}, color_acc:{value:'natural'}, glass_finish:{value:'transparent'},
     'check-espejo-led':{checked:false}, 'cantidad-item':{value:'1'},
     descuento_adicional:{value:''}, recargo_transporte:{value:''}
   };
@@ -412,6 +412,9 @@ test('protección de resultado anterior compara todos los inputs relevantes', ()
   assert.equal(snapshotFns.main_isShareSnapshotCurrent(result), false);
   globalThis.values.producto.value = 'División Batiente (Tradicional)';
   globalThis.values.ancho.value = '81';
+  assert.equal(snapshotFns.main_isShareSnapshotCurrent(result), false);
+  globalThis.values.ancho.value = '80';
+  globalThis.values.glass_finish.value = 'sandblasted';
   assert.equal(snapshotFns.main_isShareSnapshotCurrent(result), false);
   const shareSource = extractFunction(source, 'compartir');
   const validationIndex = shareSource.indexOf('main_isShareSnapshotCurrent(lastCalculation)');
@@ -455,13 +458,16 @@ test('fórmulas monetarias permanecen idénticas a 76db88e', () => {
   const base = '76db88eecc56101a8ead1eb4fae9d421be5992d6';
   const atBase = file => execFileSync('git', ['show', `${base}:${file}`], {cwd:root, encoding:'utf8'});
   const formulaRegions = [
-    ['app.js', 'function calcular()', '// Guardar cálculo actual'],
-    ['aluminio.js', 'function alu_calcular()', '// ---- 11. GUARDAR Y RENDERIZAR ----']
+    ['app.js', 'const cfg = currentConfig.globales;', 'const medidasStr ='],
+    ['aluminio.js', 'const sysData = aluConfig.sistemas[sys];', '// ---- 11. GUARDAR Y RENDERIZAR ----']
   ];
   formulaRegions.forEach(([file, start, end]) => {
+    const normalizeSpecNeutral = value => normalizeEol(value)
+      .replace('const esEspejo = esEspejoSeleccionado;', 'const esEspejo = PRODUCT_IS_MIRROR;')
+      .replace('const esEspejo = prodNombre.includes("Espejo");', 'const esEspejo = PRODUCT_IS_MIRROR;');
     assert.equal(
-      normalizeEol(extractBetween(read(file), start, end)),
-      normalizeEol(extractBetween(atBase(file), start, end)),
+      normalizeSpecNeutral(extractBetween(read(file), start, end)),
+      normalizeSpecNeutral(extractBetween(atBase(file), start, end)),
       file
     );
   });

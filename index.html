@@ -45,7 +45,8 @@
             <div class="form-group" id="group-espesor">
                 <label>Espesor Vidrio</label>
                 <select id="espesor">
-                    <option value="6mm" selected>6mm Templado</option>
+                    <option value="" selected>Selecciona el espesor</option>
+                    <option value="6mm">6mm Templado</option>
                     <option value="8mm">8mm Templado</option>
                     <option value="10mm">10mm Templado</option>
                 </select>
@@ -61,16 +62,19 @@
             <div class="form-group" id="group-color-acc">
                 <label>Color Accesorios</label>
                 <select id="color_acc">
+                    <option value="" selected>Selecciona el color</option>
                     <option value="natural">Natural (Plateado)</option>
                     <option value="negro">Negro (Mate/Semi)</option>
                     <option value="dorado">Dorado / Especial</option>
                 </select>
             </div>
-            <div class="form-group" style="display: flex; align-items: center; margin-top: 10px;">
-                <input type="checkbox" id="check-sandblasting" style="width: 20px; height: 20px; margin-right: 10px;">
-                <label for="check-sandblasting" style="margin: 0; cursor: pointer;">
-                    Vidrio con Sandblasting
-                </label>
+            <div class="form-group" id="group-glass-finish">
+                <label>Acabado del vidrio</label>
+                <select id="glass_finish">
+                    <option value="" selected>Selecciona el acabado</option>
+                    <option value="transparent">Transparente</option>
+                    <option value="sandblasted">Sandblasting / Satinado</option>
+                </select>
             </div>
         </div>
 
@@ -158,6 +162,8 @@
                     <div id="res-comparacion" style="font-size: 0.95rem; margin-bottom: 8px; display:none;"></div>
                     <div class="price-sub" id="res-precio-final">Total con IVA: $0</div>
                 </div>
+
+                <div id="main-product-spec-summary" style="display:none; margin:12px 0; padding:10px; border-radius:10px; background:#f8fafc; border:1px solid #cbd5e1; font-size:0.85rem;"></div>
 
                 <div id="res-margen-container" style="text-align: center; margin-bottom: 15px; display: none;">
                     <span id="res-badge" class="metric-badge">...</span>
@@ -741,6 +747,7 @@
     <script src="agenda/formatters.js"></script>
     <script src="agenda/availability.js"></script>
     <script src="agenda/pendingDrafts.js"></script>
+    <script src="agenda/productSpec.js"></script>
     <script src="agenda/quoteSnapshot.js"></script>
     <script src="agenda/firebase.js"></script>
     <script src="agenda/auth.js"></script>

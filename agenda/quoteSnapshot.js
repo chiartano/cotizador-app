@@ -46,6 +46,7 @@
     variantId: item.variantId ?? null,
     mappingStatus: String(item.mappingStatus || 'unmapped').slice(0, 80),
     canonicalAttributes: clone(item.canonicalAttributes || {}),
+    ...(item.productSpec ? { productSpec: clone(item.productSpec) } : {}),
     rawAttributes: technicalAttributes(item.raw || {})
   });
   const build = async (context) => {
