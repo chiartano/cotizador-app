@@ -45,7 +45,9 @@ const quote = (overrides = {}) => ({
   );
   assert.equal(standard.items[0].unitPrice, 300000);
   assert.equal(standard.items[0].totalPrice, 600000);
-  assert.equal(standard.identity.sourceVersion, 'cotizador-v7.16');
+  assert.equal(standard.identity.sourceVersion, 'cotizador-v7.17');
+  assert.equal(standard.schemaVersion, 'quote-to-crm.v1.1');
+  assert.equal(standard.quote.moneySemantics, 'display-lines-independent-total.v1');
 
   const fractional = 729243.529;
   const monetary = quote({
@@ -56,7 +58,10 @@ const quote = (overrides = {}) => ({
   assert.equal(exact.quote.total, 1458487);
   assert.equal(exact.quote.subtotal, 1458487);
   assert.equal(exact.quote.discount, 0);
-  assert.equal(exact.items.reduce((sum, value) => sum + value.totalPrice, 0), 1458487);
+  assert.deepEqual(exact.items.map((value) => value.displayTotalPrice), [729244, 729244]);
+  assert.deepEqual(exact.items.map((value) => value.totalPrice), [729244, 729244]);
+  assert.deepEqual(exact.items.map((value) => value.calculatedTotalPrice), [fractional, fractional]);
+  assert.equal(exact.items.reduce((sum, value) => sum + value.displayTotalPrice, 0), 1458488);
 
   for (const candidate of [
     quote({ quoteId: 'q_one', subtotal: 729243.529, discount: 0, total: 729243.529, items: [item({ precio: 729243.529 })] }),
@@ -64,7 +69,8 @@ const quote = (overrides = {}) => ({
     quote({ quoteId: 'q_promo', subtotal: 650000, discount: 0, total: 650000, items: [item({ precio: 650000, raw: { ancho: 120, alto: 180, promo_fija_corrediza_economica: true } })] }),
   ]) {
     const payload = bridge.buildPayload(candidate, '2026-08-14T12:00:00.000Z');
-    assert.equal(payload.items.reduce((sum, value) => sum + value.totalPrice, 0), payload.quote.subtotal);
+    assert.deepEqual(payload.items.map((value) => value.displayTotalPrice), candidate.items.map((value) => Math.round(value.precio)));
+    assert.deepEqual(payload.items.map((value) => value.calculatedTotalPrice), candidate.items.map((value) => value.precio));
     assert.equal(payload.quote.subtotal - payload.quote.discount, payload.quote.total);
   }
 

@@ -15,7 +15,7 @@ const baselineFiles = ['index.html', 'app.js', 'aluminio.js', 'comparador.js', '
 const agendaFiles = ['agenda/agenda.css', 'agenda/config.js', 'agenda/phone.js', 'agenda/formatters.js', 'agenda/availability.js', 'agenda/pendingDrafts.js', 'agenda/quoteSnapshot.js', 'agenda/firebase.js', 'agenda/auth.js', 'agenda/commands.js', 'agenda/access.js', 'agenda/queries.js', 'agenda/ui.js', 'agenda/quoteToCrm.js'];
 const servedFiles = [...baselineFiles, ...agendaFiles];
 const publishedAgendaFiles = agendaFiles.filter(file => file !== 'agenda/quoteToCrm.js');
-const CURRENT_CACHE = 'cotizador-v7.16';
+const CURRENT_CACHE = 'cotizador-v7.17';
 const commits = { A: 'a23e827f628ee8a8678b2ad326ad72aa0d67ba66', B: '8f6351bf9a65b030c5e8744938324b3c68f488bb', Bridge: '04b7ed374a4d69bf86242b5a4e69e2b8c09a6170', Published: '2fdde0cd20c97726b82e66f37c68b55db16e6731' };
 let active = 'Atomic';
 let injectedFailure = null;
@@ -233,9 +233,22 @@ async function monetaryBrowser(port) {
   const bridgeMoney = await page.evaluate(() => {
     const quoteContext = window.WilanCotizadorAgendaBridge.getQuoteContext();
     const payload = window.WilanAgenda.quoteToCrm.buildPayload(quoteContext, '2026-08-14T12:00:00.000Z');
-    return { visible: document.getElementById('quote-total').innerText, contextTotal: Math.round(quoteContext.total), payloadTotal: payload.quote.total, payloadDiscount: payload.quote.discount, itemSubtotal: payload.items.reduce((sum, item) => sum + item.totalPrice, 0) };
+    return {
+      visible: document.getElementById('quote-total').innerText,
+      visibleItems: [...document.querySelectorAll('#quote-items-list .quote-card-item')]
+        .map(row => row.firstElementChild?.lastElementChild?.innerText || ''),
+      contextTotal: Math.round(quoteContext.total), payloadTotal: payload.quote.total,
+      payloadDiscount: payload.quote.discount,
+      payloadDisplayItems: payload.items.map(item => item.displayTotalPrice),
+      payloadCalculatedItems: payload.items.map(item => item.calculatedTotalPrice),
+      displayItemSum: payload.items.reduce((sum, item) => sum + item.displayTotalPrice, 0),
+    };
   });
-  assert.deepEqual(bridgeMoney, { visible: '$1.458.487', contextTotal: 1458487, payloadTotal: 1458487, payloadDiscount: 0, itemSubtotal: 1458487 });
+  assert.deepEqual(bridgeMoney, {
+    visible: '$1.458.487', visibleItems: ['$729.244', '$729.244'], contextTotal: 1458487,
+    payloadTotal: 1458487, payloadDiscount: 0, payloadDisplayItems: [729244, 729244],
+    payloadCalculatedItems: [729243.5294117647, 729243.5294117647], displayItemSum: 1458488,
+  });
   await page.evaluate(() => { quoteItems = []; persistirCarrito(); renderQuote(); });
   const natural = await division('División Corrediza Clásica', 120, 180, 'natural'); const black = await division('División Corrediza Clásica', 120, 180, 'negro'); const outside = await division('División Corrediza Clásica', 131, 180, 'natural');
   await page.evaluate(() => abrirVistaAluminio()); await page.fill('#alu-ancho', '120'); await page.fill('#alu-alto', '100'); await page.evaluate(() => alu_calcular()); const aluminum = await page.locator('#alu-precio-iva').innerText();

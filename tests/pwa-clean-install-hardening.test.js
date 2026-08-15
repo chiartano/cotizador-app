@@ -73,9 +73,9 @@ async function exerciseUpdateCheck(registration) {
     assert.equal(result.warnings[0][1], error);
   });
 
-  await test('5 nueva version conserva hardening y usa shell completo v7.16', () => {
+  await test('5 nueva version conserva hardening y usa shell completo v7.17', () => {
     const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.16'/);
+    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.17'/);
     assert.match(sw, /agenda\/quoteToCrm\.js/);
     assert.match(sw, /await caches\.delete\(CACHE_NAME\)/);
     assert.match(sw, /cache: 'reload'/);

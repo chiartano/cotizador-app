@@ -2,7 +2,7 @@
   'use strict';
 
   const A = () => global.WilanAgenda;
-  const RELEASE = 'cotizador-v7.16';
+  const RELEASE = 'cotizador-v7.17';
   const STORAGE_KEY = 'wilan_quote_to_crm_v2';
   const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{2,159}$/;
   const MAPPING = new Set(['map_with_attributes', 'map_with_variant', 'split_required', 'review_manual', 'unmapped']);
@@ -66,27 +66,16 @@
       && MAPPING.has(item.mappingStatus) && object(item.canonicalAttributes))
   );
 
-  const allocateItemTotals = (items, targetSubtotal) => {
-    const totals = items.map((item) => money(item.precio));
-    if (totals.some((value) => value === null)) return null;
-    let delta = targetSubtotal - totals.reduce((sum, value) => sum + value, 0);
-    for (let index = totals.length - 1; index >= 0 && delta < 0; index -= 1) {
-      const reduction = Math.min(totals[index], -delta);
-      totals[index] -= reduction;
-      delta += reduction;
-    }
-    if (delta > 0) totals[totals.length - 1] += delta;
-    return totals.every(Number.isSafeInteger) ? totals : null;
-  };
-
-  const itemFrom = (item, totalPrice) => {
+  const itemFrom = (item) => {
     const quantity = Number(item.cantidad);
+    const calculatedTotalPrice = Number(item.precio);
+    const displayTotalPrice = money(calculatedTotalPrice);
     const suppliedUnit = Number(item.precioUnitario);
     const unitPrice = Number.isSafeInteger(suppliedUnit) && suppliedUnit >= 0
-      ? suppliedUnit : money(totalPrice / quantity);
+      ? suppliedUnit : money(calculatedTotalPrice / quantity);
     return {
       description: text(item.producto, 300), quantity, measurements: text(item.medidas, 300),
-      unitPrice, totalPrice,
+      unitPrice, totalPrice: displayTotalPrice, displayTotalPrice, calculatedTotalPrice,
       canonicalProductId: item.canonicalProductId == null ? null : text(item.canonicalProductId, 160),
       familyId: item.familyId == null ? null : text(item.familyId, 160),
       variantId: item.variantId == null ? null : text(item.variantId, 160),
@@ -106,9 +95,8 @@
     const discount = money(context.discount);
     if (total === null || discount === null || !Number.isSafeInteger(total + discount)) return null;
     const subtotal = total + discount;
-    const allocated = allocateItemTotals(context.items, subtotal);
-    if (!allocated) return null;
-    const items = context.items.map((item, index) => itemFrom(item, allocated[index]));
+    const items = context.items.map(itemFrom);
+    if (items.some((item) => item.totalPrice === null || item.unitPrice === null)) return null;
     const promotions = list(context.items.flatMap((item) => [
       item.raw.promo_fija_corrediza_economica ? 'Promoción fija corrediza económica' : '',
       item.raw.promoLabel || '',
@@ -119,7 +107,7 @@
       item.raw.promoDescuentoIgnorado ? 'El descuento general no aplica a una promoción fija' : '',
     ]));
     return {
-      schemaVersion: 'quote-to-crm.v1',
+      schemaVersion: 'quote-to-crm.v1.1',
       identity: {
         workspaceId: A().config.workspaceId, quoteId: text(context.quoteId, 160),
         ...(context.folio ? { folio: text(String(context.folio).replace(/^#/, ''), 120) } : {}),
@@ -131,7 +119,10 @@
         ...(context.customer?.address ? { address: text(context.customer.address, 500) } : {}),
         ...(context.customer?.project ? { project: text(context.customer.project, 500) } : {}),
       },
-      quote: { quotedAt: capturedAt, currency: 'COP', subtotal, discount, total, promotions, alerts },
+      quote: {
+        quotedAt: capturedAt, currency: 'COP', subtotal, discount, total,
+        moneySemantics: 'display-lines-independent-total.v1', promotions, alerts,
+      },
       items,
     };
   };
@@ -256,7 +247,7 @@
   };
 
   global.WilanAgenda = global.WilanAgenda || {};
-  global.WilanAgenda.quoteToCrm = { STORAGE_KEY, RELEASE, rawAttributes, isQuoteBridgeEligible, allocateItemTotals, itemFrom, buildPayload, hashesFor, prepare, send, get, save, refresh, initializeUi };
+  global.WilanAgenda.quoteToCrm = { STORAGE_KEY, RELEASE, rawAttributes, isQuoteBridgeEligible, itemFrom, buildPayload, hashesFor, prepare, send, get, save, refresh, initializeUi };
   if (global.document?.readyState === 'loading') global.document.addEventListener('DOMContentLoaded', initializeUi, { once: true });
   else if (global.document) initializeUi();
 })(window);
