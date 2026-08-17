@@ -745,6 +745,15 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             return 'incluida';
         }
 
+        function aluminumColorLabel(item) {
+            return item?.productSpec?.attributes?.frame?.color?.value
+                || ((typeof ALU_COLOR_LABELS !== 'undefined' && item?.raw?.color)
+                    ? ALU_COLOR_LABELS[item.raw.color]
+                    : '')
+                || item?.raw?.color
+                || 'Natural';
+        }
+
         function buildCartCommercialMessage(items, options) {
             const total = items.reduce((sum, item) => sum + item.precio, 0);
             const discount = options.discount || 0;
@@ -763,7 +772,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 texto += `   📏 Medidas: ${item.medidas} cm\n`;
                 if (item.esAluminio) {
                     texto += `   💎 Vidrio: ${item.vidrio}\n`;
-                    if (item.raw?.color) texto += `   🎨 Acabado: ${ALU_COLOR_LABELS[item.raw.color] || item.raw.color}\n`;
+                    if (item.raw?.color) texto += `   🎨 Acabado: ${aluminumColorLabel(item)}\n`;
                 } else if (item.producto.includes('Espejo')) {
                     texto += `   ✨ LED: ${item.raw?.led ? 'incluido' : 'no incluido'}\n`;
                 } else {
@@ -1457,9 +1466,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 // Línea de detalles distinta según el tipo de producto
                 let detallesLinea;
                 if (item.esAluminio) {
-                    const colorLbl = (item.raw && item.raw.color)
-                        ? (ALU_COLOR_LABELS[item.raw.color] || item.raw.color)
-                        : 'Natural';
+                    const colorLbl = aluminumColorLabel(item);
                     detallesLinea = `📏 ${item.medidas} cm | 💎 ${item.vidrio} | 🎨 Aluminio ${colorLbl}`;
                 } else {
                     const colorTxt = item.color || '';

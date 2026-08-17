@@ -50,7 +50,7 @@ const quote = (overrides = {}) => ({
   );
   assert.equal(standard.items[0].unitPrice, 300000);
   assert.equal(standard.items[0].totalPrice, 600000);
-  assert.equal(standard.identity.sourceVersion, 'cotizador-v7.19');
+  assert.equal(standard.identity.sourceVersion, 'cotizador-v7.20');
   assert.equal(standard.schemaVersion, 'quote-to-crm.v1.1');
   assert.equal(standard.quote.moneySemantics, 'display-lines-independent-total.v1');
   assert.deepEqual(JSON.parse(JSON.stringify(standard.items[0].productSpec)), JSON.parse(JSON.stringify(quote().items[0].productSpec)));

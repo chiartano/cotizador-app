@@ -62,7 +62,7 @@ function functionsFrom(file, names, prelude, exportsList = names) {
 const money = value => '$' + Math.round(value).toLocaleString('es-CO');
 const main = functionsFrom(
   'app.js',
-  ['main_sharePriceLines', 'buildMainCommercialMessage', 'cartInstallationLabel', 'buildCartCommercialMessage'],
+  ['main_sharePriceLines', 'buildMainCommercialMessage', 'cartInstallationLabel', 'aluminumColorLabel', 'buildCartCommercialMessage'],
   `const fmtMoney = ${money.toString()};
    const ALU_COLOR_LABELS = {natural:'Natural', negro:'Negro', blanco:'Blanco'};`
 );
@@ -317,6 +317,16 @@ test('carrito mixto conserva familia, servicios, cantidad, descuento y total', (
   assertNoForbidden(text);
   captureMessage('carrito-mixto', text);
   console.log(`message:carrito-mixto\n${text}\n`);
+});
+
+test('carrito aluminio recargado usa color canónico sin depender del catálogo aislado', () => {
+  const helperWithoutCatalog = functionsFrom('app.js', ['aluminumColorLabel'], '');
+  const item = {
+    raw:{color:'blanco_negro'},
+    productSpec:{attributes:{frame:{color:{value:'BLANCO / NEGRO'}}}}
+  };
+  assert.equal(helperWithoutCatalog.aluminumColorLabel(item), 'BLANCO / NEGRO');
+  assert.equal(helperWithoutCatalog.aluminumColorLabel({raw:{color:'natural'}}), 'natural');
 });
 
 test('comparador muestra características, IVA, diferencia y garantía sin validez', () => {
