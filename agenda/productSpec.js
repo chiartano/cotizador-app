@@ -16,6 +16,9 @@
     return match ? numberFrom(match[1]) : null;
   };
   const at = (value, path) => path.split('.').reduce((current, key) => current?.[key], value);
+  const requirementConfirmed = (attributes, path) => path === 'glass.thickness'
+    ? at(attributes, 'glass.thickness')?.status === 'confirmed' || at(attributes, 'glass.composition')?.status === 'confirmed'
+    : at(attributes, path)?.status === 'confirmed';
 
   const FAMILY_RULES = Object.freeze({
     DB: Object.freeze({
@@ -78,7 +81,7 @@
 
   const completenessFor = (identity, attributes) => {
     const rule = FAMILY_RULES[identity.familyId];
-    const missing = rule ? rule.required.filter((path) => at(attributes, path)?.status !== 'confirmed') : [];
+    const missing = rule ? rule.required.filter((path) => !requirementConfirmed(attributes, path)) : [];
     const status = AMBIGUOUS_MAPPING.has(identity.mappingStatus) || !rule
       ? 'manual_review'
       : missing.length ? 'incomplete' : 'complete';
@@ -116,6 +119,7 @@
       glass: {
         type: isMirror ? confirmed('MIRROR') : (thicknessValue ? confirmed('TEMPERED') : unknown()),
         thickness: isMirror ? notApplicable() : (thicknessValue ? confirmed(thicknessValue, 'mm') : unknown()),
+        composition: notApplicable(),
         finish: isMirror ? notApplicable() : mainGlassFinish(glassFinish),
       },
       frame: { color: familyId === 'VEN' ? unknown() : notApplicable() },
@@ -134,28 +138,24 @@
     return create(metadata, attributes);
   };
 
-  const aluminumGlass = (key, label) => {
-    const source = `${key || ''} ${label || ''}`.toLowerCase();
-    const thicknessValue = thicknessMm(source);
-    let type = unknown();
-    if (source.includes('frozen')) type = confirmed('FROZEN');
-    else if (source.includes('templado')) type = confirmed('TEMPERED');
-    else if (source.includes('laminado')) type = confirmed('LAMINATED');
-    else if (source.includes('crudo')) type = confirmed('ANNEALED');
+  const aluminumGlass = (glass = {}) => {
+    const thicknessValue = numberFrom(glass.thicknessMm);
+    const composition = typeof glass.composition === 'string' && glass.composition.trim() ? glass.composition.trim() : null;
     return {
-      type,
-      thickness: thicknessValue ? confirmed(thicknessValue, 'mm') : unknown(),
-      finish: source.includes('frozen') ? confirmed('FROZEN') : unknown(),
+      type: glass.type ? confirmed(String(glass.type)) : unknown(),
+      thickness: composition ? notApplicable() : (thicknessValue ? confirmed(thicknessValue, 'mm') : unknown()),
+      composition: composition ? confirmed(composition, glass.unit || 'mm') : (thicknessValue ? notApplicable() : unknown()),
+      finish: glass.finish ? confirmed(String(glass.finish)) : unknown(),
     };
   };
 
-  const buildAluminum = ({ metadata, system, configuration, glassKey, glassLabel, frameColor, widthCm, heightCm, quantity = 1, extras = {} }) => create(metadata, {
+  const buildAluminum = ({ metadata, system, configuration, glass, frameColor, widthCm, heightCm, quantity = 1, extras = {} }) => create(metadata, {
     product: {
       system: system ? confirmed(String(system)) : unknown(),
       configuration: configuration ? confirmed(String(configuration)) : unknown(),
       opening: unknown(),
     },
-    glass: aluminumGlass(glassKey, glassLabel),
+    glass: aluminumGlass(glass),
     frame: { color: frameColor ? confirmed(String(frameColor).toUpperCase()) : unknown() },
     hardware: { kit: unknown(), color: unknown() },
     dimensions: {
@@ -179,9 +179,11 @@
   const summary = (spec) => {
     if (!spec || spec.schemaVersion !== SCHEMA_VERSION) return null;
     const attributes = spec.attributes || {};
+    const glassType = displayValue(attributes.glass?.type);
+    const glassComposition = displayValue(attributes.glass?.composition);
     const critical = [
-      displayValue(attributes.glass?.thickness),
-      displayValue(attributes.glass?.type),
+      glassComposition ? `${glassType === 'LAMINATED' ? 'LAMINADO' : glassType || 'VIDRIO'} ${glassComposition}` : displayValue(attributes.glass?.thickness),
+      glassComposition ? null : glassType,
       displayValue(attributes.glass?.finish),
       displayValue(attributes.hardware?.color) || displayValue(attributes.frame?.color),
     ].filter(Boolean);

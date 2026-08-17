@@ -50,14 +50,14 @@ const quote = (overrides = {}) => ({
   );
   assert.equal(standard.items[0].unitPrice, 300000);
   assert.equal(standard.items[0].totalPrice, 600000);
-  assert.equal(standard.identity.sourceVersion, 'cotizador-v7.18');
+  assert.equal(standard.identity.sourceVersion, 'cotizador-v7.19');
   assert.equal(standard.schemaVersion, 'quote-to-crm.v1.1');
   assert.equal(standard.quote.moneySemantics, 'display-lines-independent-total.v1');
   assert.deepEqual(JSON.parse(JSON.stringify(standard.items[0].productSpec)), JSON.parse(JSON.stringify(quote().items[0].productSpec)));
 
   const frozenSpec = context.WilanAgenda.productSpec.buildAluminum({
     metadata: { canonicalProductId: 'VEN-5020', familyId: 'VEN', variantId: 'VEN-5020-2H', mappingStatus: 'map_with_variant', canonicalAttributes: { aluminumSystem: '5020', aluminumConfig: '2N', glassThickness: 4 } },
-    system: '5020', configuration: '2N', glassKey: 'Frozen 4mm', glassLabel: 'Frozen 4mm esmerilado (baño/cocina)', frameColor: 'Blanco / Negro', widthCm: 120, heightCm: 190,
+    system: '5020', configuration: '2N', glass: { type: 'FROZEN', thicknessMm: 4, finish: 'FROZEN' }, frameColor: 'Blanco / Negro', widthCm: 120, heightCm: 190,
   });
   const frozenItem = item({
     producto: 'VC5020 Corrediza (2 Naves)', medidas: '120×190', vidrio: 'Frozen 4mm esmerilado (baño/cocina)', color: 'Blanco / Negro',
@@ -69,6 +69,23 @@ const quote = (overrides = {}) => ({
   assert.deepEqual(JSON.parse(JSON.stringify(frozenPayload.items[0].productSpec)), JSON.parse(JSON.stringify(frozenSpec)));
   assert.equal(frozenPayload.items[0].productSpec.attributes.glass.finish.value, 'FROZEN');
   assert.doesNotMatch(JSON.stringify(frozenPayload.items[0].productSpec), /TRANSPARENT/);
+
+  for (const composition of ['3+3', '4+4', '5+5']) {
+    const laminatedSpec = context.WilanAgenda.productSpec.buildAluminum({
+      metadata: { canonicalProductId: 'VEN-5020', familyId: 'VEN', variantId: 'VEN-5020-2H', mappingStatus: 'map_with_variant', canonicalAttributes: { aluminumSystem: '5020', aluminumConfig: '2N', glassComposition: composition } },
+      system: '5020', configuration: '2N', glass: { type: 'LAMINATED', composition, unit: 'mm' },
+      frameColor: 'Blanco / Negro', widthCm: 120, heightCm: 190,
+    });
+    const laminatedPayload = bridge.buildPayload(quote({ quoteId: `q_laminated_${composition.replace('+', '_')}`, items: [item({
+      producto: 'VC5020 Corrediza (2 Naves)', medidas: '120×190', vidrio: `${composition} Laminado seguridad`, color: 'Blanco / Negro',
+      canonicalProductId: 'VEN-5020', familyId: 'VEN', variantId: 'VEN-5020-2H', mappingStatus: 'map_with_variant',
+      canonicalAttributes: { aluminumSystem: '5020', aluminumConfig: '2N', glassComposition: composition }, productSpec: laminatedSpec,
+      raw: { ancho: 120, alto: 190, sistema: '5020', config: '2N', espesor: composition, color: 'blanco_negro' },
+    })] }), '2026-08-17T12:00:00.000Z');
+    assert.deepEqual(JSON.parse(JSON.stringify(laminatedPayload.items[0].productSpec)), JSON.parse(JSON.stringify(laminatedSpec)));
+    assert.equal(laminatedPayload.items[0].productSpec.attributes.glass.composition.value, composition);
+    assert.equal(laminatedPayload.items[0].productSpec.attributes.glass.thickness.status, 'not_applicable');
+  }
 
   const fractional = 729243.529;
   const monetary = quote({

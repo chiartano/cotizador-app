@@ -238,6 +238,7 @@ test('guardas de fuente contra regresiones criticas', () => {
   assert.match(aluminio, /precioFinal = Math\.max\(0, precioFinal - descuento\)/);
   assert.doesNotMatch(aluminio, /precioFinal\s*=\s*\(precioVenta \+ ivaMonto\) \* 1\.05/);
   assert.doesNotMatch(aluminio, /precioVenta\s*=\s*costoPrimo \+ utilidad - descuento/);
+  assert.doesNotMatch(aluminio, /alu_buildCanonicalMetadata\(sys, cfg, vid\)/);
 });
 
 test('7 metadata canonica para division mapeada deriva IDs de la tabla real', () => {
@@ -276,7 +277,10 @@ test('9 metadata canonica de aluminio deriva IDs de la tabla real', () => {
   const { ALU_CANONICAL_METADATA, alu_buildCanonicalMetadata } = loadAluminumCanonicalHarness();
   const system = '5020';
   const expected = ALU_CANONICAL_METADATA[system];
-  const result = alu_buildCanonicalMetadata(system, '2N', '6mm');
+  const result = alu_buildCanonicalMetadata(system, '2N', {
+    type: 'TEMPERED',
+    thicknessMm: 6,
+  });
 
   console.log('  aluminum canonical:', { system, result });
   assertFiveCanonicalFields(result);
@@ -287,6 +291,7 @@ test('9 metadata canonica de aluminio deriva IDs de la tabla real', () => {
   assert.deepEqual(result.canonicalAttributes, {
     aluminumSystem: '5020',
     aluminumConfig: '2N',
+    glassType: 'TEMPERED',
     glassThickness: 6,
   });
 });
@@ -381,7 +386,10 @@ test('13 metadata de aluminio es monetariamente neutra', () => {
   const base = aluminioQuote({});
   const withMetadata = {
     ...base,
-    ...alu_buildCanonicalMetadata('5020', '2N', '6mm'),
+    ...alu_buildCanonicalMetadata('5020', '2N', {
+      type: 'TEMPERED',
+      thicknessMm: 6,
+    }),
   };
 
   console.log('  aluminum neutrality:', {

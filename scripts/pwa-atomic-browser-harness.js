@@ -15,7 +15,7 @@ const baselineFiles = ['index.html', 'app.js', 'aluminio.js', 'comparador.js', '
 const agendaFiles = ['agenda/agenda.css', 'agenda/config.js', 'agenda/phone.js', 'agenda/formatters.js', 'agenda/availability.js', 'agenda/pendingDrafts.js', 'agenda/productSpec.js', 'agenda/quoteSnapshot.js', 'agenda/firebase.js', 'agenda/auth.js', 'agenda/commands.js', 'agenda/access.js', 'agenda/queries.js', 'agenda/ui.js', 'agenda/quoteToCrm.js'];
 const servedFiles = [...baselineFiles, ...agendaFiles];
 const publishedAgendaFiles = agendaFiles.filter(file => !['agenda/quoteToCrm.js', 'agenda/productSpec.js'].includes(file));
-const CURRENT_CACHE = 'cotizador-v7.18';
+const CURRENT_CACHE = 'cotizador-v7.19';
 const commits = { A: 'a23e827f628ee8a8678b2ad326ad72aa0d67ba66', B: '8f6351bf9a65b030c5e8744938324b3c68f488bb', Bridge: '04b7ed374a4d69bf86242b5a4e69e2b8c09a6170', Published: '2fdde0cd20c97726b82e66f37c68b55db16e6731' };
 let active = 'Atomic';
 let injectedFailure = null;
@@ -132,7 +132,9 @@ async function snapshot(page) {
 async function prepareQuote(page) {
   await page.selectOption('#producto', { label: 'División Batiente (Tradicional)' }); await page.evaluate(() => verificarProducto());
   await page.fill('#ancho', '120'); await page.fill('#alto', '150'); await page.evaluate(() => { document.getElementById('observaciones').value = 'TRABAJO-ACTIVO'; });
-  await page.selectOption('#espesor', '6mm'); await page.selectOption('#color_acc', 'natural'); await page.evaluate(() => calcular());
+  await page.selectOption('#espesor', '6mm'); await page.selectOption('#color_acc', 'natural');
+  if (await page.locator('#glass_finish').count()) await page.selectOption('#glass_finish', 'transparent');
+  await page.evaluate(() => calcular());
   await page.evaluate(() => localStorage.setItem('wilan_atomic_marker', 'preserve-me'));
 }
 async function installVersion(port, version, profileName) {
@@ -226,7 +228,7 @@ async function monetaryBrowser(port) {
   const { context, page } = await installVersion(port, 'Atomic', 'monetary');
   const installed = await snapshot(page); assert.deepEqual(installed.caches, [CURRENT_CACHE]);
   assert.equal(await page.evaluate(() => fetch('./agenda/quoteToCrm.js').then(response => response.ok)), true);
-  async function division(label, width, height, color) { await page.selectOption('#producto', { label }); await page.evaluate(() => verificarProducto()); await page.fill('#ancho', String(width)); await page.fill('#alto', String(height)); await page.selectOption('#espesor', '6mm'); await page.selectOption('#color_acc', color); await page.evaluate(() => calcular()); return page.locator('#res-precio-final').innerText(); }
+  async function division(label, width, height, color) { await page.selectOption('#producto', { label }); await page.evaluate(() => verificarProducto()); await page.fill('#ancho', String(width)); await page.fill('#alto', String(height)); await page.selectOption('#espesor', '6mm'); await page.selectOption('#color_acc', color); await page.selectOption('#glass_finish', 'transparent'); await page.evaluate(() => calcular()); return page.locator('#res-precio-final').innerText(); }
   const base = await division('División Batiente (Tradicional)', 120, 150, 'natural');
   await page.evaluate(() => { document.getElementById('cliente-nombre').value = 'Cliente sintético O2'; onClienteChange(); agregarItem(); });
   await division('División Batiente (Tradicional)', 120, 150, 'natural'); await page.evaluate(() => agregarItem());
@@ -251,7 +253,7 @@ async function monetaryBrowser(port) {
   });
   await page.evaluate(() => { quoteItems = []; persistirCarrito(); renderQuote(); });
   const natural = await division('División Corrediza Clásica', 120, 180, 'natural'); const black = await division('División Corrediza Clásica', 120, 180, 'negro'); const outside = await division('División Corrediza Clásica', 131, 180, 'natural');
-  await page.evaluate(() => abrirVistaAluminio()); await page.fill('#alu-ancho', '120'); await page.fill('#alu-alto', '100'); await page.evaluate(() => alu_calcular()); const aluminum = await page.locator('#alu-precio-iva').innerText();
+  await page.evaluate(() => { abrirVistaAluminio(); alu_setSistema('5020'); alu_setConfig('2N'); alu_setVidrio('6mm'); alu_setColor('natural'); }); await page.fill('#alu-ancho', '120'); await page.fill('#alu-alto', '100'); await page.evaluate(() => alu_calcular()); const aluminum = await page.locator('#alu-precio-iva').innerText();
   assert.equal(base, 'Total con IVA: $729.244'); assert.equal(natural, 'Total con IVA: $650.000'); assert.equal(black, 'Total con IVA: $690.000'); assert.equal(outside, 'Total con IVA: $787.433'); assert.match(aluminum, /768\.853/);
   await context.close(); return { cache: installed.caches, bridgeOk: true, bridgeMoney, base, natural, black, outside, aluminum };
 }

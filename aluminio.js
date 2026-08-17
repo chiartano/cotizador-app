@@ -120,16 +120,16 @@
             },
             // Vidrios disponibles ($/m²)
             vidrios: {
-                '4mm':        { label:'4mm Crudo (económico)',                  precio:28000 },
-                '5mm':        { label:'5mm Crudo',                              precio:35000 },
-                '3+3':        { label:'3+3 Laminado seguridad',                 precio:110000 },
-                'Frozen 4mm': { label:'Frozen 4mm esmerilado (baño/cocina)',    precio:75000 },
-                'Frozen 5mm': { label:'Frozen 5mm esmerilado (baño/cocina)',    precio:95000 },
-                '6mm':        { label:'6mm Templado',                           precio:106000 },
-                '8mm':        { label:'8mm Templado',                           precio:135000 },
-                '10mm':       { label:'10mm Templado',                          precio:170000 },
-                '4+4':        { label:'4+4 Laminado',                           precio:155000 },
-                '5+5':        { label:'5+5 Laminado',                           precio:175000 }
+                '4mm':        { label:'4mm Crudo (económico)',                  precio:28000,  technical:{ type:'ANNEALED', thicknessMm:4 } },
+                '5mm':        { label:'5mm Crudo',                              precio:35000,  technical:{ type:'ANNEALED', thicknessMm:5 } },
+                '3+3':        { label:'3+3 Laminado seguridad',                 precio:110000, technical:{ type:'LAMINATED', composition:'3+3', unit:'mm' } },
+                'Frozen 4mm': { label:'Frozen 4mm esmerilado (baño/cocina)',    precio:75000,  technical:{ type:'FROZEN', thicknessMm:4, finish:'FROZEN' } },
+                'Frozen 5mm': { label:'Frozen 5mm esmerilado (baño/cocina)',    precio:95000,  technical:{ type:'FROZEN', thicknessMm:5, finish:'FROZEN' } },
+                '6mm':        { label:'6mm Templado',                           precio:106000, technical:{ type:'TEMPERED', thicknessMm:6 } },
+                '8mm':        { label:'8mm Templado',                           precio:135000, technical:{ type:'TEMPERED', thicknessMm:8 } },
+                '10mm':       { label:'10mm Templado',                          precio:170000, technical:{ type:'TEMPERED', thicknessMm:10 } },
+                '4+4':        { label:'4+4 Laminado',                           precio:155000, technical:{ type:'LAMINATED', composition:'4+4', unit:'mm' } },
+                '5+5':        { label:'5+5 Laminado',                           precio:175000, technical:{ type:'LAMINATED', composition:'5+5', unit:'mm' } }
             },
             // Parámetros del cálculo (todos editables)
             formula: {
@@ -194,20 +194,17 @@
             '8025': { canonicalProductId: 'VEN-8025', familyId: 'VEN', variantId: 'VEN-8025-COR', mappingStatus: 'map_with_variant' }
         };
 
-        function alu_thicknessMm(value) {
-            const match = String(value || '').match(/\d+/);
-            return match ? Number(match[0]) : null;
-        }
-
-        function alu_buildCanonicalMetadata(sys, cfg, vid) {
+        function alu_buildCanonicalMetadata(sys, cfg, glassTechnical) {
             const base = ALU_CANONICAL_METADATA[sys];
             if (!base) return {};
             const canonicalAttributes = {
                 aluminumSystem: sys,
                 aluminumConfig: cfg
             };
-            const glassThickness = alu_thicknessMm(vid);
-            if (glassThickness) canonicalAttributes.glassThickness = glassThickness;
+            if (glassTechnical?.type) canonicalAttributes.glassType = glassTechnical.type;
+            if (Number.isFinite(glassTechnical?.thicknessMm)) canonicalAttributes.glassThickness = glassTechnical.thicknessMm;
+            if (glassTechnical?.composition) canonicalAttributes.glassComposition = glassTechnical.composition;
+            if (glassTechnical?.finish) canonicalAttributes.glassFinish = glassTechnical.finish;
             return {
                 canonicalProductId: base.canonicalProductId,
                 familyId: base.familyId,
@@ -992,13 +989,13 @@
             const margen = margenReal;
 
             // ---- 11. GUARDAR Y RENDERIZAR ----
-            const canonicalMetadata = alu_buildCanonicalMetadata(sys, cfg, vid);
+            const selectedGlass = aluConfig.vidrios[vid];
+            const canonicalMetadata = alu_buildCanonicalMetadata(sys, cfg, selectedGlass.technical);
             const productSpec = window.WilanAgenda?.productSpec?.buildAluminum({
                 metadata: canonicalMetadata,
                 system: sys,
                 configuration: cfg,
-                glassKey: vid,
-                glassLabel: aluConfig.vidrios[vid].label,
+                glass: selectedGlass.technical,
                 frameColor: ALU_COLOR_LABELS[col],
                 widthCm: w,
                 heightCm: h,
@@ -1036,7 +1033,7 @@
                     precio: precioFinal,
                     fecha: new Date(),
                     origen: 'aluminio',
-                    ...alu_buildCanonicalMetadata(sys, cfg, vid)
+                    ...alu_buildCanonicalMetadata(sys, cfg, selectedGlass.technical)
                 });
             }
 

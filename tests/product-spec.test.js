@@ -16,7 +16,7 @@ const aluminumMetadata = {
 
 const frozen = spec.buildAluminum({
   metadata: aluminumMetadata, system: '5020', configuration: '2N',
-  glassKey: 'Frozen 4mm', glassLabel: 'Frozen 4mm esmerilado (baño/cocina)',
+  glass: { type: 'FROZEN', thicknessMm: 4, finish: 'FROZEN' },
   frameColor: 'Negro', widthCm: 120, heightCm: 190, quantity: 1,
 });
 assert.equal(frozen.attributes.glass.type.value, 'FROZEN');
@@ -38,13 +38,36 @@ assert.equal(blackHardware.attributes.dimensions.width.value, 157.7);
 assert.equal(blackHardware.completeness.status, 'complete');
 
 const incomplete = spec.buildAluminum({
-  metadata: aluminumMetadata, system: '5020', configuration: '2N', glassKey: '6mm',
-  glassLabel: '6mm Templado', frameColor: 'Natural Mate', widthCm: 120, heightCm: 190,
+  metadata: aluminumMetadata, system: '5020', configuration: '2N',
+  glass: { type: 'TEMPERED', thicknessMm: 6 }, frameColor: 'Natural Mate', widthCm: 120, heightCm: 190,
 });
 assert.equal(incomplete.attributes.glass.finish.status, 'unknown');
 assert.equal(incomplete.completeness.status, 'incomplete');
 assert.ok(incomplete.completeness.missing.includes('glass.finish'));
 assert.doesNotMatch(JSON.stringify(incomplete), /TRANSPARENT/);
+
+for (const composition of ['3+3', '4+4', '5+5']) {
+  const laminated = spec.buildAluminum({
+    metadata: { ...aluminumMetadata, canonicalAttributes: { ...aluminumMetadata.canonicalAttributes, glassComposition: composition } },
+    system: '5020', configuration: '2N', glass: { type: 'LAMINATED', composition, unit: 'mm' },
+    frameColor: 'Negro', widthCm: 120, heightCm: 190,
+  });
+  assert.equal(laminated.attributes.glass.type.value, 'LAMINATED');
+  assert.equal(laminated.attributes.glass.composition.value, composition);
+  assert.equal(laminated.attributes.glass.composition.unit, 'mm');
+  assert.equal(laminated.attributes.glass.thickness.status, 'not_applicable');
+  assert.match(spec.summary(laminated).critical, new RegExp(`LAMINADO ${composition.replace('+', '\\+')} MM`));
+  assert.doesNotMatch(spec.summary(laminated).critical, new RegExp(`(^|· )${composition[0]} MM`));
+}
+
+for (const thicknessMm of [6, 8, 10]) {
+  const tempered = spec.buildAluminum({
+    metadata: aluminumMetadata, system: '5020', configuration: '2N',
+    glass: { type: 'TEMPERED', thicknessMm }, frameColor: 'Negro', widthCm: 120, heightCm: 190,
+  });
+  assert.equal(tempered.attributes.glass.thickness.value, thicknessMm);
+  assert.equal(tempered.attributes.glass.composition.status, 'not_applicable');
+}
 
 const ambiguous = spec.buildMain({
   metadata: { canonicalProductId: null, familyId: null, variantId: null, mappingStatus: 'split_required', canonicalAttributes: {} },
