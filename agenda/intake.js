@@ -3,9 +3,6 @@
 
   const A = () => global.WilanAgenda;
   const STORAGE_KEY = 'wilan_quote_intake_v1';
-  const DEFINITIVE_VISIT_REJECTIONS = new Set([
-    'APPOINTMENT_NOT_FOUND', 'QUOTE_ACTION_NOT_AVAILABLE', 'QUOTE_ACTION_NOT_AUTHORIZED',
-  ]);
   const KINDS = Object.freeze({
     contact_call: 'Llamar o contactar',
     wait_response: 'Esperar respuesta',
@@ -19,13 +16,11 @@
     date.setDate(date.getDate() + days);
     return date.toLocaleDateString('en-CA');
   };
-  const emptyStore = () => ({ schema: 'quote-intake-local-store.v1', byQuoteCommand: {}, attempts: {} });
+  const emptyStore = () => ({ schema: 'quote-intake-local-store.v1', byQuoteCommand: {} });
   const readStore = () => {
     try {
       const value = JSON.parse(global.localStorage?.getItem(STORAGE_KEY) || 'null');
-      if (value?.schema !== 'quote-intake-local-store.v1' || !value.byQuoteCommand) return emptyStore();
-      value.attempts = value.attempts && typeof value.attempts === 'object' ? value.attempts : {};
-      return value;
+      return value?.schema === 'quote-intake-local-store.v1' && value.byQuoteCommand ? value : emptyStore();
     } catch (_) { return emptyStore(); }
   };
   const writeStore = (value) => global.localStorage?.setItem(STORAGE_KEY, JSON.stringify(value));
@@ -33,23 +28,9 @@
   const save = (record) => {
     const store = readStore();
     store.byQuoteCommand[record.quoteCommandId] = clone(record);
-    store.attempts[record.commandId] = clone(record);
-    const attemptIds = Object.keys(store.attempts);
-    for (const id of attemptIds.slice(0, Math.max(0, attemptIds.length - 20))) delete store.attempts[id];
     writeStore(store);
     return clone(record);
   };
-  const releaseCurrent = (quoteCommandId) => {
-    const store = readStore();
-    delete store.byQuoteCommand[quoteCommandId];
-    writeStore(store);
-  };
-  const rejectedAppointment = (quoteCommandId, appointmentId) => Object.values(readStore().attempts).some((attempt) => (
-    attempt.quoteCommandId === quoteCommandId
-    && attempt.status === 'rejected'
-    && attempt.action?.kind === 'visit_measure'
-    && attempt.action.appointmentId === appointmentId
-  ));
   const currentContext = () => global.WilanCotizadorAgendaBridge?.getQuoteContext?.() || null;
   const quoteRecord = (quoteId) => A().quoteToCrm?.get?.(quoteId) || null;
   const current = () => {
@@ -97,15 +78,7 @@
       return { ok: true, result };
     } catch (error) {
       const classified = A().commands.classify(error);
-      const definitiveVisitRejection = record.action?.kind === 'visit_measure'
-        && !classified.uncertain
-        && DEFINITIVE_VISIT_REJECTIONS.has(classified.code);
-      save({
-        ...record,
-        status: definitiveVisitRejection ? 'rejected' : (classified.uncertain ? 'unknown' : 'pending'),
-        message: classified.message,
-        ...(definitiveVisitRejection ? { rejectionCode: classified.code } : {}),
-      });
+      save({ ...record, status: classified.uncertain ? 'unknown' : 'pending', message: classified.message });
       refresh();
       return { ok: false, error: classified };
     }
@@ -114,27 +87,10 @@
   const prepare = (quote, action, status = 'pending') => {
     const existing = getByQuoteCommand(quote.commandId);
     if (existing) return existing;
-    return prepareFresh(quote, action, status);
-  };
-
-  const prepareFresh = (quote, action, status = 'pending') => {
     return save({
       schema: 'quote-intake-local.v1', commandId: A().commands.newCommandId(),
       quoteCommandId: quote.commandId, quoteId: quote.quoteId, action, status,
     });
-  };
-
-  const restartVisit = (quote) => {
-    releaseCurrent(quote.commandId);
-    const record = prepareFresh(quote, { kind: 'visit_measure' }, 'awaiting_appointment');
-    refresh();
-    A().ui?.openForm?.(currentContext());
-    return record;
-  };
-
-  const restartChoice = (quote) => {
-    releaseCurrent(quote.commandId);
-    refresh();
   };
 
   const attachAppointment = async (quoteId, appointmentId) => {
@@ -203,7 +159,7 @@
       if (kind.value === 'visit_measure') {
         const record = prepare(quote, { kind: 'visit_measure' }, 'awaiting_appointment');
         const link = A().pendingDrafts?.quoteLink?.(quote.quoteId);
-        if (link?.appointmentId && !rejectedAppointment(quote.commandId, link.appointmentId)) {
+        if (link?.appointmentId) {
           messageNode.textContent = 'Vinculando la cita existente…';
           await attachAppointment(quote.quoteId, link.appointmentId);
         } else {
@@ -242,12 +198,6 @@
       root.querySelector('[data-intake-resume]').addEventListener('click', () => A().ui?.openForm?.(currentContext()));
       return;
     }
-    if (intake?.status === 'rejected') {
-      root.innerHTML = `<div class="quote-intake-card"><strong>La cita no se pudo asociar</strong><span>${esc(intake.message || 'Elige otra cita o una acción diferente.')}</span><button type="button" class="quote-crm-button" data-intake-new-visit>Elegir otra cita</button><button type="button" class="agenda-secondary" data-intake-new-action>Elegir otra acción</button></div>`;
-      root.querySelector('[data-intake-new-visit]').addEventListener('click', () => restartVisit(quote));
-      root.querySelector('[data-intake-new-action]').addEventListener('click', () => restartChoice(quote));
-      return;
-    }
     if (intake && ['pending', 'unknown', 'sending'].includes(intake.status)) {
       root.innerHTML = `<div class="quote-intake-card"><strong>Próxima acción</strong><span>${esc(intake.message || 'Pendiente de confirmar.')}</span><button type="button" class="quote-crm-button" data-intake-retry ${intake.status === 'sending' ? 'disabled' : ''}>Reintentar</button></div>`;
       root.querySelector('[data-intake-retry]')?.addEventListener('click', () => { void send(intake); });
@@ -268,7 +218,7 @@
   };
 
   global.WilanAgenda = global.WilanAgenda || {};
-  global.WilanAgenda.intake = { STORAGE_KEY, KINDS, DEFINITIVE_VISIT_REJECTIONS, getByQuoteCommand, save, prepare, prepareFresh, send, attachAppointment, restartVisit, restartChoice, isComplete, isAwaitingVisit, refresh, initialize, _dateLabel: dateLabel, _readStore: readStore };
+  global.WilanAgenda.intake = { STORAGE_KEY, KINDS, getByQuoteCommand, save, prepare, send, attachAppointment, isComplete, isAwaitingVisit, refresh, initialize, _dateLabel: dateLabel };
   if (global.document?.readyState === 'loading') global.document.addEventListener('DOMContentLoaded', initialize, { once: true });
   else if (global.document) initialize();
 })(window);

@@ -50,7 +50,7 @@ const quote = (overrides = {}) => ({
   );
   assert.equal(standard.items[0].unitPrice, 300000);
   assert.equal(standard.items[0].totalPrice, 600000);
-  assert.equal(standard.identity.sourceVersion, 'cotizador-v7.22');
+  assert.equal(standard.identity.sourceVersion, 'cotizador-v7.21');
   const standardHashes = await bridge.hashesFor(standard);
   assert.equal(await bridge.matchesCurrent(quote(), { payload: standard, contentHash: standardHashes.contentHash }), true);
   assert.equal(await bridge.matchesCurrent(quote({ customer: { ...quote().customer, name: 'Cliente cambiado' } }), { payload: standard, contentHash: standardHashes.contentHash }), false);
