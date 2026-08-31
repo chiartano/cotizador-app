@@ -19,9 +19,9 @@ test('1 protocolo controlado de actualización permanece presente', () => {
   assert.match(index, /WILAN_PWA_CLIENT_CAPABILITY_ACK/);
 });
 
-test('2 usa cache versionada v7.21 y shell critico cerrado con product-spec e intake', () => {
-  assert.match(sw, /const CACHE_NAME = 'cotizador-v7\.21'/);
-  for (const asset of ['index.html', 'app.js', 'aluminio.js', 'comparador.js', 'dashboard.js', 'iq.js', 'visual.js', 'styles.css', 'agenda/agenda.css', 'agenda/config.js', 'agenda/productSpec.js', 'agenda/ui.js', 'agenda/quoteToCrm.js', 'agenda/intake.js', 'manifest.json', 'icon.png']) assert.match(sw, new RegExp(asset.replace('.', '\\.')));
+test('2 usa cache versionada v7.20 y shell critico cerrado con product-spec y bridge', () => {
+  assert.match(sw, /const CACHE_NAME = 'cotizador-v7\.20'/);
+  for (const asset of ['index.html', 'app.js', 'aluminio.js', 'comparador.js', 'dashboard.js', 'iq.js', 'visual.js', 'styles.css', 'agenda/agenda.css', 'agenda/config.js', 'agenda/productSpec.js', 'agenda/ui.js', 'agenda/quoteToCrm.js', 'manifest.json', 'icon.png']) assert.match(sw, new RegExp(asset.replace('.', '\\.')));
 });
 
 test('3 install exige ACK de todos los WindowClient', () => {

@@ -2,7 +2,7 @@
   'use strict';
 
   const A = () => global.WilanAgenda;
-  const RELEASE = 'cotizador-v7.21';
+  const RELEASE = 'cotizador-v7.20';
   const STORAGE_KEY = 'wilan_quote_to_crm_v2';
   const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{2,159}$/;
   const MAPPING = new Set(['map_with_attributes', 'map_with_variant', 'split_required', 'review_manual', 'unmapped']);
@@ -35,9 +35,6 @@
     store.intents[record.commandId] = clone(record);
     store.latestByQuote[record.quoteId] = record.commandId;
     writeStore(store);
-    if (global.dispatchEvent && global.CustomEvent) {
-      global.dispatchEvent(new global.CustomEvent('wilan:quote-to-crm-changed', { detail: { quoteId: record.quoteId } }));
-    }
     return clone(store.intents[record.commandId]);
   };
   const rawAttributes = (raw = {}) => ({
@@ -156,12 +153,6 @@
       payloadHash: await sha256({ payload, quoteId: payload.identity.quoteId, schema: 'quote-to-crm-command.v1', workspaceId: payload.identity.workspaceId }),
     };
   };
-  const matchesCurrent = async (context, record) => {
-    if (!record?.payload?.quote?.quotedAt) return false;
-    const payload = buildPayload(context, record.payload.quote.quotedAt);
-    if (!payload) return false;
-    return (await hashesFor(payload)).contentHash === record.contentHash;
-  };
 
   const prepare = async (context) => {
     const payload = buildPayload(context);
@@ -241,7 +232,6 @@
       : changed && ['pending', 'unknown'].includes(record?.status)
         ? 'La cotización cambió; primero se reintentará la intención anterior congelada.'
         : changed ? 'La cotización cambió. Envía los cambios para crear una intención nueva.' : stateCopy(record);
-    A().intake?.refresh?.();
   };
   const initializeUi = () => {
     const action = global.document?.querySelector?.('#agenda-quote-action');
@@ -263,7 +253,7 @@
   };
 
   global.WilanAgenda = global.WilanAgenda || {};
-  global.WilanAgenda.quoteToCrm = { STORAGE_KEY, RELEASE, rawAttributes, isQuoteBridgeEligible, itemFrom, buildPayload, hashesFor, matchesCurrent, prepare, send, get, save, refresh, initializeUi };
+  global.WilanAgenda.quoteToCrm = { STORAGE_KEY, RELEASE, rawAttributes, isQuoteBridgeEligible, itemFrom, buildPayload, hashesFor, prepare, send, get, save, refresh, initializeUi };
   if (global.document?.readyState === 'loading') global.document.addEventListener('DOMContentLoaded', initializeUi, { once: true });
   else if (global.document) initializeUi();
 })(window);

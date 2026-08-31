@@ -360,7 +360,6 @@
       form.address = quoteContext.customer?.address || '';
       form.detail = quoteContext.items.map((item) => item.producto).filter(Boolean).join(', ').slice(0, 1000);
       form.need = quoteContext.items.length > 1 ? 'other' : /espejo/i.test(form.detail) ? 'mirror' : /ventana|puerta/i.test(form.detail) ? 'window_or_door' : 'bath_partition';
-      if (A().intake?.isAwaitingVisit?.(quoteContext.quoteId)) form.type = 'measure_visit';
     }
     const layer = root.querySelector('#agenda-form-layer');
     layer.hidden = false; layer.setAttribute('aria-hidden', 'false');
@@ -403,7 +402,7 @@
       <fieldset><legend>¿Por qué vamos?</legend><div class="agenda-choice-grid">${[
         ['measure_visit', 'Tomar medidas'], ['install_visit', 'Instalar'],
         ['correction_visit', 'Mantenimiento o reparación'], ['warranty_visit', 'Revisar una garantía']
-      ].filter(([value]) => !A().intake?.isAwaitingVisit?.(form.quote?.quoteId) || value === 'measure_visit').map(([value, label]) => `<label class="agenda-choice"><input type="radio" name="type" value="${value}" ${form.type === value ? 'checked' : ''}> ${label}</label>`).join('')}</div></fieldset>
+      ].map(([value, label]) => `<label class="agenda-choice"><input type="radio" name="type" value="${value}" ${form.type === value ? 'checked' : ''}> ${label}</label>`).join('')}</div></fieldset>
       ${field('date', 'Fecha *', 'date')}
       <label>Bloque *<select name="block">${blocks.map((block) => `<option value="${block.start}" ${form.block === block.start ? 'selected' : ''}>${block.start}${block.end ? `–${block.end}` : ''}</option>`).join('')}</select></label>
       ${form.type === 'install_visit' ? `<label>Duración<select name="durationMinutes">${A().availability.INSTALL_DURATIONS.map((minutes) => `<option value="${minutes}" ${Number(form.durationMinutes) === minutes ? 'selected' : ''}>${minutes / 60} horas</option>`).join('')}</select></label><p class="agenda-warning">El horario quedará pendiente de confirmación.</p>` : ''}
@@ -477,9 +476,8 @@
     const result = await A().commands.send(draft);
     if (result.ok) {
       A().pendingDrafts.confirm(draft.commandId, result.result, draft.quoteId);
-      if (draft.quoteId) await A().intake?.attachAppointment?.(draft.quoteId, result.result.appointmentId);
       form.sending = false; form.messageKind = 'success';
-      form.message = A().intake?.isComplete?.(draft.quoteId) ? 'Cita guardada y próxima acción registrada' : 'Cita guardada';
+      form.message = 'Cita guardada';
       markRecentlyCreated(result.result.appointmentId);
       const effectiveStart = A().formatters.asDate(result.result.startAt);
       if (effectiveStart) {
