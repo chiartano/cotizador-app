@@ -11,6 +11,7 @@ const storage = new Map();
 let sent = [];
 let online = true;
 let sequence = 0;
+let nextFailure = null;
 const quote = {
   commandId: 'cmd_quote_synthetic', quoteId: 'quote_synthetic', status: 'sent',
   receipt: { status: 'received', canOpenCrm: false },
@@ -31,10 +32,14 @@ const context = {
     config: { appId: 'app_synthetic', workspaceId: 'workspace_synthetic' },
     commands: {
       newCommandId: () => `cmd_intake_${++sequence}`,
-      classify: () => ({ code: 'NETWORK_ERROR', uncertain: true, message: 'Sin confirmación' }),
+      classify: (error) => {
+        const code = error?.details?.code || 'NETWORK_ERROR';
+        return { code, uncertain: ['NETWORK_ERROR', 'INTERNAL_ERROR', 'UNAVAILABLE', 'DEADLINE_EXCEEDED', 'UNKNOWN'].includes(code), message: `Error ${code}` };
+      },
     },
     firebase: { adapter: { call: async (name, data) => {
       sent.push({ name, data });
+      if (nextFailure) { const failure = nextFailure; nextFailure = null; throw { details: { code: failure } }; }
       return { commandId: data.command.commandId, quoteId: quote.quoteId, status: 'recorded', actionKind: data.command.action.kind, target: data.command.action.kind === 'visit_measure' ? 'appointment' : 'commitment', deduplicated: false };
     } } },
     quoteToCrm: { get: () => quote, matchesCurrent: async () => true },
@@ -48,7 +53,7 @@ vm.runInContext(fs.readFileSync(path.join(root, 'agenda/intake.js'), 'utf8'), co
 const intake = context.WilanAgenda.intake;
 
 test.beforeEach(() => {
-  storage.clear(); sent = []; online = true;
+  storage.clear(); sent = []; online = true; nextFailure = null;
   context.WilanAgenda.quoteToCrm.matchesCurrent = async () => true;
 });
 
@@ -101,3 +106,58 @@ test('changed quote cannot receive an action until its changes are sent', async 
   assert.equal(result.error.code, 'QUOTE_CHANGED');
   assert.equal(sent.length, 0);
 });
+
+test('definitive appointment rejection preserves evidence and a new selection uses a new command', async () => {
+  const first = intake.prepare(quote, { kind: 'visit_measure' }, 'awaiting_appointment');
+  nextFailure = 'QUOTE_ACTION_NOT_AVAILABLE';
+  const rejected = await intake.attachAppointment(quote.quoteId, 'appointment_cancelled');
+  assert.equal(rejected.ok, false);
+  assert.equal(intake.getByQuoteCommand(quote.commandId).status, 'rejected');
+  assert.equal(intake.getByQuoteCommand(quote.commandId).rejectionCode, 'QUOTE_ACTION_NOT_AVAILABLE');
+
+  const second = intake.restartVisit(quote);
+  assert.notEqual(second.commandId, first.commandId);
+  assert.equal(second.status, 'awaiting_appointment');
+  await intake.attachAppointment(quote.quoteId, 'appointment_valid');
+  assert.equal(intake.getByQuoteCommand(quote.commandId).status, 'recorded');
+  assert.equal(sent[0].data.command.commandId, first.commandId);
+  assert.equal(sent[1].data.command.commandId, second.commandId);
+  assert.deepEqual(JSON.parse(JSON.stringify(sent[1].data.command.action)), { kind: 'visit_measure', appointmentId: 'appointment_valid' });
+  assert.equal(intake._readStore().attempts[first.commandId].status, 'rejected');
+});
+
+test('definitive rejection allows switching to a non-visit action with a new command', async () => {
+  const first = intake.prepare(quote, { kind: 'visit_measure' }, 'awaiting_appointment');
+  nextFailure = 'APPOINTMENT_NOT_FOUND';
+  await intake.attachAppointment(quote.quoteId, 'appointment_missing');
+  intake.restartChoice(quote);
+  const followup = intake.prepare(quote, { kind: 'contact_call', date: '2026-09-05' });
+  assert.notEqual(followup.commandId, first.commandId);
+  assert.equal((await intake.send(followup)).ok, true);
+  assert.deepEqual(JSON.parse(JSON.stringify(sent[1].data.command.action)), { kind: 'contact_call', date: '2026-09-05' });
+});
+
+for (const code of ['NETWORK_ERROR', 'INTERNAL_ERROR', 'UNAVAILABLE', 'DEADLINE_EXCEEDED', 'UNKNOWN']) {
+  test(`${code} preserves exact visit command and payload for safe retry`, async () => {
+    const waiting = intake.prepare(quote, { kind: 'visit_measure' }, 'awaiting_appointment');
+    nextFailure = code;
+    await intake.attachAppointment(quote.quoteId, 'appointment_uncertain');
+    const pending = intake.getByQuoteCommand(quote.commandId);
+    assert.equal(pending.status, 'unknown');
+    assert.equal(pending.commandId, waiting.commandId);
+    await intake.send(pending);
+    assert.equal(sent[0].data.command.commandId, sent[1].data.command.commandId);
+    assert.deepEqual(JSON.parse(JSON.stringify(sent[0].data.command.action)), JSON.parse(JSON.stringify(sent[1].data.command.action)));
+  });
+}
+
+for (const code of ['APPOINTMENT_NOT_FOUND', 'QUOTE_ACTION_NOT_AVAILABLE', 'QUOTE_ACTION_NOT_AUTHORIZED']) {
+  test(`${code} is a stable definitive visit rejection`, async () => {
+    intake.prepare(quote, { kind: 'visit_measure' }, 'awaiting_appointment');
+    nextFailure = code;
+    await intake.attachAppointment(quote.quoteId, `appointment_${code.toLowerCase()}`);
+    const rejected = intake.getByQuoteCommand(quote.commandId);
+    assert.equal(rejected.status, 'rejected');
+    assert.equal(rejected.rejectionCode, code);
+  });
+}
