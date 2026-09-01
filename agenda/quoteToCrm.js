@@ -2,7 +2,9 @@
   'use strict';
 
   const A = () => global.WilanAgenda;
-  const RELEASE = 'cotizador-v7.23';
+  const RELEASE = 'cotizador-v7.26';
+  const SEMANTIC_FINGERPRINT_VERSION = 'quote-semantic-fingerprint.v1';
+  const COMPARISON = Object.freeze({ MATCH: 'match', CHANGED: 'changed', INSUFFICIENT: 'insufficient_evidence' });
   const STORAGE_KEY = 'wilan_quote_to_crm_v2';
   const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{2,159}$/;
   const MAPPING = new Set(['map_with_attributes', 'map_with_variant', 'split_required', 'review_manual', 'unmapped']);
@@ -35,6 +37,9 @@
     store.intents[record.commandId] = clone(record);
     store.latestByQuote[record.quoteId] = record.commandId;
     writeStore(store);
+    if (global.dispatchEvent && global.CustomEvent) {
+      global.dispatchEvent(new global.CustomEvent('wilan:quote-to-crm-changed', { detail: { quoteId: record.quoteId } }));
+    }
     return clone(store.intents[record.commandId]);
   };
   const rawAttributes = (raw = {}) => ({
@@ -141,29 +146,65 @@
     }, {});
     return value;
   };
+  const buildQuoteSemanticIdentity = (payload) => {
+    if (!object(payload)) return null;
+    const commercial = clone(payload);
+    delete commercial.schemaVersion;
+    if (object(commercial.identity)) {
+      delete commercial.identity.source;
+      delete commercial.identity.sourceVersion;
+    }
+    if (object(commercial.quote)) {
+      delete commercial.quote.quotedAt;
+      delete commercial.quote.moneySemantics;
+    }
+    if (Array.isArray(commercial.items)) commercial.items.forEach((item) => {
+      if (!object(item?.rawAttributes)) return;
+      delete item.rawAttributes.technicalVersion;
+    });
+    return { schema: SEMANTIC_FINGERPRINT_VERSION, commercial };
+  };
   const sha256 = async (value) => {
     const bytes = new TextEncoder().encode(JSON.stringify(canonicalize(value)));
     const digest = await global.crypto.subtle.digest('SHA-256', bytes);
     return `sha256:${[...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('')}`;
   };
   const hashesFor = async (payload) => {
-    const content = clone(payload); delete content.quote.quotedAt;
+    const semanticHash = await sha256(buildQuoteSemanticIdentity(payload));
     return {
-      contentHash: await sha256(content),
+      semanticFingerprintVersion: SEMANTIC_FINGERPRINT_VERSION,
+      semanticHash,
+      contentHash: semanticHash,
       payloadHash: await sha256({ payload, quoteId: payload.identity.quoteId, schema: 'quote-to-crm-command.v1', workspaceId: payload.identity.workspaceId }),
     };
   };
+  const compareCurrent = async (context, record) => {
+    if (!record?.payload?.quote?.quotedAt) return COMPARISON.INSUFFICIENT;
+    const payload = buildPayload(context, record.payload.quote.quotedAt);
+    if (!payload) return COMPARISON.INSUFFICIENT;
+    return await sha256(buildQuoteSemanticIdentity(payload)) === await sha256(buildQuoteSemanticIdentity(record.payload))
+      ? COMPARISON.MATCH : COMPARISON.CHANGED;
+  };
+  const matchesCurrent = async (context, record) => (await compareCurrent(context, record)) === COMPARISON.MATCH;
+  const coordinationAvailable = () => typeof global.navigator?.locks?.request === 'function';
+  const prepareLockName = (quoteId) => `wilan:quote-to-crm:prepare:${A().config.workspaceId}:${quoteId}`;
 
   const prepare = async (context) => {
     const payload = buildPayload(context);
     if (!payload) return null;
     const hashes = await hashesFor(payload);
-    const existing = get(context.quoteId);
-    if (existing?.contentHash === hashes.contentHash) return existing;
-    if (existing && ['pending', 'sending', 'unknown'].includes(existing.status)) return existing;
-    return save({
-      schema: 'quote-to-crm-local.v2', commandId: A().commands.newCommandId(),
-      quoteId: context.quoteId, status: 'pending', payload, ...hashes,
+    if (!coordinationAvailable()) return get(context.quoteId);
+    return global.navigator.locks.request(prepareLockName(context.quoteId), { mode: 'exclusive' }, async () => {
+      const existing = get(context.quoteId);
+      if (existing) {
+        const comparison = await compareCurrent(context, existing);
+        if (comparison === COMPARISON.MATCH || comparison === COMPARISON.INSUFFICIENT) return existing;
+        if (['pending', 'sending', 'unknown'].includes(existing.status)) return existing;
+      }
+      return save({
+        schema: 'quote-to-crm-local.v2', commandId: A().commands.newCommandId(),
+        quoteId: context.quoteId, status: 'pending', payload, ...hashes,
+      });
     });
   };
 
@@ -214,24 +255,31 @@
     if (!button) return;
     const eligible = isQuoteBridgeEligible(quote);
     const record = quote?.quoteId ? get(quote.quoteId) : null;
-    let changed = false;
+    let comparison = record ? COMPARISON.INSUFFICIENT : null;
     if (eligible && record) {
-      const payload = buildPayload(quote, record.payload.quote.quotedAt);
-      changed = (await hashesFor(payload)).contentHash !== record.contentHash;
+      comparison = await compareCurrent(quote, record);
     }
     if (revision !== ui.revision) return;
+    const changed = comparison === COMPARISON.CHANGED;
+    const insufficient = comparison === COMPARISON.INSUFFICIENT;
+    const coordinated = coordinationAvailable();
     button.hidden = !quote || !A().config.quoteBridgeEnabled;
-    button.disabled = ui.lock || !eligible || record?.status === 'sending' || (record?.status === 'sent' && !changed);
+    button.disabled = ui.lock || !eligible || !coordinated || insufficient || record?.status === 'sending' || (record?.status === 'sent' && !changed);
     button.textContent = !eligible ? 'No disponible para CRM'
+      : !coordinated ? 'Reenvío no disponible en este navegador'
+        : insufficient ? 'Revisión manual necesaria'
       : record?.status === 'sent' && !changed ? 'Ya enviado al CRM'
         : changed && ['pending', 'unknown'].includes(record?.status) ? 'Reintentar envío anterior'
           : changed ? 'Enviar cambios al CRM'
             : record?.status === 'unknown' ? 'Reintentar envío al CRM' : 'Enviar al CRM';
     if (message) message.textContent = !eligible
       ? 'Esta cotización antigua no contiene toda la información necesaria para enviarla al CRM.'
+      : !coordinated ? 'Este navegador no permite preparar el envío de forma segura. Abre el cotizador en Chrome actualizado.'
+        : insufficient ? 'No puedo confirmar automáticamente si esta cotización cambió. Revísala antes de volver a enviarla.'
       : changed && ['pending', 'unknown'].includes(record?.status)
         ? 'La cotización cambió; primero se reintentará la intención anterior congelada.'
         : changed ? 'La cotización cambió. Envía los cambios para crear una intención nueva.' : stateCopy(record);
+    A().intake?.refresh?.();
   };
   const initializeUi = () => {
     const action = global.document?.querySelector?.('#agenda-quote-action');
@@ -253,7 +301,7 @@
   };
 
   global.WilanAgenda = global.WilanAgenda || {};
-  global.WilanAgenda.quoteToCrm = { STORAGE_KEY, RELEASE, rawAttributes, isQuoteBridgeEligible, itemFrom, buildPayload, hashesFor, prepare, send, get, save, refresh, initializeUi };
+  global.WilanAgenda.quoteToCrm = { STORAGE_KEY, RELEASE, SEMANTIC_FINGERPRINT_VERSION, COMPARISON, rawAttributes, isQuoteBridgeEligible, itemFrom, buildPayload, buildQuoteSemanticIdentity, hashesFor, compareCurrent, matchesCurrent, coordinationAvailable, prepare, send, get, save, refresh, initializeUi };
   if (global.document?.readyState === 'loading') global.document.addEventListener('DOMContentLoaded', initializeUi, { once: true });
   else if (global.document) initializeUi();
 })(window);

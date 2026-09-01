@@ -6,9 +6,15 @@ const vm = require('node:vm');
 
 const root = path.resolve(__dirname, '..');
 const values = new Map();
+let lockTail = Promise.resolve();
+const locks = { request: (_name, _options, callback) => {
+  const result = lockTail.then(callback);
+  lockTail = result.catch(() => {});
+  return result;
+} };
 const window = {
   window: null, crypto: crypto.webcrypto, TextEncoder, structuredClone, URLSearchParams,
-  location: { hostname: 'localhost', search: '' }, navigator: { onLine: true },
+  location: { hostname: 'localhost', search: '' }, navigator: { onLine: true, locks },
   localStorage: { getItem: (key) => values.get(key) || null, setItem: (key, value) => values.set(key, String(value)) },
 };
 window.window = window;
@@ -50,7 +56,10 @@ const quote = (overrides = {}) => ({
   );
   assert.equal(standard.items[0].unitPrice, 300000);
   assert.equal(standard.items[0].totalPrice, 600000);
-  assert.equal(standard.identity.sourceVersion, 'cotizador-v7.23');
+  assert.equal(standard.identity.sourceVersion, 'cotizador-v7.26');
+  const standardHashes = await bridge.hashesFor(standard);
+  assert.equal(await bridge.matchesCurrent(quote(), { payload: standard, contentHash: standardHashes.contentHash }), true);
+  assert.equal(await bridge.matchesCurrent(quote({ customer: { ...quote().customer, name: 'Cliente cambiado' } }), { payload: standard, contentHash: standardHashes.contentHash }), false);
   assert.equal(standard.schemaVersion, 'quote-to-crm.v1.1');
   assert.equal(standard.quote.moneySemantics, 'display-lines-independent-total.v1');
   assert.deepEqual(JSON.parse(JSON.stringify(standard.items[0].productSpec)), JSON.parse(JSON.stringify(quote().items[0].productSpec)));

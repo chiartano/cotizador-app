@@ -12,11 +12,11 @@ const baselines = path.join(lab, 'baselines');
 const profiles = path.join(lab, 'profiles');
 const evidence = path.join(lab, 'evidencias', 'pwa-atomic-browser-results.json');
 const baselineFiles = ['index.html', 'app.js', 'aluminio.js', 'comparador.js', 'dashboard.js', 'iq.js', 'visual.js', 'styles.css', 'manifest.json', 'icon.png', 'sw.js'];
-const agendaFiles = ['agenda/agenda.css', 'agenda/config.js', 'agenda/phone.js', 'agenda/formatters.js', 'agenda/availability.js', 'agenda/pendingDrafts.js', 'agenda/productSpec.js', 'agenda/quoteSnapshot.js', 'agenda/firebase.js', 'agenda/auth.js', 'agenda/commands.js', 'agenda/access.js', 'agenda/queries.js', 'agenda/ui.js', 'agenda/quoteToCrm.js'];
+const agendaFiles = ['agenda/agenda.css', 'agenda/config.js', 'agenda/phone.js', 'agenda/formatters.js', 'agenda/availability.js', 'agenda/pendingDrafts.js', 'agenda/productSpec.js', 'agenda/quoteSnapshot.js', 'agenda/firebase.js', 'agenda/auth.js', 'agenda/commands.js', 'agenda/access.js', 'agenda/queries.js', 'agenda/ui.js', 'agenda/quoteToCrm.js', 'agenda/intake.js'];
 const servedFiles = [...baselineFiles, ...agendaFiles];
-const publishedAgendaFiles = agendaFiles.filter(file => !['agenda/quoteToCrm.js', 'agenda/productSpec.js'].includes(file));
-const CURRENT_CACHE = 'cotizador-v7.23';
-const commits = { A: 'a23e827f628ee8a8678b2ad326ad72aa0d67ba66', B: '8f6351bf9a65b030c5e8744938324b3c68f488bb', Bridge: '04b7ed374a4d69bf86242b5a4e69e2b8c09a6170', Published: '2fdde0cd20c97726b82e66f37c68b55db16e6731' };
+const publishedAgendaFiles = agendaFiles.filter(file => file !== 'agenda/intake.js');
+const CURRENT_CACHE = 'cotizador-v7.26';
+const commits = { A: 'a23e827f628ee8a8678b2ad326ad72aa0d67ba66', B: '8f6351bf9a65b030c5e8744938324b3c68f488bb', Bridge: '04b7ed374a4d69bf86242b5a4e69e2b8c09a6170', Published: 'c5de407fa5a9a7f6ae7324fc27a309df1266ca5c' };
 let active = 'Atomic';
 let injectedFailure = null;
 
@@ -171,9 +171,23 @@ async function bridgeFlow(port, fromVersion, name) {
 }
 
 async function publishedUpgrade(port) {
-  const { context, page } = await installVersion(port, 'Published', 'published-v714');
+  const { context, page } = await installVersion(port, 'Published', 'published-v723');
   const dialogs = []; page.on('dialog', async dialog => { dialogs.push(dialog.message()); await dialog.accept(); });
-  await prepareQuote(page); await page.evaluate(() => agregarItem()); const before = await snapshot(page);
+  await prepareQuote(page);
+  await page.evaluate(() => { document.getElementById('cliente-nombre').value = 'Cliente sintético legacy'; onClienteChange(); agregarItem(); });
+  const legacy = await page.evaluate(async () => {
+    const quote = window.WilanCotizadorAgendaBridge.getQuoteContext();
+    const bridge = window.WilanAgenda.quoteToCrm;
+    const payload = bridge.buildPayload(quote, '2026-08-20T12:00:00.000Z');
+    const hashes = await bridge.hashesFor(payload);
+    const record = bridge.save({
+      schema: 'quote-to-crm-local.v2', commandId: 'cmd_browser_legacy_v723', quoteId: quote.quoteId,
+      status: 'sent', payload, ...hashes, receipt: { status: 'received', quoteId: quote.quoteId, canOpenCrm: false },
+    });
+    return { release: bridge.RELEASE, commandId: record.commandId, quoteId: quote.quoteId };
+  });
+  assert.equal(legacy.release, 'cotizador-v7.23');
+  const before = await snapshot(page);
   await switchTo(port, 'Atomic'); await requestUpdate(page); await waitUntil(async () => (await snapshot(page)).prompt);
   await page.click('#pwa-update-now');
   await waitUntil(async () => (await snapshot(page)).caches.length === 1 && (await snapshot(page)).caches[0] === CURRENT_CACHE);
@@ -183,7 +197,107 @@ async function publishedUpgrade(port) {
   assert.deepEqual(after.caches, [CURRENT_CACHE]);
   assert.equal(after.quoteTotal, before.quoteTotal);
   assert.equal(dialogs.length, 1);
-  await context.close(); return { before, after, dialogs };
+  const semantic = await page.evaluate(async () => {
+    const bridge = window.WilanAgenda.quoteToCrm;
+    const quote = window.WilanCotizadorAgendaBridge.getQuoteContext();
+    const record = bridge.get(quote.quoteId);
+    const matches = await bridge.matchesCurrent(quote, record);
+    const same = await bridge.prepare(quote);
+    const onlineBefore = navigator.onLine;
+    const changedQuote = structuredClone(quote);
+    changedQuote.customer.name = `${changedQuote.customer.name || 'Cliente'} cambiado`;
+    const changedMatches = await bridge.matchesCurrent(changedQuote, record);
+    const changed = await bridge.prepare(changedQuote);
+    return {
+      release: bridge.RELEASE, fingerprint: bridge.SEMANTIC_FINGERPRINT_VERSION,
+      matches, sameCommandId: same.commandId, priorCommandId: record.commandId,
+      changedMatches, changedCommandId: changed.commandId, changedStatus: changed.status, onlineBefore,
+    };
+  });
+  assert.equal(semantic.release, CURRENT_CACHE);
+  assert.equal(semantic.fingerprint, 'quote-semantic-fingerprint.v1');
+  assert.equal(semantic.matches, true);
+  assert.equal(semantic.sameCommandId, legacy.commandId);
+  assert.equal(semantic.priorCommandId, legacy.commandId);
+  assert.equal(semantic.changedMatches, false);
+  assert.notEqual(semantic.changedCommandId, legacy.commandId);
+  assert.equal(semantic.changedStatus, 'pending');
+  assert.equal(semantic.onlineBefore, true);
+  await context.setOffline(true);
+  const offlineMatch = await page.evaluate(async () => {
+    const quote = window.WilanCotizadorAgendaBridge.getQuoteContext();
+    const records = JSON.parse(localStorage.getItem(window.WilanAgenda.quoteToCrm.STORAGE_KEY));
+    const legacyRecord = records.intents.cmd_browser_legacy_v723;
+    return window.WilanAgenda.quoteToCrm.matchesCurrent(quote, legacyRecord);
+  });
+  assert.equal(offlineMatch, true);
+  await context.setOffline(false);
+  await context.close(); return { before, after, legacy, semantic, offlineMatch, dialogs };
+}
+
+async function fingerprintMultiTab(port) {
+  const { context, page } = await installVersion(port, 'Published', 'fingerprint-multi-tab');
+  page.on('dialog', dialog => dialog.accept());
+  await prepareQuote(page);
+  await page.evaluate(() => { document.getElementById('cliente-nombre').value = 'Cliente sintético multi-tab'; onClienteChange(); agregarItem(); });
+  const legacy = await page.evaluate(async () => {
+    const bridge = window.WilanAgenda.quoteToCrm;
+    const quote = window.WilanCotizadorAgendaBridge.getQuoteContext();
+    const payload = bridge.buildPayload(quote, '2026-08-20T12:00:00.000Z');
+    const hashes = await bridge.hashesFor(payload);
+    bridge.save({ schema: 'quote-to-crm-local.v2', commandId: 'cmd_multitab_v723', quoteId: quote.quoteId, status: 'sent', payload, ...hashes, receipt: { status: 'received', quoteId: quote.quoteId } });
+    return { quoteId: quote.quoteId };
+  });
+  await switchTo(port, 'Atomic'); await requestUpdate(page); await waitUntil(async () => (await snapshot(page)).prompt);
+  await page.click('#pwa-update-now'); await waitUntil(async () => (await snapshot(page)).caches.includes(CURRENT_CACHE));
+  await page.waitForLoadState('networkidle').catch(() => {}); await page.waitForTimeout(700);
+  const second = await context.newPage(); await second.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'networkidle' }); await second.waitForTimeout(700);
+  assert.equal(await page.evaluate(() => typeof navigator.locks?.request), 'function');
+  const sameEdition = async target => target.evaluate(async () => {
+    const quote = structuredClone(window.WilanCotizadorAgendaBridge.getQuoteContext());
+    quote.customer.name = 'Misma edición multi-tab';
+    return (await window.WilanAgenda.quoteToCrm.prepare(quote)).commandId;
+  });
+  const twenty = await Promise.all(Array.from({ length: 20 }, (_, index) => sameEdition(index % 2 ? second : page)));
+  assert.equal(new Set(twenty).size, 1);
+  const persisted = await page.evaluate((quoteId) => {
+    const bridge = window.WilanAgenda.quoteToCrm;
+    const store = JSON.parse(localStorage.getItem(bridge.STORAGE_KEY));
+    return Object.values(store.intents).filter(record => record.quoteId === quoteId).map(record => record.commandId);
+  }, legacy.quoteId);
+  assert.equal(persisted.length, 2);
+
+  await context.setOffline(true);
+  const offlinePrepare = async target => target.evaluate(async () => {
+    const quote = structuredClone(window.WilanCotizadorAgendaBridge.getQuoteContext());
+    quote.quoteId = 'q_browser_multitab_offline';
+    return (await window.WilanAgenda.quoteToCrm.prepare(quote)).commandId;
+  });
+  const offline = await Promise.all(Array.from({ length: 10 }, (_, index) => offlinePrepare(index % 2 ? second : page)));
+  assert.equal(new Set(offline).size, 1);
+  await context.setOffline(false);
+  assert.equal(await offlinePrepare(page), offline[0]);
+
+  const crashQuoteId = 'q_browser_lock_crash';
+  const lockName = await page.evaluate((quoteId) => `wilan:quote-to-crm:prepare:${window.WilanAgenda.config.workspaceId}:${quoteId}`, crashQuoteId);
+  const holding = second.evaluate((name) => navigator.locks.request(name, async () => {
+    localStorage.setItem('wilan_lock_crash_acquired', '1');
+    await new Promise(() => {});
+  }), lockName).catch(() => null);
+  await waitUntil(async () => page.evaluate(() => localStorage.getItem('wilan_lock_crash_acquired') === '1'));
+  await second.close();
+  const recovered = await Promise.race([
+    page.evaluate(async (quoteId) => {
+      const quote = structuredClone(window.WilanCotizadorAgendaBridge.getQuoteContext());
+      quote.quoteId = quoteId;
+      return (await window.WilanAgenda.quoteToCrm.prepare(quote)).commandId;
+    }, crashQuoteId),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Web Lock no se liberó al cerrar la pestaña')), 5000)),
+  ]);
+  await holding;
+  assert.match(recovered, /^cmd_/);
+  await context.close();
+  return { sameEditionCommandId: twenty[0], persisted, offlineCommandId: offline[0], crashRecoveredCommandId: recovered };
 }
 
 async function incompatibleClient(port) {
@@ -264,7 +378,7 @@ async function monetaryBrowser(port) {
     const results = { monetary: await monetaryBrowser(port) };
     fs.writeFileSync(evidence, JSON.stringify(results, null, 2)); server.close(); console.log(`ok - navegador real: ${evidence}`); return;
   }
-  const results = { legacyA: await legacyDirect(port, 'A', 'legacy-direct-a'), legacyB: await legacyDirect(port, 'B', 'legacy-direct-b'), bridgeA: await bridgeFlow(port, 'A', 'bridge-a'), bridgeB: await bridgeFlow(port, 'B', 'bridge-b'), publishedV714: await publishedUpgrade(port), incompatible: await incompatibleClient(port), failures: [], multipleTabs: await multipleTabs(port) };
+  const results = { legacyA: await legacyDirect(port, 'A', 'legacy-direct-a'), legacyB: await legacyDirect(port, 'B', 'legacy-direct-b'), bridgeA: await bridgeFlow(port, 'A', 'bridge-a'), bridgeB: await bridgeFlow(port, 'B', 'bridge-b'), publishedV723: await publishedUpgrade(port), fingerprintMultiTab: await fingerprintMultiTab(port), incompatible: await incompatibleClient(port), failures: [], multipleTabs: await multipleTabs(port) };
   results.failures.push(await failedInstall(port, { file: 'app.js', type: '404' }, 'fail-404'));
   results.failures.push(await failedInstall(port, { file: 'styles.css', type: '500' }, 'fail-500'));
   results.failures.push(await failedInstall(port, { file: 'visual.js', type: 'interrupt' }, 'fail-interrupt'));
