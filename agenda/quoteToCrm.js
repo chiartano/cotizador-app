@@ -2,7 +2,7 @@
   'use strict';
 
   const A = () => global.WilanAgenda;
-  const RELEASE = 'cotizador-v7.20';
+  const RELEASE = 'cotizador-v7.23';
   const STORAGE_KEY = 'wilan_quote_to_crm_v2';
   const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{2,159}$/;
   const MAPPING = new Set(['map_with_attributes', 'map_with_variant', 'split_required', 'review_manual', 'unmapped']);

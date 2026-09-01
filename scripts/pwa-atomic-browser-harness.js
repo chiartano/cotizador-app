@@ -15,7 +15,7 @@ const baselineFiles = ['index.html', 'app.js', 'aluminio.js', 'comparador.js', '
 const agendaFiles = ['agenda/agenda.css', 'agenda/config.js', 'agenda/phone.js', 'agenda/formatters.js', 'agenda/availability.js', 'agenda/pendingDrafts.js', 'agenda/productSpec.js', 'agenda/quoteSnapshot.js', 'agenda/firebase.js', 'agenda/auth.js', 'agenda/commands.js', 'agenda/access.js', 'agenda/queries.js', 'agenda/ui.js', 'agenda/quoteToCrm.js'];
 const servedFiles = [...baselineFiles, ...agendaFiles];
 const publishedAgendaFiles = agendaFiles.filter(file => !['agenda/quoteToCrm.js', 'agenda/productSpec.js'].includes(file));
-const CURRENT_CACHE = 'cotizador-v7.20';
+const CURRENT_CACHE = 'cotizador-v7.23';
 const commits = { A: 'a23e827f628ee8a8678b2ad326ad72aa0d67ba66', B: '8f6351bf9a65b030c5e8744938324b3c68f488bb', Bridge: '04b7ed374a4d69bf86242b5a4e69e2b8c09a6170', Published: '2fdde0cd20c97726b82e66f37c68b55db16e6731' };
 let active = 'Atomic';
 let injectedFailure = null;

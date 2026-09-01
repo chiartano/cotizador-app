@@ -207,9 +207,9 @@ const test = async (name, callback) => {
     assert.match(ui, /No puedes ver citas ni agendar/);
   });
 
-  await test('9 PWA v7.20 incluye shell Agenda, product-spec y puente CRM locales, sin cachear Firebase externo', () => {
+  await test('9 PWA v7.23 incluye shell Agenda, product-spec y puente CRM locales, sin cachear Firebase externo', () => {
     const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.20'/);
+    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.23'/);
     assert.match(sw, /agenda\/productSpec\.js/);
     assert.match(sw, /agenda\/quoteToCrm\.js/);
     for (const asset of ['agenda.css', 'config.js', 'phone.js', 'firebase.js', 'commands.js', 'access.js', 'queries.js', 'ui.js']) assert.match(sw, new RegExp(asset.replace('.', '\\.')));
