@@ -2,7 +2,7 @@
   'use strict';
 
   const A = () => global.WilanAgenda;
-  const RELEASE = 'cotizador-v7.26';
+  const RELEASE = 'cotizador-v7.27';
   const SEMANTIC_FINGERPRINT_VERSION = 'quote-semantic-fingerprint.v1';
   const COMPARISON = Object.freeze({ MATCH: 'match', CHANGED: 'changed', INSUFFICIENT: 'insufficient_evidence' });
   const STORAGE_KEY = 'wilan_quote_to_crm_v2';

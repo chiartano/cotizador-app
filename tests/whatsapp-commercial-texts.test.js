@@ -493,6 +493,13 @@ test('todas las superficies automáticas incluyen garantía aprobada', () => {
   assert.doesNotMatch(sources, /garantía escrita por (?:12|18) meses/i);
 });
 
+test('todos los mensajes informan la visita de medidas y su descuento', () => {
+  assert.ok(capturedMessages.length > 0);
+  capturedMessages.forEach(({name, text}) => {
+    assert.match(text, /Visita de medidas:\*? \$20\.000, se descuentan del total si haces el trabajo/, name);
+  });
+});
+
 const evidenceDir = process.env.WA_EVIDENCE_DIR || process.argv[2];
 if (evidenceDir) {
   fs.mkdirSync(evidenceDir, {recursive:true});

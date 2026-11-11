@@ -80,6 +80,7 @@ function buildVisualCommercialText(d, clienteDetallado) {
     } else {
         texto += `💰 Precio: ${_viz_fmtMoney(d.precioFinal)}, IVA incluido\n`;
     }
+    texto += `📐 Visita de medidas: $20.000, se descuentan del total si haces el trabajo.\n`;
     return `${texto}----------------------------`;
 }
 

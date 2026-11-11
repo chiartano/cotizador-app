@@ -734,6 +734,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 const promoColor = raw.promo_fija_corrediza_economica_color || 'natural';
                 texto += `\n_Promoción por tiempo limitado para divisiones de hasta 130 cm de ancho, con alto de 180 cm o 190 cm, en vidrio 6 mm color ${promoColor}. Otras medidas o acabados se cotizan a la medida exacta._`;
             }
+            texto += `\n📐 *Visita de medidas:* $20.000, se descuentan del total si haces el trabajo.`;
             return `${texto}\n----------------------------`;
         }
 
@@ -797,6 +798,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             }
             texto += `💰 *TOTAL: ${fmtMoney(total - discount)}*, IVA incluido\n`;
             texto += `🛡️ *Garantía:* 12 meses`;
+            texto += `\n📐 *Visita de medidas:* $20.000, se descuentan del total si haces el trabajo.`;
             return texto;
         }
 

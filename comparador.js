@@ -574,6 +574,7 @@ function buildComparisonCommercialMessage(a, b, contexto, snapshot) {
         texto += esMasCara ? ` (B es más cara)\n` : ` (B ahorra)\n`;
     }
     texto += `🛡️ Garantía: 12 meses`;
+    texto += `\n📐 Visita de medidas: $20.000, se descuentan del total si haces el trabajo.`;
     return texto;
 }
 

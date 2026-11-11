@@ -628,6 +628,7 @@
                 texto += `💰 *Precio unitario:* ${alu_fmt(result.precioFinal)}\n`;
                 texto += `💰 *Total:* ${alu_fmt(result.precioFinal * qty)}, IVA incluido\n`;
             }
+            texto += `📐 *Visita de medidas:* $20.000, se descuentan del total si haces el trabajo.\n`;
             return `${texto}----------------------------`;
         }
 
