@@ -1251,6 +1251,9 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             const fechaEnvio = new Date().toLocaleDateString('es-CO', { day:'2-digit', month:'2-digit', year:'numeric' });
             const texto = buildMainCommercialMessage(lastCalculation, folio, fechaEnvio);
 
+            // Bandeja del CRM: queda registrada sin pedir datos y sin demorar el envío.
+            window.WilanAgenda?.quoteInbox?.record(window.WilanCotizadorAgendaBridge?.getSingleQuoteContext?.(), folio);
+
             // Copiar al portapapeles y abrir WhatsApp
             navigator.clipboard.writeText(texto).then(() => toast(`Cotización ${folio} enviada`, 'success', 2500)).catch(err => console.error('Error al copiar', err));
             window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
@@ -1677,6 +1680,9 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 discount
             });
 
+            // Bandeja del CRM: queda registrada sin pedir datos y sin demorar el envío.
+            window.WilanAgenda?.quoteInbox?.record(window.WilanCotizadorAgendaBridge?.getQuoteContext?.(), folio);
+
             navigator.clipboard.writeText(texto).then(() => toast(`Cotización ${folio} enviada`, 'success', 2500)).catch(err => console.error('Error al copiar', err));
 
             // El folio ya se consumió: refrescar el encabezado para que, si se
@@ -1699,6 +1705,20 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
         // Puente aditivo de solo lectura para Agenda. No altera cálculos,
         // carrito, folios ni datos históricos del Cotizador.
         window.WilanCotizadorAgendaBridge = Object.freeze({
+            // Cotización individual (aunque haya carrito): para la bandeja del CRM.
+            getSingleQuoteContext: function () {
+                if (!lastCalculation) return null;
+                const total = Number(lastCalculation.precio || 0);
+                return JSON.parse(JSON.stringify({
+                    quoteId: lastCalculation.quoteId,
+                    items: [lastCalculation],
+                    subtotal: total,
+                    discount: 0,
+                    total: total,
+                    folio: '',
+                    customer: {}
+                }));
+            },
             getQuoteContext: function () {
                 const cartVisible = quoteItems.length > 0;
                 const items = cartVisible ? quoteItems : (lastCalculation ? [lastCalculation] : []);

@@ -597,6 +597,9 @@ async function viz_compartirWhatsApp() {
     const d = window.__viz_datos || {};
     if (!viz_requireCurrent(d)) return;
 
+    // Bandeja del CRM (sólo cotización principal): sin pedir datos ni demorar el envío.
+    if (d.modo === 'principal') window.WilanAgenda?.quoteInbox?.record(window.WilanCotizadorAgendaBridge?.getSingleQuoteContext?.(), d.folio);
+
     // Esperar a que el sketch asíncrono esté pintado antes de exportar el PNG
     if (window.__viz_ready) await window.__viz_ready;
 
