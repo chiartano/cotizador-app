@@ -95,7 +95,7 @@
         store.pending = store.pending.slice(-MAX_PENDING);
       }
       writeStore(store);
-      global.setTimeout?.(() => { void flush(); }, 0);
+      global.setTimeout?.(() => { void global.WilanAgenda.quoteInbox.flush(); }, 0);
       return true;
     } catch (_) {
       return false;
@@ -104,11 +104,36 @@
 
   const pendingCount = () => readStore().pending.length;
 
+  // Línea discreta al final de la pantalla, para revisar el teléfono sin adivinar.
+  const statusText = () => {
+    const version = String(A()?.quoteToCrm?.RELEASE || '').replace('cotizador-v', 'Cotizador ');
+    const pending = readStore().pending;
+    if (!pending.length) return `${version} · Cotizaciones al CRM: al día`;
+    const reason = global.navigator?.onLine === false ? 'sin internet'
+      : !allowed() ? 'falta iniciar sesión en Agenda'
+        : pending[0].lastError ? 'reintentando' : 'enviando';
+    return `${version} · ${pending.length} por enviar al CRM · ${reason}`;
+  };
+  const renderStatus = () => {
+    const doc = global.document;
+    if (!doc?.createElement || !doc.body) return;
+    let el = doc.getElementById('quote-inbox-status');
+    if (!el) {
+      el = doc.createElement('p');
+      el.id = 'quote-inbox-status';
+      el.style.cssText = 'margin:18px auto 90px;text-align:center;font-size:.75rem;color:#64748b;';
+      doc.body.appendChild(el);
+    }
+    el.textContent = statusText();
+  };
+  const flushAndRender = async () => { renderStatus(); await flush(); renderStatus(); };
+
   global.WilanAgenda = global.WilanAgenda || {};
-  global.WilanAgenda.quoteInbox = { STORAGE_KEY, SCHEMA, buildCommand, record, flush, pendingCount, readStore };
-  global.addEventListener?.('online', () => { void flush(); });
+  global.WilanAgenda.quoteInbox = { STORAGE_KEY, SCHEMA, buildCommand, record, flush: flushAndRender, pendingCount, readStore, statusText };
+  global.addEventListener?.('online', () => { void flushAndRender(); });
+  global.addEventListener?.('offline', renderStatus);
   const start = () => {
-    A()?.auth?.subscribe?.(() => { void flush(); });
+    A()?.auth?.subscribe?.(() => { void flushAndRender(); });
   };
   if (global.document?.readyState === 'loading') global.document.addEventListener('DOMContentLoaded', start, { once: true });
   else start();

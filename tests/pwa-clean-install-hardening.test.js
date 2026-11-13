@@ -73,9 +73,9 @@ async function exerciseUpdateCheck(registration) {
     assert.equal(result.warnings[0][1], error);
   });
 
-  await test('5 nueva version conserva hardening y usa shell completo v7.28', () => {
+  await test('5 nueva version conserva hardening y usa shell completo v7.29', () => {
     const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.28'/);
+    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.29'/);
     assert.match(sw, /agenda\/productSpec\.js/);
     assert.match(sw, /agenda\/quoteToCrm\.js/);
     assert.match(sw, /agenda\/intake\.js/);
@@ -106,6 +106,15 @@ async function exerciseUpdateCheck(registration) {
     assert.match(pwaBlock, /UPDATE_RELOAD_GUARD_KEY/);
     assert.match(pwaBlock, /UPDATE_CONSENT_KEY\) !== '1'/);
     assert.match(pwaBlock, /window\.location\.reload\(\)/);
+  });
+
+  await test('11 sin cotización en curso se actualiza sola; con trabajo sigue el aviso y la confirmación', () => {
+    const show = pwaBlock.slice(pwaBlock.indexOf('function showUpdateNotice'), pwaBlock.indexOf('function applyPendingUpdate'));
+    assert.match(show, /if \(!hasActiveQuoteWork\(\)\) \{\s*pendingUpdateRegistration = registration;\s*applyPendingUpdate\(\);\s*return;/);
+    assert.ok(show.indexOf('hasActiveQuoteWork()') < show.indexOf('UPDATE_DISMISSED_KEY'), 'la actualización sin trabajo no depende de «Más tarde»');
+    const apply = pwaBlock.slice(pwaBlock.indexOf('function applyPendingUpdate'), pwaBlock.indexOf("navigator.serviceWorker.addEventListener('message'"));
+    assert.match(apply, /if \(hasActiveQuoteWork\(\)\) \{\s*const accepted = confirm/);
+    assert.match(apply, /UPDATE_CONSENT_KEY, '1'/);
   });
 
   await test('10 aviso Actualizar ahora y Mas tarde permanece', () => {

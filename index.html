@@ -812,7 +812,15 @@
             }
 
             function showUpdateNotice(registration) {
-                if (!registration?.waiting || updateNoticeVisible || sessionStorage.getItem(UPDATE_DISMISSED_KEY) === '1') return;
+                if (!registration?.waiting) return;
+                // Sin cotización en curso no hay nada que perder: se actualiza sola,
+                // así las mejoras llegan sin que nadie tenga que tocar el aviso.
+                if (!hasActiveQuoteWork()) {
+                    pendingUpdateRegistration = registration;
+                    applyPendingUpdate();
+                    return;
+                }
+                if (updateNoticeVisible || sessionStorage.getItem(UPDATE_DISMISSED_KEY) === '1') return;
                 pendingUpdateRegistration = registration;
                 createUpdateNotice().style.display = 'flex';
                 updateNoticeVisible = true;
