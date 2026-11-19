@@ -472,7 +472,12 @@ test('fórmulas monetarias permanecen idénticas a 76db88e', () => {
     ['aluminio.js', 'const sysData = aluConfig.sistemas[sys];', '// ---- 11. GUARDAR Y RENDERIZAR ----']
   ];
   formulaRegions.forEach(([file, start, end]) => {
-    const normalizeSpecNeutral = value => normalizeEol(value)
+    // Los productos especiales del 2026-11-19 van en líneas propias marcadas
+    // «// especial»; sin ellas, la fórmula de los productos de siempre es idéntica.
+    const withoutSpecialLines = value => value.split('\n')
+      .filter(line => !/\/\/ especial\b/.test(line))
+      .join('\n');
+    const normalizeSpecNeutral = value => withoutSpecialLines(normalizeEol(value))
       .replace('const esEspejo = esEspejoSeleccionado;', 'const esEspejo = PRODUCT_IS_MIRROR;')
       .replace('const esEspejo = prodNombre.includes("Espejo");', 'const esEspejo = PRODUCT_IS_MIRROR;');
     assert.equal(

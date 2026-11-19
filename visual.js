@@ -55,10 +55,11 @@ function viz_factLines(d) {
     if (d.familia === 'espejo') {
         facts.push(`LED: ${d.led ? 'incluido' : 'no incluido'}`);
     } else if (d.vidrio) {
-        facts.push(`${d.familia === 'division' ? 'Espesor' : 'Vidrio'}: ${d.vidrio}`);
+        facts.push(`${d.familia === 'division' && !d.vidrioEsDescripcion ? 'Espesor' : 'Vidrio'}: ${d.vidrio}`);
     }
     if (d.color) facts.push(`Acabado: ${d.color}`);
     if (d.extras && d.extras.length) d.extras.forEach(extra => facts.push(extra.replace('✓ ', '')));
+    if (d.plazoEntrega) facts.push(`Entrega: ${d.plazoEntrega}`);
     facts.push(`Instalación: ${d.instalacion}`);
     if (d.transporteIncluido) facts.push('Transporte: incluido');
     facts.push('Garantía: 12 meses');
@@ -104,7 +105,9 @@ function viz_generarParaPrincipal() {
         cliente: cliente,
         producto: esEspejo ? 'Espejo Flotante' : r.producto,
         medidas: r.medidas,
-        vidrio: esEspejo ? '' : r.vidrio,
+        vidrio: esEspejo ? '' : (r.vidrioDescripcion || r.vidrio),
+        vidrioEsDescripcion: !!r.vidrioDescripcion,
+        plazoEntrega: r.plazoEntrega || '',
         color: esEspejo ? '' : raw.color_acc,
         sandblasting: raw.sandblasting,
         led: raw.led,

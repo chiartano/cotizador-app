@@ -70,10 +70,16 @@
             </div>
             <div class="form-group" id="group-glass-finish">
                 <label>Acabado del vidrio</label>
-                <select id="glass_finish">
+                <select id="glass_finish" onchange="verificarProducto()">
                     <option value="" selected>Selecciona el acabado</option>
                     <option value="transparent">Transparente</option>
                     <option value="sandblasted">Sandblasting / Satinado</option>
+                    <optgroup label="Especiales (12 a 15 días hábiles)">
+                        <option value="serigrafia_6mm">Serigrafía 6 mm</option>
+                        <option value="serigrafia_negra_8mm">Serigrafía negra 8 mm</option>
+                        <option value="laminado_4_4">Laminado templado 4+4</option>
+                        <option value="negro_6mm">Transparente negro 6 mm</option>
+                    </optgroup>
                 </select>
             </div>
         </div>

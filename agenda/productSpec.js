@@ -99,9 +99,18 @@
     };
   };
 
+  // Vidrios especiales del Cotizador (2026-11-19).
+  const SPECIAL_GLASS_FINISHES = Object.freeze({
+    serigrafia_6mm: 'SCREEN_PRINTED',
+    serigrafia_negra_8mm: 'SCREEN_PRINTED_BLACK',
+    laminado_4_4: 'TRANSPARENT',
+    negro_6mm: 'TINTED_BLACK',
+  });
   const mainGlassFinish = (value) => value === 'transparent'
     ? confirmed('TRANSPARENT')
-    : value === 'sandblasted' ? confirmed('SANDBLASTED') : unknown();
+    : value === 'sandblasted' ? confirmed('SANDBLASTED')
+    : SPECIAL_GLASS_FINISHES[value] ? confirmed(SPECIAL_GLASS_FINISHES[value]) : unknown();
+  const isLaminated = (value) => value === 'laminado_4_4';
 
   const buildMain = ({ metadata, productName, widthCm, secondaryWidthCm, heightCm, thickness, hardwareColor, glassFinish, hasLed, quantity = 1 }) => {
     const familyId = metadata?.familyId;
@@ -117,9 +126,9 @@
         opening: unknown(),
       },
       glass: {
-        type: isMirror ? confirmed('MIRROR') : (thicknessValue ? confirmed('TEMPERED') : unknown()),
-        thickness: isMirror ? notApplicable() : (thicknessValue ? confirmed(thicknessValue, 'mm') : unknown()),
-        composition: notApplicable(),
+        type: isMirror ? confirmed('MIRROR') : isLaminated(glassFinish) ? confirmed('LAMINATED') : (thicknessValue ? confirmed('TEMPERED') : unknown()),
+        thickness: isMirror || isLaminated(glassFinish) ? notApplicable() : (thicknessValue ? confirmed(thicknessValue, 'mm') : unknown()),
+        composition: isLaminated(glassFinish) ? confirmed('4+4') : notApplicable(),
         finish: isMirror ? notApplicable() : mainGlassFinish(glassFinish),
       },
       frame: { color: familyId === 'VEN' ? unknown() : notApplicable() },

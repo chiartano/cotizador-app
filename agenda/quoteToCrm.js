@@ -2,7 +2,7 @@
   'use strict';
 
   const A = () => global.WilanAgenda;
-  const RELEASE = 'cotizador-v7.29';
+  const RELEASE = 'cotizador-v7.30';
   const SEMANTIC_FINGERPRINT_VERSION = 'quote-semantic-fingerprint.v1';
   const COMPARISON = Object.freeze({ MATCH: 'match', CHANGED: 'changed', INSUFFICIENT: 'insufficient_evidence' });
   const STORAGE_KEY = 'wilan_quote_to_crm_v2';
@@ -90,7 +90,8 @@
       mappingStatus: item.mappingStatus,
       canonicalAttributes: clone(item.canonicalAttributes),
       ...(object(item.productSpec) ? { productSpec: clone(item.productSpec) } : {}),
-      ...(item.vidrio ? { glass: text(item.vidrio, 200) } : {}),
+      // Vidrio especial, tiras o repisa: la descripción («Serigrafía 6 mm») dice más que el espesor.
+      ...((item.vidrioDescripcion || item.vidrio) ? { glass: text(item.vidrioDescripcion || item.vidrio, 200) } : {}),
       ...(item.color ? { color: text(item.color, 200) } : {}),
       ...(item.observaciones ? { observations: text(item.observaciones, 2000) } : {}),
       addons: list([item.raw.desmonte ? 'Desmonte' : '', item.raw.acarreo ? 'Acarreo' : '']),
