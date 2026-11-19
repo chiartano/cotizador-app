@@ -46,7 +46,7 @@ test('1 precios de costo de Andrés en Configuración', () => {
   assert.equal(cfg.acc_bisagra_muro, 35000);
   assert.equal(cfg.acc_bisagra_vidrio_vidrio, 70000);
   assert.equal(cfg.acc_boton, 15000);
-  assert.equal(cfg.acc_tubo_terminales_carro, 100000);
+  assert.equal(cfg.acc_tubo_terminales_carro, 120000);
   assert.equal(cfg.acc_perfil_u_6m, 20000);
   assert.equal(cfg.precio_repisa_6mm, 60000);
 });
@@ -60,10 +60,10 @@ test('2 los 4 productos nuevos aparecen en la lista y los viejos siguen', () => 
   assert.equal(defaults.productos['División Corrediza Clásica'], 120000);
 });
 
-test('3 kit de la plegable de 2 hojas: natural 340.000, negro 390.000', () => {
-  assert.equal(helpers.costoKitPlegable(cfg, 'natural'), 340000);
-  assert.equal(helpers.costoKitPlegable(cfg, 'negro'), 390000);
-  assert.equal(helpers.costoKitPlegable(cfg, 'dorado'), 340000 + cfg.extra_color_dorado);
+test('3 kit de la plegable de 2 hojas: natural 360.000, negro 410.000 (tubo y carro 120.000 / 140.000)', () => {
+  assert.equal(helpers.costoKitPlegable(cfg, 'natural'), 360000);
+  assert.equal(helpers.costoKitPlegable(cfg, 'negro'), 410000);
+  assert.equal(helpers.costoKitPlegable(cfg, 'dorado'), 360000 + cfg.extra_color_dorado);
 });
 
 test('4 perfil U del panel fijo en tiras de 6 m (2 x ancho + alto)', () => {
@@ -147,8 +147,8 @@ const precio = (costoDirecto, est = cfg.est_controlada) => (costoDirecto + est) 
 test('8 ejemplos del cliente del 2026-11-19 (los mismos que se verifican en el navegador)', () => {
   const otros = cfg.instalacion_base + cfg.transporte + cfg.insumos;
   // Plegable negra 109,5 x 193 en 8 mm transparente
-  const plegable = precio(1.095 * 1.93 * cfg.precio_vidrio_8mm * cfg.colchon_vidrio + 390000 + otros);
-  assert.equal(Math.round(plegable), 1166819);
+  const plegable = precio(1.095 * 1.93 * cfg.precio_vidrio_8mm * cfg.colchon_vidrio + 410000 + otros);
+  assert.equal(Math.round(plegable), 1191524);
   // Panel fijo 50 x 215 en serigrafía 6 mm
   const panel = precio(0.5 * 2.15 * cfg.precio_vidrio_serigrafia_6mm * cfg.colchon_vidrio + 20000 + otros);
   assert.equal(Math.round(panel), 688290);

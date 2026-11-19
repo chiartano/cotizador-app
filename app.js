@@ -94,7 +94,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 acc_bisagra_muro: 35000.0,
                 acc_bisagra_vidrio_vidrio: 70000.0,
                 acc_boton: 15000.0,
-                acc_tubo_terminales_carro: 100000.0, // tubo superior, 2 terminales y carro guía
+                acc_tubo_terminales_carro: 120000.0, // tubo superior, 2 terminales y carro guía (negro: 140.000)
                 acc_extra_negro_pieza: 5000.0, // recargo negro por pieza pequeña
                 acc_extra_negro_tubo_carro: 20000.0, // recargo negro del tubo y el carro
                 acc_perfil_u_6m: 20000.0, // tira de perfil U de 6 m
