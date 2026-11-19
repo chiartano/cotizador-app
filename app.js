@@ -100,7 +100,12 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 acc_perfil_u_6m: 20000.0, // tira de perfil U de 6 m
                 // Adicionales que van en la misma visita
                 instalacion_adicional: 0, // mano de obra extra por tira; hoy cada tira paga sus insumos ($15.000)
-                precio_repisa_6mm: 60000.0 // precio al cliente, IVA incluido
+                precio_repisa_6mm: 60000.0, // precio al cliente, IVA incluido
+                // Margen propio sobre la venta sin IVA (Andrés, 2026-11-19):
+                // precio = costo total x (1 + IVA) / (1 - margen)
+                margen_plegable: 0.15,
+                margen_panel_fijo: 0.20,
+                margen_tiras: 0.30
             },
             productos: {
                 "División Batiente (Tradicional)": 135000.0,
@@ -742,8 +747,8 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             ['precio_vidrio_serigrafia_6mm', 'precio_vidrio_serigrafia_negra_8mm', 'precio_vidrio_laminado_4_4', 'precio_vidrio_negro_6mm', 'precio_vidrio_5mm'].forEach(k => addInputConfig(tEspc, k, currentConfig.globales[k], 'globales'));
             addHeader(tEspc, "Accesorios (costo por unidad, natural)");
             ['acc_bisagra_muro', 'acc_bisagra_vidrio_vidrio', 'acc_boton', 'acc_tubo_terminales_carro', 'acc_extra_negro_pieza', 'acc_extra_negro_tubo_carro', 'acc_perfil_u_6m'].forEach(k => addInputConfig(tEspc, k, currentConfig.globales[k], 'globales'));
-            addHeader(tEspc, "Adicionales (misma visita)");
-            ['instalacion_adicional', 'precio_repisa_6mm'].forEach(k => addInputConfig(tEspc, k, currentConfig.globales[k], 'globales'));
+            addHeader(tEspc, "Adicionales y márgenes propios");
+            ['instalacion_adicional', 'precio_repisa_6mm', 'margen_plegable', 'margen_panel_fijo', 'margen_tiras'].forEach(k => addInputConfig(tEspc, k, currentConfig.globales[k], 'globales'));
         }
 
         function addHeader(parent, text) {
@@ -1124,6 +1129,9 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             let precioFinal = esPromoCorredizaEconomica ? precioPromoCorredizaEconomica : precioBase * AJUSTE_COMERCIAL;
             // especial: repisa con precio fijo al cliente, IVA incluido (Configuración → Especiales)
             if (esRepisa) precioFinal = cfg.precio_repisa_6mm; // especial
+            // especial: plegable, panel y tiras con margen propio sobre la venta sin IVA
+            const margenEspecial = esPlegable ? cfg.margen_plegable : esPanelFijo ? cfg.margen_panel_fijo : esTiras ? cfg.margen_tiras : null; // especial
+            if (margenEspecial !== null) precioFinal = totalCostos * (1 + cfg.iva) / (1 - margenEspecial); // especial
 
             // Aumento general del 5% sobre el precio final (IVA incluido)
             // Ajuste comercial aplicado arriba; no se suma IVA nuevamente al cliente.

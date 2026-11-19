@@ -141,18 +141,24 @@ test('10 el presupuesto con varios productos describe cada uno; la repisa sin me
   assert.equal((texto.match(/Transporte: incluido/g) || []).length, 2); // tiras y repisa van en la misma visita
 });
 
-// Fórmula del Cotizador, línea controlada: (costos + estructura) / (1 - 15 %) x 1,05.
-const precio = (costoDirecto, est = cfg.est_controlada) => (costoDirecto + est) / (1 - cfg.util_controlada) * 1.05;
+// Plegable, panel y tiras (Andrés, 2026-11-19): margen propio sobre la venta sin IVA.
+// precio = (costos + estructura) x 1,19 / (1 - margen). La línea controlada pone estructura 100.000.
+const precio = (costoDirecto, margen, est = cfg.est_controlada) => (costoDirecto + est) * (1 + cfg.iva) / (1 - margen);
 
 test('8 ejemplos del cliente del 2026-11-19 (los mismos que se verifican en el navegador)', () => {
   const otros = cfg.instalacion_base + cfg.transporte + cfg.insumos;
   // Plegable negra 109,5 x 193 en 8 mm transparente
-  const plegable = precio(1.095 * 1.93 * cfg.precio_vidrio_8mm * cfg.colchon_vidrio + 410000 + otros);
-  assert.equal(Math.round(plegable), 1191524);
-  // Panel fijo 50 x 215 en serigrafía 6 mm
-  const panel = precio(0.5 * 2.15 * cfg.precio_vidrio_serigrafia_6mm * cfg.colchon_vidrio + 20000 + otros);
-  assert.equal(Math.round(panel), 688290);
-  // Tira 10 x 260: vidrio + insumos, sin transporte ni estructura
-  const tira = precio(0.1 * 2.6 * cfg.precio_vidrio_5mm * cfg.colchon_vidrio + cfg.insumos + cfg.instalacion_adicional, 0);
-  assert.equal(Math.round(tira), 45508);
+  // Plegable negra 109,5 x 193 en transparente negro 6 mm, margen 15 %
+  const plegable = precio(1.095 * 1.93 * cfg.precio_vidrio_negro_6mm * cfg.colchon_vidrio + 410000 + otros, cfg.margen_plegable);
+  assert.equal(Math.round(plegable), 1459126);
+  // Panel fijo 50 x 215 en serigrafía negra 8 mm, margen 20 %
+  const panel = precio(0.5 * 2.15 * cfg.precio_vidrio_serigrafia_negra_8mm * cfg.colchon_vidrio + 20000 + otros, cfg.margen_panel_fijo);
+  assert.equal(Math.round(panel), 929557); // con el costo redondeado a $624.913 da $929.558
+  // Tira 10 x 260: vidrio + insumos, sin transporte ni estructura, margen 30 %
+  const tira = precio(0.1 * 2.6 * cfg.precio_vidrio_5mm * cfg.colchon_vidrio + cfg.insumos + cfg.instalacion_adicional, cfg.margen_tiras, 0);
+  assert.equal(Math.round(tira), 62628);
+  assert.equal(Math.round(tira * 4), 250512);
+  assert.equal(cfg.margen_plegable, 0.15);
+  assert.equal(cfg.margen_panel_fijo, 0.20);
+  assert.equal(cfg.margen_tiras, 0.30);
 });
