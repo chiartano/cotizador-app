@@ -110,7 +110,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             productos: {
                 "División Batiente (Tradicional)": 135000.0,
                 "División Corrediza Clásica": 120000.0,
-                "División Corrediza Premium": 220000.0,
+                "División Corrediza Premium": 280000.0, // Andrés, 2026-11-19 y 2026-11-21 (antes 220.000)
                 "División de baño L - Corrediza": 235000.0,
                 "División de baño L - Batiente": 335000.0,
                 // Los 4 siguientes calculan su kit con los accesorios de Configuración → Especiales.
@@ -122,6 +122,78 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 "Repisa de vidrio 6 mm (hasta 30 cm)": 0
             }
         };
+
+        // Kit premium: valor de la app para todos los teléfonos (B2, 2026-11-21).
+        // Cada teléfono guarda su configuración en `vidrios_config`; esto decide
+        // qué pasa con el valor que ya tiene guardado. Corre una sola vez: la
+        // marca `KIT_PREMIUM.marca` queda puesta cuando el teléfono ya está al día
+        // o cuando alguien revisó Configuración y tocó Guardar.
+        const KIT_PREMIUM = {
+            producto: "División Corrediza Premium",
+            viejo: 220000,
+            nuevo: 280000,
+            marca: 'wilan_kit_premium_280000'
+        };
+        function migrarKitPremium(config, storage) {
+            const leer = (k) => { try { return storage.getItem(k); } catch (_) { return null; } };
+            const escribir = (k, v) => { try { storage.setItem(k, v); } catch (_) { /* sin espacio: se reintenta al abrir */ } };
+            if (!config || !config.productos || leer(KIT_PREMIUM.marca)) return null;
+            const actual = config.productos[KIT_PREMIUM.producto];
+            if (actual === undefined || actual === KIT_PREMIUM.nuevo) {
+                escribir(KIT_PREMIUM.marca, 'al-dia');
+                return null;
+            }
+            if (actual === KIT_PREMIUM.viejo) {
+                config.productos[KIT_PREMIUM.producto] = KIT_PREMIUM.nuevo;
+                try {
+                    const guardado = JSON.parse(leer('vidrios_config') || 'null');
+                    if (guardado && guardado.productos) {
+                        guardado.productos[KIT_PREMIUM.producto] = KIT_PREMIUM.nuevo;
+                        escribir('vidrios_config', JSON.stringify(guardado));
+                    }
+                } catch (_) { /* configuración ilegible: el valor nuevo vale en memoria */ }
+                escribir(KIT_PREMIUM.marca, 'actualizado');
+                return { tipo: 'actualizado' };
+            }
+            // Otro valor puesto a mano: no se pisa. Se avisa hasta que alguien
+            // revise Configuración y toque Guardar.
+            return { tipo: 'distinto', valor: actual };
+        }
+        function textoAvisoKitPremium(aviso) {
+            if (!aviso || aviso.tipo !== 'distinto') return '';
+            return `Kit de la corrediza premium: este teléfono tiene ${fmtMoney(aviso.valor)} puesto a mano. `
+                + `El valor nuevo de la app es ${fmtMoney(KIT_PREMIUM.nuevo)}. `
+                + `Revísalo en Configuración → Divisiones y toca Guardar.`;
+        }
+
+        // Mínimo por salida de instalación (regla del 2026-11-11). Andrés, 2026-11-21:
+        // por ahora solo avisa; el precio no cambia. El aviso lo ve quien cotiza
+        // en la pantalla; no va en el mensaje, el presupuesto ni la imagen.
+        const MINIMO_SALIDA = 350000;
+        // Tiras y repisa van en la visita de otro trabajo: solas no son una salida.
+        function esAdicionalDeVisita(item) {
+            return !!item && (item.producto === PRODUCTOS_ESPECIALES.TIRAS || item.producto === PRODUCTOS_ESPECIALES.REPISA);
+        }
+        function textoAvisoMinimoSalida(items, total) {
+            const lista = (items || []).filter(Boolean);
+            if (!lista.length || lista.every(esAdicionalDeVisita)) return '';
+            if (!(Number(total) < MINIMO_SALIDA)) return '';
+            return `⚠️ Esta salida suma ${fmtMoney(Number(total) || 0)}, menos que el mínimo de ${fmtMoney(MINIMO_SALIDA)} por salida de instalación. `
+                + `El precio no cambia: decide tú si lo subes. El cliente no ve este aviso.`;
+        }
+        function pintarAvisoMinimoSalida(el, texto) {
+            if (!el) return;
+            el.innerText = texto;
+            el.style.display = texto ? 'block' : 'none';
+        }
+        function actualizarAvisoMinimoPrincipal() {
+            // Con carrito, la salida es el carrito completo: el aviso va allá.
+            const cantidad = parseInt(document.getElementById('cantidad-item')?.value, 10) || 1;
+            const texto = (lastCalculation && quoteItems.length === 0)
+                ? textoAvisoMinimoSalida([lastCalculation], lastCalculation.precio * cantidad)
+                : '';
+            pintarAvisoMinimoSalida(document.getElementById('aviso-minimo-main'), texto);
+        }
 
         // Productos nuevos del 2026-11-19 (Andrés). Su precio no usa el valor de
         // `productos`: el kit sale de los accesorios y el vidrio de su tipo.
@@ -144,7 +216,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
         const PLAZO_VIDRIO_ESPECIAL = '12 a 15 días hábiles después del anticipo';
 
         // Kit de la plegable de 2 hojas: 2 bisagras a muro, 2 vidrio a vidrio,
-        // 2 botones y el juego de tubo, terminales y carro. Negro: +5.000 por
+        // 2 botones haladera y el juego de tubo, terminales y carro. Negro: +5.000 por
         // pieza pequeña (6) y +20.000 el tubo y el carro.
         function costoKitPlegable(cfg, color) {
             let total = 2 * cfg.acc_bisagra_muro + 2 * cfg.acc_bisagra_vidrio_vidrio
@@ -621,6 +693,11 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             currentConfig.globales.instalacion_base = 70000;
         }
 
+        // B2 (2026-11-21): el kit premium pasa a $280.000 en todos los teléfonos.
+        // Si el teléfono guardó $220.000 (el valor viejo de la app), pasa solo.
+        // Si alguien puso otro valor a mano, no se pisa: se avisa.
+        const avisoKitPremium = migrarKitPremium(currentConfig, localStorage);
+
         // Sincronizar y REORDENAR productos según DEFAULT_CONFIG
         // Esto asegura que Económica y Premium queden en la posición correcta (2da y 3ra)
         const newProductosOrder = {};
@@ -658,10 +735,22 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             renderHistorial();
             verificarProducto();
 
+            if (avisoKitPremium && avisoKitPremium.tipo === 'distinto') {
+                setTimeout(() => {
+                    toast(textoAvisoKitPremium(avisoKitPremium), 'warn', 9000);
+                    // Texto largo: que no se desvanezca a los 2,5 s como los demás.
+                    const ultimo = document.getElementById('toast-container')?.lastElementChild;
+                    if (ultimo && ultimo.style) ultimo.style.animation = 'toastIn 0.25s ease-out, toastOut 0.3s ease-in 8.5s forwards';
+                }, 1200);
+            } else if (avisoKitPremium && avisoKitPremium.tipo === 'actualizado') {
+                setTimeout(() => toast(`Kit de la corrediza premium actualizado a ${fmtMoney(KIT_PREMIUM.nuevo)}`, 'info', 4000), 1200);
+            }
+
             // Restaurar UI del cliente y renderizar carrito guardado
             restaurarClienteEnUI();
             renderLibretaSelect();
             if (quoteItems.length > 0) renderQuote();
+            document.getElementById('cantidad-item')?.addEventListener('input', actualizarAvisoMinimoPrincipal);
         }
 
         function verificarProducto() {
@@ -728,6 +817,14 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             // --- TAB 2: DIVISIONES ---
             const tDiv = document.getElementById('tab-divisiones');
             addHeader(tDiv, "Precios Base Productos");
+            const avisoPremium = textoAvisoKitPremium(avisoKitPremium);
+            if (avisoPremium) {
+                const nota = document.createElement('div');
+                nota.id = 'aviso-kit-premium';
+                nota.style.cssText = 'margin:8px 0;padding:10px;border-radius:8px;background:#fff7ed;color:#9a3412;font-size:0.85rem;font-weight:600;';
+                nota.innerText = avisoPremium;
+                tDiv.appendChild(nota);
+            }
             Object.keys(currentConfig.productos).filter(isDivision).forEach(k => addInputConfig(tDiv, k, currentConfig.productos[k], 'productos'));
 
             addHeader(tDiv, "Extras y Acabados");
@@ -764,8 +861,10 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             group.className = 'form-group';
 
             let label = document.createElement('label');
-            // Limpiar nombres de variables para que se vean bonitos
-            label.innerText = key.replace(/_/g, ' ').toUpperCase();
+            // Limpiar nombres de variables para que se vean bonitos.
+            // El agarre se llama «botón haladera» en todos lados (Andrés, 2026-11-20).
+            const ETIQUETAS_CONFIG = { acc_boton: 'ACC BOTÓN HALADERA' };
+            label.innerText = ETIQUETAS_CONFIG[key] || key.replace(/_/g, ' ').toUpperCase();
 
             let inp = document.createElement('input');
             inp.type = 'number';
@@ -1276,6 +1375,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                     ? `<b>${productSpecSummary.critical || 'Especificación pendiente'}</b>${productSpecSummary.secondary ? `<div>${productSpecSummary.secondary}</div>` : ''}${productSpecSummary.status !== 'complete' ? `<div style="color:#b45309;font-weight:700;">⚠️ ${productSpecSummary.missing.length ? `Falta definir ${productSpecSummary.missing.join(', ')}` : 'Requiere revisión canónica manual'}</div>` : ''}`
                     : '';
             }
+            actualizarAvisoMinimoPrincipal();
 
             // IQ v5.0: análisis inteligente post-cálculo (no rompe nada si iq.js no carga)
             if (typeof iq_analizarPrincipal === 'function') iq_analizarPrincipal();
@@ -1530,6 +1630,8 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             }
 
             localStorage.setItem('vidrios_config', JSON.stringify(currentConfig));
+            // Guardar = alguien revisó los valores: el aviso del kit premium ya no sale.
+            try { localStorage.setItem(KIT_PREMIUM.marca, 'revisado'); } catch (_) { /* no bloquea */ }
             toast('Configuración guardada', 'success');
             cerrarConfig();
             document.getElementById('lbl-desmonte-val').innerText = fmtMoney(currentConfig.globales.desmonte);
@@ -1609,6 +1711,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             if (quoteItems.length === 0) {
                 container.style.display = 'none';
                 document.getElementById('quote-discount').value = '';
+                actualizarAvisoMinimoPrincipal();
                 return;
             }
 
@@ -1677,6 +1780,8 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             let discount = parseFloat(document.getElementById('quote-discount').value) || 0;
             let final = total - discount;
             document.getElementById('quote-total').innerText = fmtMoney(final);
+            pintarAvisoMinimoSalida(document.getElementById('aviso-minimo-cart'), textoAvisoMinimoSalida(quoteItems, final));
+            actualizarAvisoMinimoPrincipal();
         }
 
         // borrarItem(index)            → borrado del usuario, muestra "Deshacer" 5s

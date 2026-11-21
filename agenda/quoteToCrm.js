@@ -2,7 +2,7 @@
   'use strict';
 
   const A = () => global.WilanAgenda;
-  const RELEASE = 'cotizador-v7.31';
+  const RELEASE = 'cotizador-v7.32';
   const SEMANTIC_FINGERPRINT_VERSION = 'quote-semantic-fingerprint.v1';
   const COMPARISON = Object.freeze({ MATCH: 'match', CHANGED: 'changed', INSUFFICIENT: 'insufficient_evidence' });
   const STORAGE_KEY = 'wilan_quote_to_crm_v2';
@@ -238,71 +238,10 @@
     }
   };
 
-  const ui = { lock: false, revision: 0 };
-  const context = () => global.WilanCotizadorAgendaBridge?.getQuoteContext?.();
-  const stateCopy = (record) => {
-    if (!record) return '';
-    if (record.status === 'sent') return record.receipt?.status === 'review_required'
-      ? 'Recibida; el Operator debe revisar clientes duplicados.' : 'Enviada al CRM.';
-    if (record.status === 'sending') return 'Enviando…';
-    if (record.status === 'unknown') return 'Sin confirmación; reintenta el mismo envío.';
-    return 'Pendiente de enviar.';
-  };
-  const refresh = async () => {
-    const revision = ++ui.revision;
-    const button = global.document?.querySelector?.('[data-quote-crm-action="send"]');
-    const message = global.document?.querySelector?.('#quote-crm-status');
-    const quote = context();
-    if (!button) return;
-    const eligible = isQuoteBridgeEligible(quote);
-    const record = quote?.quoteId ? get(quote.quoteId) : null;
-    let comparison = record ? COMPARISON.INSUFFICIENT : null;
-    if (eligible && record) {
-      comparison = await compareCurrent(quote, record);
-    }
-    if (revision !== ui.revision) return;
-    const changed = comparison === COMPARISON.CHANGED;
-    const insufficient = comparison === COMPARISON.INSUFFICIENT;
-    const coordinated = coordinationAvailable();
-    button.hidden = !quote || !A().config.quoteBridgeEnabled;
-    button.disabled = ui.lock || !eligible || !coordinated || insufficient || record?.status === 'sending' || (record?.status === 'sent' && !changed);
-    button.textContent = !eligible ? 'No disponible para CRM'
-      : !coordinated ? 'Reenvío no disponible en este navegador'
-        : insufficient ? 'Revisión manual necesaria'
-      : record?.status === 'sent' && !changed ? 'Ya enviado al CRM'
-        : changed && ['pending', 'unknown'].includes(record?.status) ? 'Reintentar envío anterior'
-          : changed ? 'Enviar cambios al CRM'
-            : record?.status === 'unknown' ? 'Reintentar envío al CRM' : 'Enviar al CRM';
-    if (message) message.textContent = !eligible
-      ? 'Esta cotización antigua no contiene toda la información necesaria para enviarla al CRM.'
-      : !coordinated ? 'Este navegador no permite preparar el envío de forma segura. Abre el cotizador en Chrome actualizado.'
-        : insufficient ? 'No puedo confirmar automáticamente si esta cotización cambió. Revísala antes de volver a enviarla.'
-      : changed && ['pending', 'unknown'].includes(record?.status)
-        ? 'La cotización cambió; primero se reintentará la intención anterior congelada.'
-        : changed ? 'La cotización cambió. Envía los cambios para crear una intención nueva.' : stateCopy(record);
-    A().intake?.refresh?.();
-  };
-  const initializeUi = () => {
-    const action = global.document?.querySelector?.('#agenda-quote-action');
-    if (!action || action.querySelector('[data-quote-crm-action="send"]')) return;
-    const button = global.document.createElement('button');
-    button.type = 'button'; button.dataset.quoteCrmAction = 'send'; button.className = 'quote-crm-button'; button.textContent = 'Enviar al CRM';
-    const message = global.document.createElement('span'); message.id = 'quote-crm-status'; message.className = 'quote-crm-status';
-    action.append(button, message);
-    button.addEventListener('click', async () => {
-      if (ui.lock) return;
-      ui.lock = true; await refresh();
-      const result = await send(context());
-      ui.lock = false; await refresh();
-      if (!result.ok && message) message.textContent = result.error.message;
-    });
-    global.addEventListener('wilan:quote-ready', () => { void refresh(); });
-    global.addEventListener('online', () => { void refresh(); });
-    void refresh();
-  };
+  // B2 (2026-11-21): se quitó el botón para mandar al CRM a mano. La bandeja del CRM
+  // recibe cada cotización con el botón de WhatsApp (quoteInbox.js), que usa
+  // buildPayload de este módulo. send() queda solo para los envíos viejos.
 
   global.WilanAgenda = global.WilanAgenda || {};
-  global.WilanAgenda.quoteToCrm = { STORAGE_KEY, RELEASE, SEMANTIC_FINGERPRINT_VERSION, COMPARISON, rawAttributes, isQuoteBridgeEligible, itemFrom, buildPayload, buildQuoteSemanticIdentity, hashesFor, compareCurrent, matchesCurrent, coordinationAvailable, prepare, send, get, save, refresh, initializeUi };
-  if (global.document?.readyState === 'loading') global.document.addEventListener('DOMContentLoaded', initializeUi, { once: true });
-  else if (global.document) initializeUi();
+  global.WilanAgenda.quoteToCrm = { STORAGE_KEY, RELEASE, SEMANTIC_FINGERPRINT_VERSION, COMPARISON, rawAttributes, isQuoteBridgeEligible, itemFrom, buildPayload, buildQuoteSemanticIdentity, hashesFor, compareCurrent, matchesCurrent, coordinationAvailable, prepare, send, get, save };
 })(window);

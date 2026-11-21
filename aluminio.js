@@ -1063,6 +1063,21 @@
                 ? `<b>${specSummary.critical || 'Especificación pendiente'}</b>${specSummary.secondary ? `<div>${specSummary.secondary}</div>` : ''}${specSummary.status !== 'complete' ? `<div style="color:#b45309;font-weight:700;">⚠️ ${specSummary.missing.length ? `Falta definir ${specSummary.missing.join(', ')}` : 'Requiere revisión canónica manual'}</div>` : ''}`
                 : '';
 
+            // B2: aviso del mínimo por salida (solo en pantalla, no va al cliente).
+            // Con carrito, el aviso va en el carrito, que es la salida completa.
+            if (typeof textoAvisoMinimoSalida === 'function') {
+                let avisoMin = document.getElementById('aviso-minimo-alu');
+                if (!avisoMin) {
+                    avisoMin = document.createElement('div');
+                    avisoMin.id = 'aviso-minimo-alu';
+                    avisoMin.style.cssText = 'display:none;margin:12px 0;padding:10px 12px;border-radius:10px;background:#fffbeb;border:1px solid #f59e0b;color:#92400e;font-size:0.85rem;font-weight:600;';
+                    document.getElementById('alu-result').prepend(avisoMin);
+                }
+                const aluQty = r.shareInputSnapshot?.cantidad || 1;
+                const conCarrito = typeof quoteItems !== 'undefined' && quoteItems.length > 0;
+                pintarAvisoMinimoSalida(avisoMin, conCarrito ? '' : textoAvisoMinimoSalida([r], r.precioFinal * aluQty));
+            }
+
             // Badges
             const bM = document.getElementById('alu-badge-merma');
             if (r.mermaAltaUsada) { bM.className = 'alu-badge warn'; bM.innerText = 'Merma alta (piezas pequeñas)'; }
