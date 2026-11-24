@@ -50,14 +50,14 @@ const inbox = context.WilanAgenda.quoteInbox;
 const pending = () => inbox.readStore().pending;
 
 (async () => {
-  assert.equal(inbox.statusText(), 'Cotizador 7.33 · Cotizaciones al CRM: al día');
+  assert.equal(inbox.statusText(), 'Cotizador 7.34 · Cotizaciones al CRM: al día');
 
   // Sin sesión: queda en cola, sin llamadas, y la línea de estado lo dice.
   assert.equal(inbox.record(quote(), 'F-042'), true);
   await inbox.flush();
   assert.equal(calls.length, 0);
   assert.equal(pending().length, 1);
-  assert.equal(inbox.statusText(), 'Cotizador 7.33 · 1 por enviar al CRM · falta iniciar sesión en Agenda');
+  assert.equal(inbox.statusText(), 'Cotizador 7.34 · 1 por enviar al CRM · falta iniciar sesión en Agenda');
   const command = pending()[0].command;
   assert.equal(command.schema, 'quote-inbox-command.v1');
   assert.deepEqual(JSON.parse(JSON.stringify(command.payload.customer)), {});
@@ -71,7 +71,7 @@ const pending = () => inbox.readStore().pending;
   window.navigator.onLine = false;
   await inbox.flush();
   assert.equal(calls.length, 0);
-  assert.equal(inbox.statusText(), 'Cotizador 7.33 · 1 por enviar al CRM · sin internet');
+  assert.equal(inbox.statusText(), 'Cotizador 7.34 · 1 por enviar al CRM · sin internet');
 
   // Error de red: se conserva para reintentar.
   window.navigator.onLine = true;
@@ -80,7 +80,7 @@ const pending = () => inbox.readStore().pending;
   assert.equal(calls.length, 1);
   assert.equal(pending().length, 1);
   assert.equal(pending()[0].attempts, 1);
-  assert.equal(inbox.statusText(), 'Cotizador 7.33 · 1 por enviar al CRM · reintentando');
+  assert.equal(inbox.statusText(), 'Cotizador 7.34 · 1 por enviar al CRM · reintentando');
 
   // Al volver la red se manda una sola vez y sale de la cola.
   callImpl = async () => ({ status: 'received' });

@@ -410,15 +410,39 @@ test('protección de resultado anterior compara todos los inputs relevantes', ()
   const snapshotFns = functionsFrom(
     'app.js',
     ['main_getShareInputSnapshot', 'main_isShareSnapshotCurrent'],
-    `const document = {getElementById(id) { return globalThis.values[id]; }};`
+    `const document = {getElementById(id) { return globalThis.values[id]; }};
+     const PRODUCTO_REEMPLAZO = 'Vidrio de reemplazo para división';
+     const PRODUCTO_L_PREMIUM = 'División de baño L - Corrediza premium';
+     const leerPiezasReemplazo = () => ({ ...globalThis.piezas });`
   );
+  globalThis.piezas = {};
   globalThis.values = {
     producto:{value:'División Batiente (Tradicional)'}, ancho:{value:'80'}, ancho2:{value:''},
     alto:{value:'190'}, espesor:{value:'8mm'}, color_acc:{value:'natural'}, glass_finish:{value:'transparent'},
     'check-espejo-led':{checked:false}, 'cantidad-item':{value:'1'},
-    descuento_adicional:{value:''}, recargo_transporte:{value:''}
+    descuento_adicional:{value:''}, recargo_transporte:{value:''},
+    // B8 (2026-11-24): neoangular, espejo con otro trabajo y vidrio de reemplazo
+    ancho3:{value:''}, 'check-espejo-otro':{checked:false},
+    reemplazo_pieza:{value:'puerta'}, reemplazo_origen:{value:'otra'}
   };
   const result = {shareInputSnapshot:snapshotFns.main_getShareInputSnapshot()};
+  assert.equal(snapshotFns.main_isShareSnapshotCurrent(result), true);
+  globalThis.values.ancho3.value = '40';
+  assert.equal(snapshotFns.main_isShareSnapshotCurrent(result), false);
+  globalThis.values.ancho3.value = '';
+  globalThis.values['check-espejo-otro'].checked = true;
+  assert.equal(snapshotFns.main_isShareSnapshotCurrent(result), false);
+  globalThis.values['check-espejo-otro'].checked = false;
+  // Con el vidrio de reemplazo, cambiar una pieza también cuenta.
+  globalThis.values.producto.value = 'Vidrio de reemplazo para división';
+  const conReemplazo = {shareInputSnapshot:snapshotFns.main_getShareInputSnapshot()};
+  globalThis.piezas = { bisagra: 2 };
+  assert.equal(snapshotFns.main_isShareSnapshotCurrent(conReemplazo), false);
+  globalThis.piezas = {};
+  globalThis.values.reemplazo_pieza.value = 'fijo';
+  assert.equal(snapshotFns.main_isShareSnapshotCurrent(conReemplazo), false);
+  globalThis.values.reemplazo_pieza.value = 'puerta';
+  globalThis.values.producto.value = 'División Batiente (Tradicional)';
   assert.equal(snapshotFns.main_isShareSnapshotCurrent(result), true);
   globalThis.values.producto.value = 'Espejo Flotante';
   assert.equal(snapshotFns.main_isShareSnapshotCurrent(result), false);

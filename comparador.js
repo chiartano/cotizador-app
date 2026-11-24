@@ -153,6 +153,7 @@ function cmp_calcularPrincipal(productoAlt) {
     const esLEspecial = productoAlt.includes("División de baño L -");
     let anchoCalculo = ancho;
     if (esLEspecial) anchoCalculo += ancho2;
+    if (productoAlt === 'División neoangular') anchoCalculo += ancho2 + (s.ancho3 || 0) / 100; // ficha D11
     const area = anchoCalculo * alto;
     const esEspejo = productoAlt.includes("Espejo");
 
@@ -199,6 +200,7 @@ function cmp_calcularPrincipal(productoAlt) {
         // Producto no existe en la config — devolvemos un placeholder
         return { error: true, mensaje: 'Producto no disponible' };
     }
+    if (['Vidrio de reemplazo para división', 'División de baño L - Corrediza premium', 'Instalación sola de división (accesorios del cliente)'].includes(productoAlt)) return { error: true, mensaje: 'Producto no disponible' }; // ficha M1, D13 y S3: no se comparan
     if (typeof kitSegunFicha === 'function') baseAcc = kitSegunFicha(cfg, productoAlt, baseAcc, espesor, s.ancho); // ficha
     let extraColor = 0;
     if (colorAcc === 'negro') extraColor = cfg.extra_color_negro;
@@ -231,6 +233,8 @@ function cmp_calcularPrincipal(productoAlt) {
     let costoTransporte = (esEspejo ? cfg.transporte_espejo : cfg.transporte) + recargoTransporte;
     let costoInsumos = cfg.insumos;
     let costoDesmonte = tieneDesmonte ? cfg.desmonte : 0;
+    if (productoAlt === 'División neoangular') costoInstalacion = cfg.instalacion_L; // ficha D11
+    if (esEspejo && s.espejo_con_otro_trabajo) costoTransporte = recargoTransporte; // ficha E1
 
     // ---- Estructura y utilidad ----
     let est, utilPorcentaje;
@@ -244,7 +248,8 @@ function cmp_calcularPrincipal(productoAlt) {
         est = cfg.est_empresa;
         utilPorcentaje = cfg.util_empresa;
     }
-    if (typeof estructuraSegunFicha === 'function') est = estructuraSegunFicha(cfg, productoAlt, linea, est); // ficha
+    if (typeof estructuraSegunFicha === 'function') est = estructuraSegunFicha(cfg, productoAlt, linea, est, ancho); // ficha
+    if (esEspejo && s.espejo_con_otro_trabajo) est = cfg.est_espejo_con_otro_trabajo; // ficha E1
 
     const costoDirecto = costoVidrioTotal + costoAcc + costoLed + costoAluminio
                        + costoInstalacion + costoTransporte + costoInsumos + costoDesmonte;

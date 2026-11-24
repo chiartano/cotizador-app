@@ -102,6 +102,28 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 acc_extra_negro_pieza: 5000.0, // recargo negro por pieza pequeña
                 acc_extra_negro_tubo_carro: 20000.0, // recargo negro del tubo y el carro
                 acc_perfil_u_6m: 20000.0, // tira de perfil U de 6 m
+                // Piezas sueltas para el vidrio de reemplazo (AP2, 2026-11-23), costo en natural
+                acc_mariposa: 25000.0,
+                acc_manija_vertical: 40000.0, // de 2 perforaciones
+                acc_deslizantes_par: 50000.0,
+                acc_deslizantes_par_superior: 85000.0, // de mejor calidad
+                acc_medias_lunas_par: 15000.0,
+                acc_terminales_freno_par: 15000.0, // par de terminales con su freno
+                acc_tubo_m: 15000.0, // tubo superior, por metro
+                acc_riel_m: 15000.0, // riel inferior, por metro
+                acc_guia: 10000.0, // guía inferior acrílica
+                acc_burbuja: 10000.0, // de 2 m
+                acc_barredor: 10000.0, // de 2 m
+                acc_boquete: 15000.0,
+                acc_l_fija: 30000.0,
+                // Recargo por pieza suelta en dorado u oro rosa (Andrés, 2026-11-24); en negro, acc_extra_negro_pieza
+                acc_extra_dorado_pieza: 22000.0,
+                // Instalación sola con accesorios del cliente: precio al cliente, IVA incluido (ficha S3)
+                precio_instalacion_sola: 140000.0,
+                // Vidrio de reemplazo (ficha M1): sin kit ni estructura, transporte propio
+                transporte_reemplazo: 50000.0,
+                // Espejo que va con otro trabajo (ficha E1): sin transporte y con este aporte
+                est_espejo_con_otro_trabajo: 20000.0,
                 // Adicionales que van en la misma visita
                 instalacion_adicional: 0, // mano de obra extra por tira; hoy cada tira paga sus insumos ($15.000)
                 precio_repisa_6mm: 60000.0, // precio al cliente, IVA incluido
@@ -117,9 +139,13 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 "División Corrediza Premium": 280000.0, // Andrés, 2026-11-19 y 2026-11-21 (antes 220.000)
                 "División de baño L - Corrediza": 235000.0,
                 "División de baño L - Batiente": 335000.0,
-                // Los 4 siguientes calculan su kit con los accesorios de Configuración → Especiales.
+                "División de baño L - Corrediza premium": 0, // ficha D13: kit premium × 1,05 (1 puerta) o 2 kits (2 puertas)
+                "División neoangular": 335000.0, // ficha D11: el kit de la L batiente (B8, 2026-11-24)
+                // Los siguientes calculan su kit con los accesorios de Configuración → Especiales.
                 "División de baño plegable (2 hojas)": 0,
                 "Panel fijo piso a techo (perfil U)": 0,
+                "Vidrio de reemplazo para división": 0, // ficha M1: piezas sueltas, sin kit
+                "Instalación sola de división (accesorios del cliente)": 0, // ficha S3: precio fijo
                 "Cortaviento / Oficina": 90000.0,
                 "Espejo Flotante": 30000.0,
                 "Tiras de vidrio 5 mm (adicional)": 0,
@@ -196,7 +222,15 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 acc_bisagra_muro: 'A12', acc_bisagra_vidrio_vidrio: 'A13', acc_boton: 'A14',
                 acc_tubo_terminales_carro: 'A15', acc_extra_negro_pieza: 'A15', acc_extra_negro_tubo_carro: 'A15',
                 acc_perfil_u_6m: 'A24',
-                margen_plegable: 'D8', margen_panel_fijo: 'D7', margen_tiras: 'D12'
+                margen_plegable: 'D8', margen_panel_fijo: 'D7', margen_tiras: 'D12',
+                // Segunda parte de B8 (2026-11-24): piezas sueltas, vidrio de reemplazo y espejo con otro trabajo.
+                acc_mariposa: 'A29', acc_manija_vertical: 'A43', acc_deslizantes_par: 'A16',
+                acc_deslizantes_par_superior: 'A16', acc_medias_lunas_par: 'A18', acc_terminales_freno_par: 'A19',
+                acc_tubo_m: 'A17', acc_riel_m: 'A23', acc_guia: 'A22', acc_burbuja: 'A25', acc_barredor: 'A26',
+                acc_boquete: 'A27', acc_l_fija: 'A28',
+                transporte_reemplazo: 'M1', est_espejo_con_otro_trabajo: 'E1',
+                // Confirmado en AP3 (2026-11-24)
+                acc_extra_dorado_pieza: 'A§2', precio_instalacion_sola: 'S3'
             },
             // Costo del kit de cada división (02-accesorios.md).
             productos: {
@@ -204,12 +238,13 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 "División Corrediza Clásica": 'A1',
                 "División Corrediza Premium": 'A2',
                 "División de baño L - Corrediza": 'A4',
-                "División de baño L - Batiente": 'A5'
+                "División de baño L - Batiente": 'A5',
+                "División neoangular": 'A5'
             },
             // Divisiones con ficha confirmada (03-divisiones.md): llevan el plazo y la garantía de la ficha.
             divisiones: [
                 "División Batiente (Tradicional)", "División Corrediza Clásica", "División Corrediza Premium",
-                "División de baño L - Corrediza", "División de baño L - Batiente",
+                "División de baño L - Corrediza", "División de baño L - Batiente", "División neoangular",
                 "División de baño plegable (2 hojas)", "Panel fijo piso a techo (perfil U)"
             ],
             // Plazo del vidrio, en días hábiles desde el anticipo (01-vidrios.md). Es el
@@ -220,14 +255,85 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 sandblasting: '7 a 10 días hábiles después del anticipo',
                 // Promoción de la clásica ($650.000 / $690.000), Andrés, 2026-11-24.
                 promocion: '3 días hábiles después del anticipo',
+                // Vidrio de reemplazo de una clásica de 180 o 190 en 6 mm, comprado suelto (ficha M1).
+                reemplazoClasica: '1 a 3 días después del anticipo',
+                // Juego hecho de la clásica (ficha V20; A4, 2026-11-24): la cotización y la orden dicen lo mismo.
+                juegoHecho: '3 días hábiles después del anticipo',
+                // Espejo (ficha E1, AP3, 2026-11-24).
+                espejo: '3 días hábiles después del anticipo',
                 especial: '12 a 15 días hábiles después del anticipo',
                 templado5: '12 a 15 días hábiles después del anticipo'
             },
-            garantiaDivisiones: '12 meses sobre los herrajes y la instalación'
+            garantiaDivisiones: '12 meses sobre los herrajes y la instalación',
+            // Instalación sola con accesorios del cliente (Andrés, 2026-11-24).
+            garantiaInstalacionSola: '3 meses sobre la instalación',
+            // «Incluye» que lee el cliente (03-divisiones.md, fila 3; AP3, 2026-11-24). La neoangular
+            // lleva el kit de la L batiente: su texto es el de la L batiente.
+            incluye: (() => {
+                const final = 'transporte e instalación en el perímetro urbano de Bogotá; asesoría técnica y verificación de medidas';
+                const vidrio = 'Vidrio templado incoloro cortado, perforado, pulido y brillado';
+                const lBatiente = `${vidrio}; herrajes en acero inoxidable 304 (bisagras vidrio a vidrio, L fijas, boquetes y botón haladera o manija vertical); ${final}`;
+                return {
+                    "División Corrediza Clásica": `${vidrio}; herrajes en acero inoxidable 304 (2 deslizantes, tubo superior, botón haladera); guías acrílicas o riel inferior de aluminio, según el diseño; ${final}`,
+                    "División Corrediza Premium": `${vidrio}; herrajes en acero inoxidable 304 (tubo rectangular premium, deslizantes premium con 2 perforaciones cada uno, manija de 2 perforaciones); ${final}`,
+                    "División Batiente (Tradicional)": `${vidrio}; herrajes en acero inoxidable 304 (2 bisagras, boquetes y botón haladera o mariposa); ${final}`,
+                    "Panel fijo piso a techo (perfil U)": `${vidrio}; soportes en acero inoxidable 304 o perfil U de aluminio, según la opción; ${final}`,
+                    "División de baño plegable (2 hojas)": `${vidrio}; herrajes en acero inoxidable 304 (2 bisagras a muro, 2 bisagras vidrio a vidrio, 2 botones haladera, tubo superior con carro guía); ${final}`,
+                    "División de baño L - Corrediza": `${vidrio}; herrajes en acero inoxidable 304 (deslizantes, 2 tubos con codo, botón haladera o manija, medias lunas, terminales y freno); guías acrílicas o riel inferior de aluminio, según el diseño; ${final}`,
+                    "División de baño L - Batiente": lBatiente,
+                    "División neoangular": lBatiente
+                };
+            })()
         };
 
         const PRODUCTO_CLASICA = "División Corrediza Clásica";
         const PRODUCTO_PREMIUM = "División Corrediza Premium";
+        const PRODUCTO_NEOANGULAR = "División neoangular";
+        const PRODUCTO_REEMPLAZO = "Vidrio de reemplazo para división";
+        const PRODUCTO_L_PREMIUM = "División de baño L - Corrediza premium";
+        const PRODUCTO_INSTALACION_SOLA = "Instalación sola de división (accesorios del cliente)";
+
+        // Piezas sueltas con costo (02-accesorios.md §2), para el vidrio de reemplazo.
+        // `nombre` es lo que lee el cliente; `costo` es la clave de Configuración.
+        // Las piezas en negro o dorado todavía no tienen recargo confirmado.
+        const PIEZAS_SUELTAS = [
+            { clave: 'bisagra', nombre: 'Bisagra', costo: 'acc_bisagra_muro', unidad: 'u' },
+            { clave: 'bisagra_vv', nombre: 'Bisagra vidrio a vidrio', costo: 'acc_bisagra_vidrio_vidrio', unidad: 'u' },
+            { clave: 'boton', nombre: 'Botón haladera', costo: 'acc_boton', unidad: 'u' },
+            { clave: 'mariposa', nombre: 'Mariposa', costo: 'acc_mariposa', unidad: 'u' },
+            { clave: 'manija', nombre: 'Manija vertical', costo: 'acc_manija_vertical', unidad: 'u' },
+            { clave: 'deslizantes', nombre: 'Par de deslizantes', costo: 'acc_deslizantes_par', unidad: 'par' },
+            { clave: 'deslizantes_sup', nombre: 'Par de deslizantes de mejor calidad', costo: 'acc_deslizantes_par_superior', unidad: 'par' },
+            { clave: 'medias_lunas', nombre: 'Par de medias lunas', costo: 'acc_medias_lunas_par', unidad: 'par' },
+            { clave: 'terminales', nombre: 'Par de terminales con freno', costo: 'acc_terminales_freno_par', unidad: 'par' },
+            { clave: 'tubo', nombre: 'Tubo superior', costo: 'acc_tubo_m', unidad: 'm' },
+            { clave: 'riel', nombre: 'Riel inferior', costo: 'acc_riel_m', unidad: 'm' },
+            { clave: 'guia', nombre: 'Guía inferior', costo: 'acc_guia', unidad: 'u', sinColor: true }, // acrílica
+            { clave: 'burbuja', nombre: 'Burbuja', costo: 'acc_burbuja', unidad: 'u', sinColor: true }, // perfil antigolpe
+            { clave: 'barredor', nombre: 'Barredor', costo: 'acc_barredor', unidad: 'u', sinColor: true },
+            { clave: 'boquete', nombre: 'Boquete', costo: 'acc_boquete', unidad: 'u' },
+            { clave: 'l_fija', nombre: 'L fija', costo: 'acc_l_fija', unidad: 'u' }
+        ];
+        function limpiarPiezas(piezas) {
+            const limpias = {};
+            PIEZAS_SUELTAS.forEach(p => {
+                const cantidad = Number(piezas && piezas[p.clave]);
+                if (cantidad > 0) limpias[p.clave] = p.unidad === 'm' ? Math.round(cantidad * 100) / 100 : Math.round(cantidad);
+            });
+            return limpias;
+        }
+        function costoPiezas(cfg, piezas) {
+            const limpias = limpiarPiezas(piezas);
+            return PIEZAS_SUELTAS.reduce((total, p) => total + (limpias[p.clave] || 0) * (cfg[p.costo] || 0), 0);
+        }
+        // Lo que lee el cliente: piezas y cantidades, sin precios.
+        function textoPiezas(piezas) {
+            const limpias = limpiarPiezas(piezas);
+            const partes = PIEZAS_SUELTAS.filter(p => limpias[p.clave]).map(p => p.unidad === 'm'
+                ? `${p.nombre}: ${String(limpias[p.clave]).replace('.', ',')} m`
+                : `${p.nombre} × ${limpias[p.clave]}`);
+            return partes.length ? partes.join(', ') : 'sin accesorios';
+        }
         // Kit de la clásica según espesor y ancho (Andrés, 2026-11-23): el A1 en 6 mm
         // y en 8 mm de menos de 120 cm; el A1b en 8 mm desde 120 cm y en todo 10 mm.
         function usaKitA1b(producto, espesor, anchoCm) {
@@ -237,10 +343,48 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
         function kitSegunFicha(cfg, producto, kitBase, espesor, anchoCm) {
             return usaKitA1b(producto, espesor, anchoCm) ? cfg.kit_clasica_a1b : kitBase;
         }
-        // Estructura de la premium: $150.000 en la línea controlada (D2). La línea
+        // Estructura de $150.000 en la línea controlada (ficha §0): la premium y la L premium,
+        // y toda división de más de 150 cm de ancho (AP3, 2026-11-24; el mismo límite de la
+        // instalación de $100.000 y del recargo del kit, que miran el primer ancho). La línea
         // empresa sigue igual hasta que Andrés diga si también sube.
-        function estructuraSegunFicha(cfg, producto, linea, est) {
-            return (producto === PRODUCTO_PREMIUM && linea === 'controlada') ? cfg.est_premium : est;
+        function estructuraSegunFicha(cfg, producto, linea, est, anchoM = 0) {
+            if (linea !== 'controlada') return est;
+            const esPremium = producto === PRODUCTO_PREMIUM || producto === PRODUCTO_L_PREMIUM;
+            const esGrande = (FICHAS.divisiones.includes(producto) || producto === PRODUCTO_L_PREMIUM) && Number(anchoM) > 1.5;
+            return (esPremium || esGrande) ? cfg.est_premium : est;
+        }
+        // Kit de la L corrediza premium (ficha D13; Andrés, 2026-11-24): con 1 puerta (2 fijos y
+        // 1 puerta), el kit premium × 1,05; con 2 puertas (2 fijos y 2 puertas), 2 kits premium.
+        function kitLPremium(kitPremium, puertas) {
+            return Number(puertas) === 2 ? 2 * kitPremium : kitPremium * 1.05;
+        }
+        // Recargo por color de las piezas sueltas (02-accesorios.md §2; Andrés, 2026-11-24):
+        // negro +$5.000 y dorado u oro rosa +$22.000 por pieza. Un par son 2 piezas; el tubo
+        // y el riel, una pieza cada uno.
+        function recargoColorPiezas(cfg, piezas, color) {
+            const porPieza = color === 'negro' ? cfg.acc_extra_negro_pieza : esColorDorado(color) ? cfg.acc_extra_dorado_pieza : 0;
+            if (!porPieza) return 0;
+            const limpias = limpiarPiezas(piezas);
+            // La guía, la burbuja y el barredor no son de metal: no llevan color.
+            const cuantas = PIEZAS_SUELTAS.reduce((n, p) => n + (!limpias[p.clave] || p.sinColor ? 0 : p.unidad === 'par' ? 2 * limpias[p.clave] : p.unidad === 'm' ? 1 : limpias[p.clave]), 0);
+            return cuantas * porPieza;
+        }
+        // Vidrio de reemplazo (ficha M1; AP3, 2026-11-24): cuatro variantes. La puerta de
+        // corrediza lleva su burbuja, incluida en el precio.
+        const VARIANTES_REEMPLAZO = {
+            puerta_corrediza: 'vidrio para puerta de división corrediza',
+            fijo_corrediza: 'vidrio fijo de división corrediza',
+            puerta_batiente: 'vidrio para puerta de división batiente',
+            fijo_batiente: 'vidrio fijo de división batiente'
+        };
+        function varianteReemplazo(reemplazo) {
+            const sistema = reemplazo && reemplazo.origen === 'batiente' ? 'batiente' : 'corrediza';
+            return `${reemplazo && reemplazo.pieza === 'fijo' ? 'fijo' : 'puerta'}_${sistema}`;
+        }
+        function piezasConBurbuja(reemplazo) {
+            const piezas = { ...(reemplazo && reemplazo.piezas) };
+            if (varianteReemplazo(reemplazo) === 'puerta_corrediza') piezas.burbuja = (Number(piezas.burbuja) || 0) + 1;
+            return limpiarPiezas(piezas);
         }
         // El oro rosa lleva el mismo recargo que el dorado.
         const esColorDorado = (color) => color === 'dorado' || color === 'oro_rosa';
@@ -255,16 +399,41 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
         }
         // Plazo de entrega que va en la cotización. Sin ficha o sin plazo conocido
         // (espejo, repisa, cortaviento), no se dice nada, como antes.
-        function plazoSegunFicha(producto, { vidrioEspecial, glassFinish, esTiras, esPromocion } = {}) {
+        // Juego hecho (ficha V20; A4, 2026-11-24): clásica o L corrediza en 6 mm transparente,
+        // alto de 180 o 190, hasta 160 cm de ancho (en la L, cada lado), herraje natural o negro.
+        function esRutaJuegoHecho(producto, { espesor, glassFinish, colorAcc, anchoCm, ancho2Cm, altoCm } = {}) {
+            const esL = producto === 'División de baño L - Corrediza';
+            if (producto !== PRODUCTO_CLASICA && !esL) return false;
+            if (espesor !== '6mm' || glassFinish !== 'transparent') return false;
+            if (colorAcc !== 'natural' && colorAcc !== 'negro') return false;
+            if (Number(altoCm) !== 180 && Number(altoCm) !== 190) return false;
+            return Number(anchoCm) <= 160 && (!esL || Number(ancho2Cm) <= 160);
+        }
+        function plazoSegunFicha(producto, { vidrioEspecial, glassFinish, esTiras, esPromocion, espesor, reemplazoOrigen, juegoHecho } = {}) {
             if (vidrioEspecial) return FICHAS.plazos.especial;
             if (esTiras) return FICHAS.plazos.templado5;
+            if (producto === 'Espejo Flotante') return FICHAS.plazos.espejo;
+            // Vidrio de reemplazo (ficha M1): el de una clásica de 180 o 190 en 6 mm se compra suelto.
+            if (producto === PRODUCTO_REEMPLAZO && glassFinish === 'transparent') {
+                return (reemplazoOrigen === 'clasica_180_190' && espesor === '6mm') ? FICHAS.plazos.reemplazoClasica : FICHAS.plazos.incoloro;
+            }
+            if (producto === PRODUCTO_REEMPLAZO && glassFinish === 'sandblasted') return FICHAS.plazos.sandblasting;
             if (!FICHAS.divisiones.includes(producto)) return '';
-            if (glassFinish === 'transparent') return esPromocion ? FICHAS.plazos.promocion : FICHAS.plazos.incoloro;
+            if (glassFinish === 'transparent') return esPromocion ? FICHAS.plazos.promocion : juegoHecho ? FICHAS.plazos.juegoHecho : FICHAS.plazos.incoloro;
             if (glassFinish === 'sandblasted') return FICHAS.plazos.sandblasting;
             return '';
         }
         function textoGarantia(producto) {
+            if (producto === 'Instalación sola de división (accesorios del cliente)') return FICHAS.garantiaInstalacionSola;
             return FICHAS.divisiones.includes(producto) ? FICHAS.garantiaDivisiones : '12 meses';
+        }
+        // «Incluye» de la ficha; con el kit A1b, la clásica dice «accesorios de alta calidad».
+        // Con un vidrio especial no se dice «incoloro»: la línea «Vidrio:» ya dice cuál es.
+        function textoIncluye(producto, conKitA1b, vidrioEspecial) {
+            let texto = FICHAS.incluye[producto] || '';
+            if (texto && conKitA1b) texto = texto.replace('herrajes en acero inoxidable 304', 'accesorios de alta calidad en acero inoxidable 304');
+            if (texto && vidrioEspecial) texto = texto.replace('Vidrio templado incoloro cortado', 'Vidrio cortado');
+            return texto;
         }
 
         // Los valores de las fichas llegan a cada teléfono sin pisar lo puesto a mano.
@@ -328,10 +497,18 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
         const ETIQUETAS_CONFIG = {
             acc_boton: 'ACC BOTÓN HALADERA', // «botón haladera» en todos lados (Andrés, 2026-11-20)
             extra_color_dorado: 'EXTRA COLOR DORADO U ORO ROSA',
-            est_premium: 'EST PREMIUM (LÍNEA CONTROLADA)',
+            est_premium: 'EST PREMIUM Y DIVISIONES DE MÁS DE 150 CM (LÍNEA CONTROLADA)',
             kit_clasica_a1b: 'KIT CLÁSICA 8 MM DESDE 120 CM Y 10 MM',
             precio_sandblasting_menor_140: 'SANDBLASTING AL CLIENTE, MENOS DE 140 CM',
-            precio_sandblasting_desde_140: 'SANDBLASTING AL CLIENTE, DESDE 140 CM O L'
+            precio_sandblasting_desde_140: 'SANDBLASTING AL CLIENTE, DESDE 140 CM O L',
+            acc_bisagra_muro: 'ACC BISAGRA MURO (Y DE BATIENTE)',
+            acc_tubo_m: 'ACC TUBO SUPERIOR (POR METRO)',
+            acc_riel_m: 'ACC RIEL INFERIOR (POR METRO)',
+            transporte_reemplazo: 'TRANSPORTE VIDRIO DE REEMPLAZO',
+            acc_extra_negro_pieza: 'ACC EXTRA NEGRO POR PIEZA',
+            acc_extra_dorado_pieza: 'ACC EXTRA DORADO U ORO ROSA POR PIEZA',
+            precio_instalacion_sola: 'INSTALACIÓN SOLA (PRECIO AL CLIENTE)',
+            est_espejo_con_otro_trabajo: 'EST ESPEJO CON OTRO TRABAJO'
         };
         const etiquetaConfig = (clave) => ETIQUETAS_CONFIG[clave] || clave.replace(/_/g, ' ').toUpperCase();
         const fmtValorConfig = (v) => (Math.abs(Number(v)) < 10 ? String(v) : fmtMoney(Number(v)));
@@ -354,7 +531,8 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
         }
         function textoAvisoMinimoSalida(items, total) {
             const lista = (items || []).filter(Boolean);
-            if (!lista.length || lista.every(esAdicionalDeVisita)) return '';
+            // El vidrio de reemplazo y la instalación sola son excepción: no avisan (fichas M1 y S3).
+            if (!lista.length || lista.every(i => esAdicionalDeVisita(i) || i.producto === PRODUCTO_REEMPLAZO || i.producto === PRODUCTO_INSTALACION_SOLA)) return '';
             if (!(Number(total) < MINIMO_SALIDA)) return '';
             return `⚠️ Esta salida suma ${fmtMoney(Number(total) || 0)}, menos que el mínimo de ${fmtMoney(MINIMO_SALIDA)} por salida de instalación. `
                 + `El precio no cambia: decide tú si lo subes. El cliente no ve este aviso.`;
@@ -379,7 +557,8 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             PLEGABLE: "División de baño plegable (2 hojas)",
             PANEL_FIJO: "Panel fijo piso a techo (perfil U)",
             TIRAS: "Tiras de vidrio 5 mm (adicional)",
-            REPISA: "Repisa de vidrio 6 mm (hasta 30 cm)"
+            REPISA: "Repisa de vidrio 6 mm (hasta 30 cm)",
+            REEMPLAZO: "Vidrio de reemplazo para división" // B8, 2026-11-24 (ficha M1)
         };
         const esProductoEspecial = (nombre) => Object.values(PRODUCTOS_ESPECIALES).includes(nombre);
 
@@ -425,6 +604,10 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             "Panel fijo piso a techo (perfil U)": "FIJO",
             "Tiras de vidrio 5 mm (adicional)": "FIJO",
             "Repisa de vidrio 6 mm (hasta 30 cm)": "FIJO",
+            "División neoangular": "FIJO",
+            "Vidrio de reemplazo para división": "FIJO",
+            "División de baño L - Corrediza premium": "FIJO",
+            "Instalación sola de división (accesorios del cliente)": "FIJO",
         };
 
         const CANONICAL_PRODUCT_METADATA = {
@@ -497,6 +680,36 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 familyId: "REP",
                 variantId: null,
                 mappingStatus: "map_with_attributes"
+            },
+            // B8, 2026-11-24: códigos del catálogo maestro (fichas D11 y M1). El CRM no los
+            // convierte solo en una línea: quedan para agregarlos con el asistente.
+            "División neoangular": {
+                canonicalProductId: "DB-NEO",
+                familyId: "DB",
+                variantId: "DB-NEO-STD",
+                mappingStatus: "map_with_variant"
+            },
+            "Vidrio de reemplazo para división": {
+                canonicalProductId: "MAN-DB-VID",
+                familyId: "MAN",
+                variantId: null,
+                mappingStatus: "map_with_attributes"
+            },
+            // Ficha D13: el catálogo maestro no tiene variante para la L premium; no se inventa.
+            "División de baño L - Corrediza premium": {
+                canonicalProductId: "DB-ESC",
+                familyId: "DB",
+                variantId: null,
+                mappingStatus: "map_with_attributes",
+                canonicalAttributes: { dimensionSchema: "width_height_side2" }
+            },
+            // Ficha S3: sin código en el catálogo maestro. Va a la bandeja para revisión manual.
+            "Instalación sola de división (accesorios del cliente)": {
+                canonicalProductId: null,
+                familyId: null,
+                variantId: null,
+                mappingStatus: "review_manual",
+                canonicalAttributes: {}
             }
         };
 
@@ -522,7 +735,8 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 familyId: base.familyId,
                 variantId: base.variantId,
                 mappingStatus: base.mappingStatus,
-                ...(Object.keys(canonicalAttributes).length ? { canonicalAttributes } : {})
+                // B8: un producto sin atributos que los declara vacíos ({}) los manda así; la bandeja los pide.
+                ...((Object.keys(canonicalAttributes).length || base.canonicalAttributes) ? { canonicalAttributes } : {})
             };
         }
 
@@ -914,6 +1128,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             document.getElementById('lbl-desmonte-val').innerText = fmtMoney(currentConfig.globales.desmonte);
             document.getElementById('lbl-led-val').innerText = fmtMoney(currentConfig.globales.extra_espejo_led);
             renderConfigForm();
+            renderPiezasReemplazo();
             renderHistorial();
             verificarProducto();
 
@@ -950,7 +1165,8 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             const esEspejo = prod.includes("Espejo");
             const esLEspecial = prod.includes("División de baño L -");
             // Tiras y repisa traen su vidrio fijo: no piden espesor, color ni acabado.
-            const esAdicional = prod === PRODUCTOS_ESPECIALES.TIRAS || prod === PRODUCTOS_ESPECIALES.REPISA;
+            const esAdicional = prod === PRODUCTOS_ESPECIALES.TIRAS || prod === PRODUCTOS_ESPECIALES.REPISA
+                || prod === PRODUCTO_INSTALACION_SOLA; // B8: la instalación sola usa los vidrios y accesorios del cliente
             if (esAdicional) {
                 document.getElementById('glass_finish').value = '';
                 document.getElementById('color_acc').value = '';
@@ -959,20 +1175,73 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             const vidrioEspecial = VIDRIOS_ESPECIALES[document.getElementById('glass_finish').value] || null;
             if (vidrioEspecial) document.getElementById('espesor').value = vidrioEspecial.espesor;
 
+            // B8 (2026-11-24): la neoangular pide tres anchos; el vidrio de reemplazo, sus piezas
+            // (el color es opcional: solo suma si lleva piezas); la L premium, cuántas puertas.
+            const esNeoangular = prod === PRODUCTO_NEOANGULAR;
+            const esReemplazo = prod === PRODUCTO_REEMPLAZO;
+            const esLPremium = prod === PRODUCTO_L_PREMIUM;
+            if (!esEspejo) document.getElementById('check-espejo-otro').checked = false;
+
             // Mostrar/Ocultar opción LED y Espesor según el producto
             document.getElementById('group-espejo-led').style.display = esEspejo ? 'flex' : 'none';
+            document.getElementById('group-espejo-otro').style.display = esEspejo ? 'flex' : 'none';
             document.getElementById('group-espesor').style.display = (esEspejo || esAdicional || vidrioEspecial) ? 'none' : 'block';
             document.getElementById('group-color-acc').style.display = (esEspejo || esAdicional) ? 'none' : 'block';
+            document.getElementById('group-l-puertas').style.display = esLPremium ? 'block' : 'none';
             document.getElementById('group-glass-finish').style.display = (esEspejo || esAdicional) ? 'none' : 'block';
+            document.getElementById('group-reemplazo').style.display = esReemplazo ? 'block' : 'none';
 
-            document.getElementById('col-ancho2').style.display = esLEspecial ? 'block' : 'none';
-            document.getElementById('lbl-ancho').innerText = esLEspecial ? "Lado 1 (cm)" : "Ancho (cm)";
+            document.getElementById('col-ancho2').style.display = (esLEspecial || esNeoangular) ? 'block' : 'none';
+            document.getElementById('col-ancho3').style.display = esNeoangular ? 'block' : 'none';
+            document.getElementById('lbl-ancho').innerText = esLEspecial ? "Lado 1 (cm)" : esNeoangular ? "Ancho 1 (cm)" : "Ancho (cm)";
+            document.getElementById('lbl-ancho2').innerText = esNeoangular ? "Ancho 2 (cm)" : "Lado 2 (cm)";
 
             // Si el producto NO es tipo L, limpiar ancho2 para que no quede un valor
             // residual oculto (p.ej. 90) que contamine cálculos posteriores.
-            if (!esLEspecial) document.getElementById('ancho2').value = '';
+            if (!esLEspecial && !esNeoangular) document.getElementById('ancho2').value = '';
+            if (!esNeoangular) document.getElementById('ancho3').value = '';
 
             if (esEspejo) document.getElementById('glass_finish').value = '';
+        }
+
+        // B8: lista de piezas sueltas del vidrio de reemplazo, con su costo a la vista.
+        function renderPiezasReemplazo() {
+            const cont = document.getElementById('reemplazo-piezas');
+            if (!cont) return;
+            cont.innerHTML = '';
+            PIEZAS_SUELTAS.forEach(p => {
+                const fila = document.createElement('div');
+                fila.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0;';
+                const etiqueta = document.createElement('label');
+                etiqueta.style.cssText = 'margin:0;font-size:0.85rem;';
+                const unidad = p.unidad === 'm' ? 'el metro' : p.unidad === 'par' ? 'el par' : 'c/u';
+                etiqueta.innerText = `${p.nombre} (${fmtMoney(currentConfig.globales[p.costo] || 0)} ${unidad})`;
+                const entrada = document.createElement('input');
+                entrada.type = 'number';
+                entrada.min = '0';
+                entrada.step = p.unidad === 'm' ? '0.1' : '1';
+                entrada.placeholder = p.unidad === 'm' ? 'metros' : '0';
+                entrada.id = `pieza_${p.clave}`;
+                entrada.style.cssText = 'width:80px;';
+                fila.appendChild(etiqueta);
+                fila.appendChild(entrada);
+                cont.appendChild(fila);
+            });
+        }
+        function leerPiezasReemplazo() {
+            const piezas = {};
+            PIEZAS_SUELTAS.forEach(p => {
+                const valor = parseFloat(document.getElementById(`pieza_${p.clave}`)?.value);
+                if (valor > 0) piezas[p.clave] = valor;
+            });
+            return limpiarPiezas(piezas);
+        }
+        function ponerPiezasReemplazo(piezas) {
+            const limpias = limpiarPiezas(piezas);
+            PIEZAS_SUELTAS.forEach(p => {
+                const el = document.getElementById(`pieza_${p.clave}`);
+                if (el) el.value = limpias[p.clave] ? String(limpias[p.clave]) : '';
+            });
         }
 
         // Generar formulario de configuración dinámico
@@ -993,7 +1262,8 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
 
             // Helpers para filtrar productos (las ventanas/puertas ya no aparecen aquí)
             const isEspejo = (k) => k.includes('Espejo');
-            const isDivision = (k) => !isEspejo(k) && !esProductoEspecial(k);
+            // B8: la L premium y la instalación sola no tienen precio base propio (su kit o su precio salen de otra parte).
+            const isDivision = (k) => !isEspejo(k) && !esProductoEspecial(k) && k !== PRODUCTO_L_PREMIUM && k !== PRODUCTO_INSTALACION_SOLA;
 
             // --- TAB 1: GENERAL ---
             const tGen = document.getElementById('tab-general');
@@ -1052,7 +1322,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             Object.keys(currentConfig.productos).filter(isEspejo).forEach(k => addInputConfig(tEsp, k, currentConfig.productos[k], 'productos'));
 
             addHeader(tEsp, "Costos y Variables");
-            ['precio_espejo_m2', 'extra_espejo_led', 'instalacion_espejo', 'transporte_espejo', 'est_espejo', 'util_espejo'].forEach(k => addInputConfig(tEsp, k, currentConfig.globales[k], 'globales'));
+            ['precio_espejo_m2', 'extra_espejo_led', 'instalacion_espejo', 'transporte_espejo', 'est_espejo', 'est_espejo_con_otro_trabajo', 'util_espejo'].forEach(k => addInputConfig(tEsp, k, currentConfig.globales[k], 'globales'));
 
             // --- TAB 4: ESPECIALES (2026-11-19) ---
             const tEspc = document.getElementById('tab-especiales');
@@ -1060,6 +1330,10 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             ['precio_vidrio_serigrafia_6mm', 'precio_vidrio_serigrafia_negra_8mm', 'precio_vidrio_laminado_4_4', 'precio_vidrio_negro_6mm', 'precio_vidrio_5mm'].forEach(k => addInputConfig(tEspc, k, currentConfig.globales[k], 'globales'));
             addHeader(tEspc, "Accesorios (costo por unidad, natural)");
             ['acc_bisagra_muro', 'acc_bisagra_vidrio_vidrio', 'acc_boton', 'acc_tubo_terminales_carro', 'acc_extra_negro_pieza', 'acc_extra_negro_tubo_carro', 'acc_perfil_u_6m'].forEach(k => addInputConfig(tEspc, k, currentConfig.globales[k], 'globales'));
+            addHeader(tEspc, "Piezas sueltas (vidrio de reemplazo, costo natural)");
+            ['acc_mariposa', 'acc_manija_vertical', 'acc_deslizantes_par', 'acc_deslizantes_par_superior', 'acc_medias_lunas_par',
+                'acc_terminales_freno_par', 'acc_tubo_m', 'acc_riel_m', 'acc_guia', 'acc_burbuja', 'acc_barredor', 'acc_boquete', 'acc_l_fija',
+                'acc_extra_dorado_pieza', 'transporte_reemplazo', 'precio_instalacion_sola'].forEach(k => addInputConfig(tEspc, k, currentConfig.globales[k], 'globales'));
             addHeader(tEspc, "Adicionales y márgenes propios");
             ['instalacion_adicional', 'precio_repisa_6mm', 'margen_plegable', 'margen_panel_fijo', 'margen_tiras'].forEach(k => addInputConfig(tEspc, k, currentConfig.globales[k], 'globales'));
         }
@@ -1132,6 +1406,13 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 acabado: document.getElementById('color_acc').value,
                 glassFinish: document.getElementById('glass_finish').value,
                 led: document.getElementById('check-espejo-led').checked,
+                // B8 (2026-11-24): neoangular, espejo con otro trabajo y vidrio de reemplazo
+                ancho3: document.getElementById('ancho3').value,
+                espejoConOtro: document.getElementById('check-espejo-otro').checked,
+                lPuertas: document.getElementById('producto').value === PRODUCTO_L_PREMIUM ? document.getElementById('l_puertas').value : '',
+                reemplazo: document.getElementById('producto').value === PRODUCTO_REEMPLAZO
+                    ? { pieza: document.getElementById('reemplazo_pieza').value, origen: document.getElementById('reemplazo_origen').value, piezas: leerPiezasReemplazo() }
+                    : null,
                 cantidad: parseInt(document.getElementById('cantidad-item').value, 10) || 1,
                 descuento: parseFloat(document.getElementById('descuento_adicional').value) || 0,
                 transporte: parseFloat(document.getElementById('recargo_transporte').value) || 0
@@ -1157,6 +1438,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             const esEspejo = result.producto.includes('Espejo');
             const medidas = result.producto.includes('División de baño L -')
                 ? `L(${raw.ancho} + ${raw.ancho2}) x ${raw.alto} cm`
+                : raw.ancho3 ? `${raw.ancho} + ${raw.ancho2} + ${raw.ancho3} x ${raw.alto} cm` // neoangular (B8)
                 : (raw.ancho && raw.alto ? `${raw.ancho} x ${raw.alto} cm` : `${result.medidas} cm`);
             let texto = `*COTIZACIÓN* 📄\n*N° ${folio}*  ·  ${fechaEnvio}\n----------------------------\n`;
 
@@ -1166,10 +1448,14 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 texto += `🔹 *LED:* ${raw.led ? 'incluido' : 'no incluido'}\n`;
             } else {
                 texto += `🔹 *Producto:* ${result.producto}\n`;
+                if (raw.reemplazo) texto += `🔹 *Se cambia:* ${raw.reemplazo.descripcion || (raw.reemplazo.pieza === 'fijo' ? 'el fijo' : 'la puerta')}\n`;
+                if (raw.l_puertas) texto += `🔹 *Puertas:* ${raw.l_puertas === 2 ? '2 (2 fijos y 2 puertas)' : '1 (2 fijos y 1 puerta)'}\n`;
                 texto += `🔹 *Medidas:* ${medidas}\n`;
                 if (raw.vidrio_descripcion) texto += `🔹 *Vidrio:* ${raw.vidrio_descripcion}\n`;
-                else texto += `🔹 *Espesor:* ${raw.espesor}${raw.sandblasting ? ' + sandblasting' : ''}\n`;
+                else if (!raw.instalacion_sola) texto += `🔹 *Espesor:* ${raw.espesor}${raw.sandblasting ? ' + sandblasting' : ''}\n`;
                 if (raw.color_acc) texto += `🔹 *Acabado:* ${etiquetaColorHerraje(raw.color_acc).toUpperCase()}\n`;
+                if (raw.reemplazo) texto += `🔹 *Accesorios:* ${raw.reemplazo.texto || 'sin accesorios'}\n`;
+                if (raw.incluye) texto += `🔹 *Incluye:* ${raw.incluye}\n`;
             }
 
             texto += `🔹 *Instalación:* incluida\n`;
@@ -1225,9 +1511,14 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 } else if (item.producto.includes('Espejo')) {
                     texto += `   ✨ LED: ${item.raw?.led ? 'incluido' : 'no incluido'}\n`;
                 } else {
+                    if (item.raw?.reemplazo) texto += `   🔁 Se cambia: ${item.raw.reemplazo.descripcion || (item.raw.reemplazo.pieza === 'fijo' ? 'el fijo' : 'la puerta')}\n`;
+                    if (item.raw?.l_puertas) texto += `   🚪 Puertas: ${item.raw.l_puertas === 2 ? '2 (2 fijos y 2 puertas)' : '1 (2 fijos y 1 puerta)'}\n`;
                     if (item.vidrioDescripcion) texto += `   💎 Vidrio: ${item.vidrioDescripcion}\n`;
-                    else texto += `   💎 Espesor: ${item.vidrio}${item.sandblasting ? ' + sandblasting' : ''}\n`;
+                    else if (!item.raw?.instalacion_sola) texto += `   💎 Espesor: ${item.vidrio}${item.sandblasting ? ' + sandblasting' : ''}\n`;
                     if (item.color) texto += `   🎨 Acabado: ${etiquetaColorHerraje(item.color).toUpperCase()}\n`;
+                    if (item.raw?.reemplazo) texto += `   🧩 Accesorios: ${item.raw.reemplazo.texto || 'sin accesorios'}\n`;
+                    if (item.raw?.incluye) texto += `   ✅ Incluye: ${item.raw.incluye}\n`;
+                    if (item.raw?.instalacion_sola) texto += `   🛡️ Garantía: 3 meses sobre la instalación\n`;
                 }
                 if (item.plazoEntrega) texto += `   ⏱️ Entrega: ${item.plazoEntrega}\n`;
                 texto += `   🔢 Cantidad: ${qty}\n`;
@@ -1248,7 +1539,13 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             }
             texto += `💰 *TOTAL: ${fmtMoney(total - discount)}*, IVA incluido\n`;
             // B8: con alguna división, la garantía dice qué cubre (ficha); si no, como antes.
-            texto += `🛡️ *Garantía:* ${items.some(item => !item.esAluminio && FICHAS.divisiones.includes(item.producto)) ? FICHAS.garantiaDivisiones : '12 meses'}`;
+            // La instalación sola lleva su propia garantía en su renglón; la general es la de lo demás.
+            const conGarantiaGeneral = items.filter(item => !item.raw?.instalacion_sola);
+            if (conGarantiaGeneral.length) {
+                texto += `🛡️ *Garantía:* ${conGarantiaGeneral.some(item => !item.esAluminio && FICHAS.divisiones.includes(item.producto)) ? FICHAS.garantiaDivisiones : '12 meses'}`;
+            } else {
+                texto = texto.replace(/\n$/, '');
+            }
             texto += `\n📐 *Visita de medidas:* $20.000, se descuentan del total si haces el trabajo.`;
             return texto;
         }
@@ -1271,7 +1568,9 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             const esPanelFijo = prodNombre === PRODUCTOS_ESPECIALES.PANEL_FIJO;
             const esTiras = prodNombre === PRODUCTOS_ESPECIALES.TIRAS;
             const esRepisa = prodNombre === PRODUCTOS_ESPECIALES.REPISA;
-            const esAdicional = esTiras || esRepisa; // va en la misma visita: sin transporte ni estructura
+            // B8: la instalación sola (ficha S3) tiene precio fijo y usa los vidrios y accesorios del cliente.
+            const esInstalacionSola = prodNombre === PRODUCTO_INSTALACION_SOLA;
+            const esAdicional = esTiras || esRepisa || esInstalacionSola; // va en la misma visita: sin transporte ni estructura
             const repisaSinMedidas = esRepisa && (!ancho || !alto);
 
             if ((!ancho || !alto) && !esRepisa) {
@@ -1296,7 +1595,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             const glassFinish = esAdicional ? '' : document.getElementById('glass_finish').value;
             const vidrioEspecial = VIDRIOS_ESPECIALES[glassFinish] || null;
             // Espesor real: tiras 5 mm, repisa 6 mm y el que fija cada vidrio especial.
-            const espesor = esTiras ? '5mm' : esRepisa ? '6mm' : (vidrioEspecial ? vidrioEspecial.espesor : espesorSelect);
+            const espesor = esInstalacionSola ? '' : esTiras ? '5mm' : esRepisa ? '6mm' : (vidrioEspecial ? vidrioEspecial.espesor : espesorSelect);
             // Lo que se muestra al cliente como vidrio, y el plazo cuando no es el normal.
             const vidrioDescripcion = esTiras ? 'Templado incoloro 5 mm'
                 : esRepisa ? 'Templado 6 mm'
@@ -1304,16 +1603,39 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             let plazoEntrega = plazoSegunFicha(prodNombre, { vidrioEspecial, glassFinish, esTiras });
             const esEspejoSeleccionado = prodNombre.includes("Espejo");
             const pideVidrioYColor = !esEspejoSeleccionado && !esAdicional;
+            // B8 (2026-11-24): neoangular (tres anchos), vidrio de reemplazo y espejo con otro trabajo.
+            const esNeoangular = prodNombre === PRODUCTO_NEOANGULAR;
+            const esReemplazo = prodNombre === PRODUCTO_REEMPLAZO;
+            const ancho3CmOriginal = esNeoangular ? (parseFloat(document.getElementById('ancho3').value) || 0) : 0;
+            const ancho3 = ancho3CmOriginal / 100;
+            const espejoConOtroTrabajo = esEspejoSeleccionado && document.getElementById('check-espejo-otro').checked;
+            const reemplazo = esReemplazo ? {
+                pieza: document.getElementById('reemplazo_pieza').value || 'puerta',
+                origen: document.getElementById('reemplazo_origen').value || 'corrediza',
+                piezas: leerPiezasReemplazo()
+            } : null;
+            // Lo que lee el cliente: piezas y cantidades, sin precios.
+            // La puerta de corrediza lleva su burbuja, incluida en el precio (AP3, 2026-11-24).
+            if (reemplazo) {
+                reemplazo.variante = varianteReemplazo(reemplazo);
+                reemplazo.piezasPrecio = piezasConBurbuja(reemplazo);
+                reemplazo.texto = textoPiezas(reemplazo.piezasPrecio);
+                reemplazo.descripcion = VARIANTES_REEMPLAZO[reemplazo.variante];
+            }
+            const esLPremium = prodNombre === PRODUCTO_L_PREMIUM;
+            const lPuertas = esLPremium ? (Number(document.getElementById('l_puertas').value) === 2 ? 2 : 1) : 0;
             const missingCritical = [
                 !prodNombre ? 'producto' : '',
+                esNeoangular && (!ancho2CmOriginal || !ancho3CmOriginal) ? 'los tres anchos de la neoangular' : '',
                 pideVidrioYColor && !espesor ? 'espesor del vidrio' : '',
                 pideVidrioYColor && !glassFinish ? 'acabado del vidrio' : '',
-                pideVidrioYColor && !colorAcc ? 'color de accesorios/herrajes' : ''
+                pideVidrioYColor && !esReemplazo && !colorAcc ? 'color de accesorios/herrajes' : ''
             ].filter(Boolean);
             if (missingCritical.length) {
                 toast(`Falta definir ${missingCritical[0]}`, 'warn', 5000);
                 return;
             }
+            plazoEntrega = plazoSegunFicha(prodNombre, { vidrioEspecial, glassFinish, esTiras, espesor, reemplazoOrigen: reemplazo && reemplazo.origen });
             const tieneSandblasting = glassFinish === 'sandblasted';
             const tieneLed = document.getElementById('check-espejo-led').checked;
             const recargoTransporte = parseFloat(document.getElementById('recargo_transporte').value) || 0;
@@ -1343,6 +1665,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             const esLEspecial = prodNombre.includes("División de baño L -");
             let anchoCalculo = ancho;
             if (esLEspecial) anchoCalculo += ancho2;
+            if (esNeoangular) anchoCalculo += ancho2 + ancho3; // ficha D11: los tres anchos sumados
 
             const area = anchoCalculo * alto;
             const esEspejo = esEspejoSeleccionado;
@@ -1365,6 +1688,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             if (esRepisa) costoVidrioBase = 0; // especial
             else if (esTiras) costoVidrioBase = cfg.precio_vidrio_5mm; // especial
             else if (vidrioEspecial) costoVidrioBase = cfg[vidrioEspecial.precioKey]; // especial
+            if (esInstalacionSola) costoVidrioBase = 0; // ficha S3: el vidrio es del cliente
 
             // Aplica desperdicio (colchon) tanto a vidrio como a espejo
             const costoVidrioTotal = area * costoVidrioBase * cfg.colchon_vidrio;
@@ -1374,6 +1698,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             let costoLed = 0;
             let baseAcc = currentConfig.productos[prodNombre];
             baseAcc = kitSegunFicha(cfg, prodNombre, baseAcc, espesor, anchoCmOriginal); // ficha
+            if (esLPremium) baseAcc = kitLPremium(currentConfig.productos[PRODUCTO_PREMIUM], lPuertas); // ficha D13
 
             // Ajuste por Color
             if (!esEspejo) {
@@ -1403,6 +1728,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             if (esPlegable) costoAcc = costoKitPlegable(cfg, colorAcc); // especial
             if (esPanelFijo) costoAcc = costoPerfilU(cfg, ancho, alto); // especial
             if (esAdicional) costoAcc = 0; // especial
+            if (esReemplazo) costoAcc = costoPiezas(cfg, reemplazo.piezasPrecio) + recargoColorPiezas(cfg, reemplazo.piezasPrecio, colorAcc); // ficha M1: pieza por pieza, sin kit
             // Sumar extras manuales (bisagras, soportes, etc)
             costoAcc += extraAcc;
 
@@ -1429,6 +1755,9 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
 
             // especial: tiras y repisa van en la misma visita de otro trabajo, sin transporte propio
             if (esAdicional) { costoInstalacion = esTiras ? cfg.instalacion_adicional : 0; costoTransporte = 0; } // especial
+            if (esNeoangular) costoInstalacion = cfg.instalacion_L; // ficha D11: instalación como la L
+            if (esReemplazo) { costoInstalacion = cfg.instalacion_base; costoTransporte = cfg.transporte_reemplazo; } // ficha M1
+            if (espejoConOtroTrabajo) costoTransporte = 0; // ficha E1: va con otro trabajo
             const costoInsumos = cfg.insumos;
             const otros = costoInstalacion + costoTransporte + recargoTransporte + costoInsumos + costoDesmonte;
             const costoDirecto = costoVidrioTotal + costoAcc + costoAluminio + costoLed + otros;
@@ -1448,9 +1777,11 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 est = cfg.est_empresa;
                 utilPorcentaje = cfg.util_empresa;
             }
-            est = estructuraSegunFicha(cfg, prodNombre, linea, est); // ficha
+            est = estructuraSegunFicha(cfg, prodNombre, linea, est, ancho); // ficha
             // especial: los adicionales no cargan estructura, ya la paga el trabajo principal
             if (esAdicional) est = 0; // especial
+            if (esReemplazo) est = 0; // ficha M1: sin estructura
+            if (espejoConOtroTrabajo) est = cfg.est_espejo_con_otro_trabajo; // ficha E1: aporte de $20.000
 
             const totalCostos = costoDirecto + est;
 
@@ -1466,6 +1797,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             // ficha: el diseño sandblasting se cobra al cliente con el precio de la ficha, IVA incluido (V9 y V10)
             const precioSandblasting = (tieneSandblasting && !esEspejo) ? precioSandblastingFicha(cfg, anchoCalculo) : 0; // ficha
             precioFinal += precioSandblasting; // ficha
+            if (esInstalacionSola) precioFinal = cfg.precio_instalacion_sola; // ficha S3: precio fijo al cliente, IVA incluido
 
             // Aumento general del 5% sobre el precio final (IVA incluido)
             // Ajuste comercial aplicado arriba; no se suma IVA nuevamente al cliente.
@@ -1489,12 +1821,16 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             // costos del negocio). NO se le vuelve a sumar IVA. Es el número que
             // se muestra, se guarda en el carrito y se envía por WhatsApp.
 
-            const medidasStr = repisaSinMedidas ? 'hasta 30' : esLEspecial ? 
-                `L(${Math.round(ancho * 100)}+${Math.round(ancho2 * 100)})x${Math.round(alto * 100)}` : 
+            const medidasStr = repisaSinMedidas ? 'hasta 30' : esLEspecial ?
+                `L(${Math.round(ancho * 100)}+${Math.round(ancho2 * 100)})x${Math.round(alto * 100)}` :
+                esNeoangular ? `${Math.round(ancho * 100)}+${Math.round(ancho2 * 100)}+${Math.round(ancho3 * 100)}x${Math.round(alto * 100)}` :
                 `${Math.round(ancho * 100)}x${Math.round(alto * 100)}`;
 
+            const incluye = textoIncluye(prodNombre, usaKitA1b(prodNombre, espesor, anchoCmOriginal), vidrioEspecial);
+
             // B8: la promoción de la clásica promete 3 días hábiles (Andrés, 2026-11-24).
-            plazoEntrega = plazoSegunFicha(prodNombre, { vidrioEspecial, glassFinish, esTiras, esPromocion: esPromoCorredizaEconomica });
+            plazoEntrega = plazoSegunFicha(prodNombre, { vidrioEspecial, glassFinish, esTiras, esPromocion: esPromoCorredizaEconomica, espesor, reemplazoOrigen: reemplazo && reemplazo.origen,
+                juegoHecho: esRutaJuegoHecho(prodNombre, { espesor, glassFinish, colorAcc, anchoCm: anchoCmOriginal, ancho2Cm: ancho2CmOriginal, altoCm: altoCmOriginal }) });
 
             const canonicalMetadata = buildCanonicalProductMetadata(prodNombre, {
                 espesor,
@@ -1556,6 +1892,14 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                     descuento: descuentoAdicional,
                     promo_fija_corrediza_economica: esPromoCorredizaEconomica,
                     promo_fija_corrediza_economica_color: esPromoCorredizaEconomicaNegra ? 'negro' : (esPromoCorredizaEconomicaNatural ? 'natural' : ''),
+                    // B8 (2026-11-24)
+                    ...(esNeoangular ? { ancho3: ancho3CmOriginal } : {}),
+                    ...(espejoConOtroTrabajo ? { espejo_con_otro_trabajo: true } : {}),
+                    ...(reemplazo ? { reemplazo } : {}),
+                    ...(esLPremium ? { l_puertas: lPuertas } : {}),
+                    ...(esInstalacionSola ? { instalacion_sola: true } : {}),
+                    // «Incluye» de la ficha, tal como lo lee el cliente (AP3, 2026-11-24)
+                    ...(incluye ? { incluye } : {}),
                     observaciones: observaciones
                 }
             };
@@ -1780,6 +2124,8 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             lastCalculation = null;
             document.getElementById('ancho').value = '';
             document.getElementById('ancho2').value = '';
+            document.getElementById('ancho3').value = '';
+            ponerPiezasReemplazo({}); // B8: las piezas son de cada vidrio
             document.getElementById('alto').value = '';
             document.getElementById('mercado').value = '';
             document.getElementById('recargo_transporte').value = '';
@@ -1807,6 +2153,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             document.getElementById('linea').selectedIndex = 0;
             document.getElementById('check-desmonte').checked = false;
             document.getElementById('check-espejo-led').checked = false;
+            document.getElementById('check-espejo-otro').checked = false;
             verificarProducto();
         }
 
@@ -2165,6 +2512,14 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             document.getElementById('observaciones').value = item.raw.observaciones || '';
             document.getElementById('check-desmonte').checked = item.raw.desmonte;
             document.getElementById('check-espejo-led').checked = item.raw.led || false;
+            // B8 (2026-11-24): neoangular, espejo con otro trabajo y vidrio de reemplazo
+            document.getElementById('ancho3').value = item.raw.ancho3 || '';
+            document.getElementById('check-espejo-otro').checked = !!item.raw.espejo_con_otro_trabajo;
+            if (item.raw.reemplazo) {
+                document.getElementById('reemplazo_pieza').value = item.raw.reemplazo.pieza || 'puerta';
+                document.getElementById('reemplazo_origen').value = item.raw.reemplazo.origen || 'corrediza';
+            }
+            ponerPiezasReemplazo(item.raw.reemplazo ? item.raw.reemplazo.piezas : {});
             verificarProducto();
 
             document.getElementById('estrategia-content').style.display = 'block';

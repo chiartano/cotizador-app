@@ -59,6 +59,13 @@
                     ✨ Incluir Luz LED (+<span id="lbl-led-val">$50.000</span>)
                 </label>
             </div>
+            <div class="form-group" id="group-espejo-otro"
+                style="display:none; align-items: center; margin-top: 10px; background: #f1f5f9; padding: 10px; border-radius: 8px;">
+                <input type="checkbox" id="check-espejo-otro" style="width: 20px; height: 20px; margin-right: 10px;">
+                <label for="check-espejo-otro" style="margin: 0; cursor: pointer; font-weight: bold;">
+                    🧳 Va con otro trabajo (sin transporte y con aporte de $20.000)
+                </label>
+            </div>
             <div class="form-group" id="group-color-acc">
                 <label>Color Accesorios</label>
                 <select id="color_acc">
@@ -83,6 +90,34 @@
                     </optgroup>
                 </select>
             </div>
+            <div class="form-group" id="group-l-puertas" style="display:none;">
+                <label>Puertas de la L premium</label>
+                <select id="l_puertas">
+                    <option value="1">1 puerta (2 fijos y 1 puerta)</option>
+                    <option value="2">2 puertas (2 fijos y 2 puertas)</option>
+                </select>
+            </div>
+            <div id="group-reemplazo" style="display:none;">
+                <div class="form-group">
+                    <label>¿Qué vidrio se cambia?</label>
+                    <select id="reemplazo_pieza">
+                        <option value="puerta">La puerta</option>
+                        <option value="fijo">El fijo</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>¿De qué división?</label>
+                    <select id="reemplazo_origen">
+                        <option value="corrediza">Corrediza (premium u otra medida)</option>
+                        <option value="clasica_180_190">Corrediza clásica de 180 o 190 de alto</option>
+                        <option value="batiente">Batiente</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Accesorios que van con el vidrio (cantidad)</label>
+                    <div id="reemplazo-piezas"></div>
+                </div>
+            </div>
         </div>
 
         <div class="card">
@@ -93,8 +128,12 @@
                     <input type="number" id="ancho" step="1" placeholder="Ej: 120">
                 </div>
                 <div class="col" id="col-ancho2" style="display:none;">
-                    <label>Lado 2 (cm)</label>
+                    <label id="lbl-ancho2">Lado 2 (cm)</label>
                     <input type="number" id="ancho2" step="1" placeholder="Ej: 80">
+                </div>
+                <div class="col" id="col-ancho3" style="display:none;">
+                    <label>Ancho 3 (cm)</label>
+                    <input type="number" id="ancho3" step="1" placeholder="Ej: 40">
                 </div>
                 <div class="col">
                     <label>Alto (cm)</label>
