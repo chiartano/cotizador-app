@@ -191,9 +191,7 @@ function cmp_calcularPrincipal(productoAlt) {
         else precioVidrio = cfg.precio_vidrio_8mm;
     }
     let costoVidrioTotal = precioVidrio * area * cfg.colchon_vidrio;
-    if (tieneSandblasting && !esEspejo) {
-        costoVidrioTotal *= (1 + cfg.extra_sandblasting_porc);
-    }
+    // El sandblasting se cobra con el precio de la ficha (V9 y V10), más abajo. // ficha
 
     // ---- Accesorios ----
     let baseAcc = currentConfig.productos[productoAlt];
@@ -201,9 +199,11 @@ function cmp_calcularPrincipal(productoAlt) {
         // Producto no existe en la config — devolvemos un placeholder
         return { error: true, mensaje: 'Producto no disponible' };
     }
+    if (typeof kitSegunFicha === 'function') baseAcc = kitSegunFicha(cfg, productoAlt, baseAcc, espesor, s.ancho); // ficha
     let extraColor = 0;
     if (colorAcc === 'negro') extraColor = cfg.extra_color_negro;
     else if (colorAcc === 'dorado') extraColor = cfg.extra_color_dorado;
+    else if (colorAcc === 'oro_rosa') extraColor = cfg.extra_color_dorado; // ficha
 
     const logica = LOGICA_ACCESORIOS[productoAlt] || "FIJO";
     let costoAcc;
@@ -244,6 +244,7 @@ function cmp_calcularPrincipal(productoAlt) {
         est = cfg.est_empresa;
         utilPorcentaje = cfg.util_empresa;
     }
+    if (typeof estructuraSegunFicha === 'function') est = estructuraSegunFicha(cfg, productoAlt, linea, est); // ficha
 
     const costoDirecto = costoVidrioTotal + costoAcc + costoLed + costoAluminio
                        + costoInstalacion + costoTransporte + costoInsumos + costoDesmonte;
@@ -252,6 +253,7 @@ function cmp_calcularPrincipal(productoAlt) {
     const precioBase = esPromoCorredizaEconomica ? precioPromoCorredizaEconomica : totalCostos / (1 - utilPorcentaje);
     const AJUSTE_COMERCIAL = 1.05;
     let precioFinal = esPromoCorredizaEconomica ? precioPromoCorredizaEconomica : precioBase * AJUSTE_COMERCIAL;
+    if (tieneSandblasting && !esEspejo && typeof precioSandblastingFicha === 'function') precioFinal += precioSandblastingFicha(cfg, anchoCalculo); // ficha
 
     if (!esPromoCorredizaEconomica && descuentoAdicional > 0) {
         precioFinal = Math.max(0, precioFinal - descuentoAdicional);

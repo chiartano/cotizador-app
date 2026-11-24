@@ -73,9 +73,9 @@ async function exerciseUpdateCheck(registration) {
     assert.equal(result.warnings[0][1], error);
   });
 
-  await test('5 nueva version conserva hardening y usa shell completo v7.32', () => {
+  await test('5 nueva version conserva hardening y usa shell completo v7.33', () => {
     const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.32'/);
+    assert.match(sw, /CACHE_NAME = 'cotizador-v7\.33'/);
     assert.match(sw, /agenda\/productSpec\.js/);
     assert.match(sw, /agenda\/quoteToCrm\.js/);
     assert.match(sw, /agenda\/intake\.js/);
@@ -84,8 +84,9 @@ async function exerciseUpdateCheck(registration) {
   });
 
   await test('6 archivos ajenos a la corrección permanecen iguales al candidato bloqueado', () => {
+    // B8 (2026-11-23): iq.js sale de la lista (ahorro de premium a clásica según las fichas).
     const protectedFiles = [
-      'dashboard.js', 'iq.js', 'styles.css',
+      'dashboard.js', 'styles.css',
       'manifest.json', 'icon.png', '_verify_tmp.js'
     ];
     assert.equal(git(['diff', '--name-only', blockedBridgeCandidate, '--', ...protectedFiles]), '');

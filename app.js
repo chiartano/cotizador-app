@@ -75,8 +75,12 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 meta_mensual: 4500000.0,
                 desmonte: 20000.0,
                 extra_color_negro: 50000.0,
-                extra_color_dorado: 200000.0,
-                extra_sandblasting_porc: 0.30,
+                extra_color_dorado: 200000.0, // también el oro rosa (ficha, 2026-11-20)
+                // B8 (2026-11-23), de las fichas:
+                est_premium: 150000.0, // estructura de la premium en línea controlada (D2)
+                kit_clasica_a1b: 180000.0, // kit de la clásica en 8 mm desde 120 cm y en 10 mm (A1b)
+                precio_sandblasting_menor_140: 70000.0, // al cliente, IVA incluido (V9)
+                precio_sandblasting_desde_140: 100000.0, // al cliente, 140 cm o más, o L (V10)
                 // Variables ESPEJO
                 precio_espejo_m2: 100000.0,
                 extra_espejo_led: 50000.0,
@@ -90,7 +94,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 precio_vidrio_laminado_4_4: 430000.0,
                 precio_vidrio_negro_6mm: 170000.0,
                 precio_vidrio_5mm: 80000.0, // templado 5 mm, para tiras
-                // Accesorios: costo por unidad en acero natural (Cristali 304)
+                // Accesorios: costo por unidad en acero natural
                 acc_bisagra_muro: 35000.0,
                 acc_bisagra_vidrio_vidrio: 70000.0,
                 acc_boton: 15000.0,
@@ -166,6 +170,180 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 + `Revísalo en Configuración → Divisiones y toca Guardar.`;
         }
 
+        // ==========================================
+        // FICHAS DE PRODUCTO (B8, 2026-11-23)
+        // ==========================================
+        // Valores de Configuración que salen de una ficha confirmada por Andrés
+        // (docs/catalogo-maestro/fichas/: 01-vidrios, 02-accesorios y 03-divisiones).
+        // El valor está en DEFAULT_CONFIG; aquí se dice de qué fila de la ficha sale.
+        // Lo que no tiene ficha confirmada (espejo, repisa, cortaviento, desmonte,
+        // mano de obra de las tiras, meta) sigue como antes: solo en Configuración.
+        // Repositorio público: costos sí, nombres de proveedores no (Andrés, 2026-11-23).
+        const FICHAS = {
+            version: '2026-11-23',
+            globales: {
+                precio_vidrio_6mm: 'V1', precio_vidrio_8mm: 'V2', precio_vidrio_10mm: 'V3',
+                precio_vidrio_5mm: 'V4', precio_vidrio_serigrafia_6mm: 'V5',
+                precio_vidrio_serigrafia_negra_8mm: 'V6', precio_vidrio_laminado_4_4: 'V7',
+                precio_vidrio_negro_6mm: 'V8',
+                precio_sandblasting_menor_140: 'V9', precio_sandblasting_desde_140: 'V10',
+                colchon_vidrio: 'D0', instalacion_base: 'D0', instalacion_L: 'D0', transporte: 'D0',
+                insumos: 'A33', iva: 'D0',
+                est_controlada: 'D0', est_empresa: 'D0', est_premium: 'D2',
+                util_controlada: 'D0', util_empresa: 'D0',
+                extra_color_negro: 'D0', extra_color_dorado: 'D0',
+                kit_clasica_a1b: 'A1b',
+                acc_bisagra_muro: 'A12', acc_bisagra_vidrio_vidrio: 'A13', acc_boton: 'A14',
+                acc_tubo_terminales_carro: 'A15', acc_extra_negro_pieza: 'A15', acc_extra_negro_tubo_carro: 'A15',
+                acc_perfil_u_6m: 'A24',
+                margen_plegable: 'D8', margen_panel_fijo: 'D7', margen_tiras: 'D12'
+            },
+            // Costo del kit de cada división (02-accesorios.md).
+            productos: {
+                "División Batiente (Tradicional)": 'A3',
+                "División Corrediza Clásica": 'A1',
+                "División Corrediza Premium": 'A2',
+                "División de baño L - Corrediza": 'A4',
+                "División de baño L - Batiente": 'A5'
+            },
+            // Divisiones con ficha confirmada (03-divisiones.md): llevan el plazo y la garantía de la ficha.
+            divisiones: [
+                "División Batiente (Tradicional)", "División Corrediza Clásica", "División Corrediza Premium",
+                "División de baño L - Corrediza", "División de baño L - Batiente",
+                "División de baño plegable (2 hojas)", "Panel fijo piso a techo (perfil U)"
+            ],
+            // Plazo del vidrio, en días hábiles desde el anticipo (01-vidrios.md). Es el
+            // mismo texto que lleva la orden.
+            plazos: {
+                incoloro: '6 a 8 días hábiles después del anticipo',
+                // Templado común (6 a 8) más el diseño sandblasting (1 a 2), Andrés, 2026-11-24.
+                sandblasting: '7 a 10 días hábiles después del anticipo',
+                // Promoción de la clásica ($650.000 / $690.000), Andrés, 2026-11-24.
+                promocion: '3 días hábiles después del anticipo',
+                especial: '12 a 15 días hábiles después del anticipo',
+                templado5: '12 a 15 días hábiles después del anticipo'
+            },
+            garantiaDivisiones: '12 meses sobre los herrajes y la instalación'
+        };
+
+        const PRODUCTO_CLASICA = "División Corrediza Clásica";
+        const PRODUCTO_PREMIUM = "División Corrediza Premium";
+        // Kit de la clásica según espesor y ancho (Andrés, 2026-11-23): el A1 en 6 mm
+        // y en 8 mm de menos de 120 cm; el A1b en 8 mm desde 120 cm y en todo 10 mm.
+        function usaKitA1b(producto, espesor, anchoCm) {
+            if (producto !== PRODUCTO_CLASICA) return false;
+            return espesor === '10mm' || (espesor === '8mm' && Number(anchoCm) >= 120);
+        }
+        function kitSegunFicha(cfg, producto, kitBase, espesor, anchoCm) {
+            return usaKitA1b(producto, espesor, anchoCm) ? cfg.kit_clasica_a1b : kitBase;
+        }
+        // Estructura de la premium: $150.000 en la línea controlada (D2). La línea
+        // empresa sigue igual hasta que Andrés diga si también sube.
+        function estructuraSegunFicha(cfg, producto, linea, est) {
+            return (producto === PRODUCTO_PREMIUM && linea === 'controlada') ? cfg.est_premium : est;
+        }
+        // El oro rosa lleva el mismo recargo que el dorado.
+        const esColorDorado = (color) => color === 'dorado' || color === 'oro_rosa';
+        function etiquetaColorHerraje(color) {
+            const etiquetas = { natural: 'natural', negro: 'negro', dorado: 'dorado', oro_rosa: 'oro rosa' };
+            return etiquetas[color] || String(color || '');
+        }
+        // Diseño sandblasting: precio al cliente, IVA incluido (V9 y V10). En la L
+        // se suman sus anchos.
+        function precioSandblastingFicha(cfg, anchoTotalM) {
+            return Math.round(anchoTotalM * 100) >= 140 ? cfg.precio_sandblasting_desde_140 : cfg.precio_sandblasting_menor_140;
+        }
+        // Plazo de entrega que va en la cotización. Sin ficha o sin plazo conocido
+        // (espejo, repisa, cortaviento), no se dice nada, como antes.
+        function plazoSegunFicha(producto, { vidrioEspecial, glassFinish, esTiras, esPromocion } = {}) {
+            if (vidrioEspecial) return FICHAS.plazos.especial;
+            if (esTiras) return FICHAS.plazos.templado5;
+            if (!FICHAS.divisiones.includes(producto)) return '';
+            if (glassFinish === 'transparent') return esPromocion ? FICHAS.plazos.promocion : FICHAS.plazos.incoloro;
+            if (glassFinish === 'sandblasted') return FICHAS.plazos.sandblasting;
+            return '';
+        }
+        function textoGarantia(producto) {
+            return FICHAS.divisiones.includes(producto) ? FICHAS.garantiaDivisiones : '12 meses';
+        }
+
+        // Los valores de las fichas llegan a cada teléfono sin pisar lo puesto a mano.
+        // `wilan_fichas_vistas` guarda lo que decían las fichas la última vez que se
+        // abrió la app en este teléfono. Un valor guardado igual a ese sigue a la ficha
+        // nueva; uno distinto lo puso alguien a mano: no se pisa y se avisa, hasta que
+        // alguien toque «Guardar» en Configuración (`wilan_fichas_revisadas`).
+        const FICHAS_VISTAS_KEY = 'wilan_fichas_vistas';
+        const FICHAS_REVISADAS_KEY = 'wilan_fichas_revisadas';
+        function valoresDeFichas(defaults) {
+            const valores = { globales: {}, productos: {} };
+            Object.keys(FICHAS.globales).forEach(k => { valores.globales[k] = defaults.globales[k]; });
+            Object.keys(FICHAS.productos).forEach(k => { valores.productos[k] = defaults.productos[k]; });
+            return valores;
+        }
+        function aplicarFichas(config, defaults, storage) {
+            const leer = (k) => { try { return storage.getItem(k); } catch (_) { return null; } };
+            const leerJson = (k) => { try { return JSON.parse(leer(k) || 'null'); } catch (_) { return null; } };
+            const escribir = (k, v) => { try { storage.setItem(k, v); } catch (_) { /* sin espacio: se reintenta al abrir */ } };
+            const fichas = valoresDeFichas(defaults);
+            const vistas = leerJson(FICHAS_VISTAS_KEY) || {};
+            const revisadas = leerJson(FICHAS_REVISADAS_KEY) || {};
+            // El kit premium ya tiene su aviso de B2 mientras nadie toque Guardar.
+            const marcaPremium = leer(KIT_PREMIUM.marca);
+            const premiumConAvisoB2 = !marcaPremium || marcaPremium === 'revisado';
+            const resultado = { actualizados: [], distintos: [] };
+            if (!config) return resultado;
+            ['globales', 'productos'].forEach(seccion => {
+                const actual = config[seccion] || (config[seccion] = {});
+                Object.keys(fichas[seccion]).forEach(clave => {
+                    const ficha = fichas[seccion][clave];
+                    const valor = actual[clave];
+                    if (valor === undefined || valor === ficha) return;
+                    // La primera vez con B8, lo que traía la app es lo mismo que la ficha.
+                    const visto = vistas[seccion] && vistas[seccion][clave] !== undefined ? vistas[seccion][clave] : ficha;
+                    if (valor === visto) {
+                        actual[clave] = ficha;
+                        resultado.actualizados.push({ seccion, clave, de: valor, a: ficha });
+                        return;
+                    }
+                    if (seccion === 'productos' && clave === KIT_PREMIUM.producto && premiumConAvisoB2 && ficha === KIT_PREMIUM.nuevo) return;
+                    if (revisadas[seccion] && revisadas[seccion][clave] === ficha) return;
+                    resultado.distintos.push({ seccion, clave, valor, ficha });
+                });
+            });
+            if (resultado.actualizados.length) {
+                const guardado = leerJson('vidrios_config');
+                if (guardado) {
+                    resultado.actualizados.forEach(({ seccion, clave, a }) => {
+                        if (guardado[seccion]) guardado[seccion][clave] = a;
+                    });
+                    escribir('vidrios_config', JSON.stringify(guardado));
+                }
+            }
+            escribir(FICHAS_VISTAS_KEY, JSON.stringify(fichas));
+            return resultado;
+        }
+        function marcarFichasRevisadas(defaults, storage) {
+            try { storage.setItem(FICHAS_REVISADAS_KEY, JSON.stringify(valoresDeFichas(defaults))); } catch (_) { /* no bloquea */ }
+        }
+        const ETIQUETAS_CONFIG = {
+            acc_boton: 'ACC BOTÓN HALADERA', // «botón haladera» en todos lados (Andrés, 2026-11-20)
+            extra_color_dorado: 'EXTRA COLOR DORADO U ORO ROSA',
+            est_premium: 'EST PREMIUM (LÍNEA CONTROLADA)',
+            kit_clasica_a1b: 'KIT CLÁSICA 8 MM DESDE 120 CM Y 10 MM',
+            precio_sandblasting_menor_140: 'SANDBLASTING AL CLIENTE, MENOS DE 140 CM',
+            precio_sandblasting_desde_140: 'SANDBLASTING AL CLIENTE, DESDE 140 CM O L'
+        };
+        const etiquetaConfig = (clave) => ETIQUETAS_CONFIG[clave] || clave.replace(/_/g, ' ').toUpperCase();
+        const fmtValorConfig = (v) => (Math.abs(Number(v)) < 10 ? String(v) : fmtMoney(Number(v)));
+        function textoAvisoFichas(resultado) {
+            const lista = (resultado && resultado.distintos) || [];
+            if (!lista.length) return '';
+            const detalle = lista.slice(0, 3).map(d => `${etiquetaConfig(d.clave)}: ${fmtValorConfig(d.valor)} (ficha ${fmtValorConfig(d.ficha)})`).join('; ');
+            const mas = lista.length > 3 ? ` y ${lista.length - 3} más` : '';
+            return `Este teléfono tiene ${lista.length === 1 ? 'un valor puesto a mano distinto' : `${lista.length} valores puestos a mano distintos`} de las fichas: ${detalle}${mas}. `
+                + `No se cambiaron. Revísalos en Configuración y toca Guardar, o «Usar los valores de las fichas».`;
+        }
+
         // Mínimo por salida de instalación (regla del 2026-11-11). Andrés, 2026-11-21:
         // por ahora solo avisa; el precio no cambia. El aviso lo ve quien cotiza
         // en la pantalla; no va en el mensaje, el presupuesto ni la imagen.
@@ -213,7 +391,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             laminado_4_4: { label: 'Laminado templado 4+4', espesor: '8mm', precioKey: 'precio_vidrio_laminado_4_4' },
             negro_6mm: { label: 'Transparente negro 6 mm', espesor: '6mm', precioKey: 'precio_vidrio_negro_6mm' }
         };
-        const PLAZO_VIDRIO_ESPECIAL = '12 a 15 días hábiles después del anticipo';
+        const PLAZO_VIDRIO_ESPECIAL = FICHAS.plazos.especial;
 
         // Kit de la plegable de 2 hojas: 2 bisagras a muro, 2 vidrio a vidrio,
         // 2 botones haladera y el juego de tubo, terminales y carro. Negro: +5.000 por
@@ -222,14 +400,15 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             let total = 2 * cfg.acc_bisagra_muro + 2 * cfg.acc_bisagra_vidrio_vidrio
                 + 2 * cfg.acc_boton + cfg.acc_tubo_terminales_carro;
             if (color === 'negro') total += 6 * cfg.acc_extra_negro_pieza + cfg.acc_extra_negro_tubo_carro;
-            if (color === 'dorado') total += cfg.extra_color_dorado;
+            if (color === 'dorado' || color === 'oro_rosa') total += cfg.extra_color_dorado;
             return total;
         }
 
-        // Panel fijo de piso a techo: perfil U en piso, techo y muro
-        // (2 x ancho + alto), en tiras completas de 6 m. Medidas en metros.
+        // Panel fijo: un perfil U en cada lado del vidrio, 2 x ancho + 2 x alto
+        // (ficha D7, Andrés, 2026-11-20; antes 2 x ancho + alto), en tiras
+        // completas de 6 m. Medidas en metros.
         function costoPerfilU(cfg, anchoM, altoM) {
-            const metros = 2 * anchoM + altoM;
+            const metros = 2 * anchoM + 2 * altoM;
             const tiras = Math.max(1, Math.ceil(metros / 6 - 1e-9));
             return tiras * cfg.acc_perfil_u_6m;
         }
@@ -697,6 +876,9 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
         // Si el teléfono guardó $220.000 (el valor viejo de la app), pasa solo.
         // Si alguien puso otro valor a mano, no se pisa: se avisa.
         const avisoKitPremium = migrarKitPremium(currentConfig, localStorage);
+        // B8 (2026-11-23): los valores de las fichas llegan a todos los teléfonos;
+        // lo puesto a mano no se pisa: se avisa.
+        const avisoFichas = aplicarFichas(currentConfig, DEFAULT_CONFIG, localStorage);
 
         // Sincronizar y REORDENAR productos según DEFAULT_CONFIG
         // Esto asegura que Económica y Premium queden en la posición correcta (2da y 3ra)
@@ -744,6 +926,16 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 }, 1200);
             } else if (avisoKitPremium && avisoKitPremium.tipo === 'actualizado') {
                 setTimeout(() => toast(`Kit de la corrediza premium actualizado a ${fmtMoney(KIT_PREMIUM.nuevo)}`, 'info', 4000), 1200);
+            }
+            const textoFichas = textoAvisoFichas(avisoFichas);
+            if (textoFichas) {
+                setTimeout(() => {
+                    toast(textoFichas, 'warn', 10000);
+                    const ultimo = document.getElementById('toast-container')?.lastElementChild;
+                    if (ultimo && ultimo.style) ultimo.style.animation = 'toastIn 0.25s ease-out, toastOut 0.3s ease-in 9.5s forwards';
+                }, 2400);
+            } else if (avisoFichas.actualizados.length) {
+                setTimeout(() => toast(`${avisoFichas.actualizados.length === 1 ? 'Un valor actualizado' : `${avisoFichas.actualizados.length} valores actualizados`} desde las fichas`, 'info', 4000), 2400);
             }
 
             // Restaurar UI del cliente y renderizar carrito guardado
@@ -805,6 +997,29 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
 
             // --- TAB 1: GENERAL ---
             const tGen = document.getElementById('tab-general');
+            // B8: de dónde salen los valores y qué tiene este teléfono puesto a mano.
+            const notaFichas = document.createElement('div');
+            notaFichas.id = 'nota-fichas';
+            notaFichas.style.cssText = 'margin:8px 0;padding:10px;border-radius:8px;background:#eff6ff;color:#1e3a8a;font-size:0.85rem;';
+            notaFichas.innerText = `📋 = sale de las fichas de producto (al día con ${FICHAS.version}). `
+                + `Si lo cambias aquí, cambia solo en este teléfono; cuando la ficha cambie, se te avisa.`;
+            tGen.appendChild(notaFichas);
+            const distintos = (avisoFichas && avisoFichas.distintos) || [];
+            if (distintos.length) {
+                const aviso = document.createElement('div');
+                aviso.id = 'aviso-fichas';
+                aviso.style.cssText = 'margin:8px 0;padding:10px;border-radius:8px;background:#fff7ed;color:#9a3412;font-size:0.85rem;font-weight:600;';
+                aviso.innerText = `Este teléfono tiene ${distintos.length === 1 ? 'un valor puesto a mano distinto' : `${distintos.length} valores puestos a mano distintos`} de las fichas (salen en naranja). `
+                    + `Si están bien, toca Guardar. Si no, usa los de las fichas:`;
+                const boton = document.createElement('button');
+                boton.type = 'button';
+                boton.id = 'btn-usar-fichas';
+                boton.innerText = 'Usar los valores de las fichas';
+                boton.style.cssText = 'display:block;margin-top:8px;border:0;border-radius:6px;padding:8px 10px;background:#9a3412;color:#fff;font-weight:700;cursor:pointer;';
+                boton.onclick = usarValoresDeFichas;
+                aviso.appendChild(boton);
+                tGen.appendChild(aviso);
+            }
             addHeader(tGen, "Vidrios Templados (m²)");
             ['precio_vidrio_6mm', 'precio_vidrio_8mm', 'precio_vidrio_10mm', 'colchon_vidrio'].forEach(k => addInputConfig(tGen, k, currentConfig.globales[k], 'globales'));
 
@@ -812,7 +1027,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             ['instalacion_base', 'instalacion_L', 'transporte', 'insumos', 'desmonte'].forEach(k => addInputConfig(tGen, k, currentConfig.globales[k], 'globales'));
 
             addHeader(tGen, "Negocio y Metas");
-            ['iva', 'est_controlada', 'est_empresa', 'util_controlada', 'util_empresa', 'meta_mensual'].forEach(k => addInputConfig(tGen, k, currentConfig.globales[k], 'globales'));
+            ['iva', 'est_controlada', 'est_premium', 'est_empresa', 'util_controlada', 'util_empresa', 'meta_mensual'].forEach(k => addInputConfig(tGen, k, currentConfig.globales[k], 'globales'));
 
             // --- TAB 2: DIVISIONES ---
             const tDiv = document.getElementById('tab-divisiones');
@@ -826,9 +1041,10 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 tDiv.appendChild(nota);
             }
             Object.keys(currentConfig.productos).filter(isDivision).forEach(k => addInputConfig(tDiv, k, currentConfig.productos[k], 'productos'));
+            addInputConfig(tDiv, 'kit_clasica_a1b', currentConfig.globales.kit_clasica_a1b, 'globales');
 
             addHeader(tDiv, "Extras y Acabados");
-            ['extra_color_negro', 'extra_color_dorado', 'extra_sandblasting_porc'].forEach(k => addInputConfig(tDiv, k, currentConfig.globales[k], 'globales'));
+            ['extra_color_negro', 'extra_color_dorado', 'precio_sandblasting_menor_140', 'precio_sandblasting_desde_140'].forEach(k => addInputConfig(tDiv, k, currentConfig.globales[k], 'globales'));
 
             // --- TAB 3: ESPEJOS ---
             const tEsp = document.getElementById('tab-espejos');
@@ -862,9 +1078,14 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
 
             let label = document.createElement('label');
             // Limpiar nombres de variables para que se vean bonitos.
-            // El agarre se llama «botón haladera» en todos lados (Andrés, 2026-11-20).
-            const ETIQUETAS_CONFIG = { acc_boton: 'ACC BOTÓN HALADERA' };
-            label.innerText = ETIQUETAS_CONFIG[key] || key.replace(/_/g, ' ').toUpperCase();
+            const deFicha = !!(FICHAS[section] && FICHAS[section][key]);
+            label.innerText = etiquetaConfig(key);
+            if (deFicha) {
+                const marca = document.createElement('span');
+                marca.title = 'Sale de las fichas';
+                marca.innerText = ' 📋';
+                label.appendChild(marca);
+            }
 
             let inp = document.createElement('input');
             inp.type = 'number';
@@ -873,6 +1094,16 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
 
             group.appendChild(label);
             group.appendChild(inp);
+            // B8: si este teléfono tiene otro valor que la ficha, se dice cuál es el de la ficha.
+            const valorFicha = deFicha ? DEFAULT_CONFIG[section][key] : undefined;
+            if (deFicha && val !== valorFicha) {
+                inp.style.borderColor = '#ea580c';
+                const nota = document.createElement('div');
+                nota.className = 'nota-ficha';
+                nota.style.cssText = 'font-size:0.75rem;color:#9a3412;margin-top:2px;';
+                nota.innerText = `La ficha dice ${fmtValorConfig(valorFicha)}. Este teléfono tiene otro valor.`;
+                group.appendChild(nota);
+            }
             parent.appendChild(group);
         }
 
@@ -938,13 +1169,13 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 texto += `🔹 *Medidas:* ${medidas}\n`;
                 if (raw.vidrio_descripcion) texto += `🔹 *Vidrio:* ${raw.vidrio_descripcion}\n`;
                 else texto += `🔹 *Espesor:* ${raw.espesor}${raw.sandblasting ? ' + sandblasting' : ''}\n`;
-                if (raw.color_acc) texto += `🔹 *Acabado:* ${String(raw.color_acc).toUpperCase()}\n`;
+                if (raw.color_acc) texto += `🔹 *Acabado:* ${etiquetaColorHerraje(raw.color_acc).toUpperCase()}\n`;
             }
 
             texto += `🔹 *Instalación:* incluida\n`;
             if (result.services?.transportIncluded) texto += `🔹 *Transporte:* incluido\n`;
             if (raw.plazo_entrega) texto += `🔹 *Entrega:* ${raw.plazo_entrega}\n`;
-            texto += `🔹 *Garantía:* 12 meses\n\n`;
+            texto += `🔹 *Garantía:* ${textoGarantia(result.producto)}\n\n`;
             texto += main_sharePriceLines(result.precio, qty);
 
             if (!esEspejo && raw.promo_fija_corrediza_economica) {
@@ -996,7 +1227,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 } else {
                     if (item.vidrioDescripcion) texto += `   💎 Vidrio: ${item.vidrioDescripcion}\n`;
                     else texto += `   💎 Espesor: ${item.vidrio}${item.sandblasting ? ' + sandblasting' : ''}\n`;
-                    if (item.color) texto += `   🎨 Acabado: ${item.color.toUpperCase()}\n`;
+                    if (item.color) texto += `   🎨 Acabado: ${etiquetaColorHerraje(item.color).toUpperCase()}\n`;
                 }
                 if (item.plazoEntrega) texto += `   ⏱️ Entrega: ${item.plazoEntrega}\n`;
                 texto += `   🔢 Cantidad: ${qty}\n`;
@@ -1016,7 +1247,8 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 texto += `📉 *Descuento:* -${fmtMoney(discount)}\n`;
             }
             texto += `💰 *TOTAL: ${fmtMoney(total - discount)}*, IVA incluido\n`;
-            texto += `🛡️ *Garantía:* 12 meses`;
+            // B8: con alguna división, la garantía dice qué cubre (ficha); si no, como antes.
+            texto += `🛡️ *Garantía:* ${items.some(item => !item.esAluminio && FICHAS.divisiones.includes(item.producto)) ? FICHAS.garantiaDivisiones : '12 meses'}`;
             texto += `\n📐 *Visita de medidas:* $20.000, se descuentan del total si haces el trabajo.`;
             return texto;
         }
@@ -1069,7 +1301,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             const vidrioDescripcion = esTiras ? 'Templado incoloro 5 mm'
                 : esRepisa ? 'Templado 6 mm'
                 : (vidrioEspecial ? vidrioEspecial.label : '');
-            const plazoEntrega = vidrioEspecial ? PLAZO_VIDRIO_ESPECIAL : '';
+            let plazoEntrega = plazoSegunFicha(prodNombre, { vidrioEspecial, glassFinish, esTiras });
             const esEspejoSeleccionado = prodNombre.includes("Espejo");
             const pideVidrioYColor = !esEspejoSeleccionado && !esAdicional;
             const missingCritical = [
@@ -1127,10 +1359,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 else if (espesor === '10mm') costoVidrioBase = cfg.precio_vidrio_10mm;
                 else costoVidrioBase = cfg.precio_vidrio_8mm; // 8mm default
 
-                // Aumento por Sandblasting (Porcentaje sobre el costo del vidrio)
-                if (tieneSandblasting) {
-                    costoVidrioBase = costoVidrioBase * (1 + cfg.extra_sandblasting_porc);
-                }
+                // El sandblasting ya no sube el vidrio un 30 %: se cobra con el precio de la ficha (V9 y V10), más abajo. // ficha
             }
             // especial: repisa con precio fijo (sin m2), tiras de 5 mm y vidrios especiales por m2
             if (esRepisa) costoVidrioBase = 0; // especial
@@ -1144,11 +1373,13 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             let costoAluminio = 0;
             let costoLed = 0;
             let baseAcc = currentConfig.productos[prodNombre];
+            baseAcc = kitSegunFicha(cfg, prodNombre, baseAcc, espesor, anchoCmOriginal); // ficha
 
             // Ajuste por Color
             if (!esEspejo) {
                 if (colorAcc === 'negro') baseAcc += cfg.extra_color_negro;
                 if (colorAcc === 'dorado') baseAcc += cfg.extra_color_dorado;
+                if (colorAcc === 'oro_rosa') baseAcc += cfg.extra_color_dorado; // ficha
             }
 
             const logica = LOGICA_ACCESORIOS[prodNombre] || "FIJO";
@@ -1217,6 +1448,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 est = cfg.est_empresa;
                 utilPorcentaje = cfg.util_empresa;
             }
+            est = estructuraSegunFicha(cfg, prodNombre, linea, est); // ficha
             // especial: los adicionales no cargan estructura, ya la paga el trabajo principal
             if (esAdicional) est = 0; // especial
 
@@ -1231,6 +1463,9 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             // especial: plegable, panel y tiras con margen propio sobre la venta sin IVA
             const margenEspecial = esPlegable ? cfg.margen_plegable : esPanelFijo ? cfg.margen_panel_fijo : esTiras ? cfg.margen_tiras : null; // especial
             if (margenEspecial !== null) precioFinal = totalCostos * (1 + cfg.iva) / (1 - margenEspecial); // especial
+            // ficha: el diseño sandblasting se cobra al cliente con el precio de la ficha, IVA incluido (V9 y V10)
+            const precioSandblasting = (tieneSandblasting && !esEspejo) ? precioSandblastingFicha(cfg, anchoCalculo) : 0; // ficha
+            precioFinal += precioSandblasting; // ficha
 
             // Aumento general del 5% sobre el precio final (IVA incluido)
             // Ajuste comercial aplicado arriba; no se suma IVA nuevamente al cliente.
@@ -1257,6 +1492,9 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             const medidasStr = repisaSinMedidas ? 'hasta 30' : esLEspecial ? 
                 `L(${Math.round(ancho * 100)}+${Math.round(ancho2 * 100)})x${Math.round(alto * 100)}` : 
                 `${Math.round(ancho * 100)}x${Math.round(alto * 100)}`;
+
+            // B8: la promoción de la clásica promete 3 días hábiles (Andrés, 2026-11-24).
+            plazoEntrega = plazoSegunFicha(prodNombre, { vidrioEspecial, glassFinish, esTiras, esPromocion: esPromoCorredizaEconomica });
 
             const canonicalMetadata = buildCanonicalProductMetadata(prodNombre, {
                 espesor,
@@ -1354,6 +1592,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 insumos: costoInsumos,
                 desmonte: costoDesmonte,
                 estructura: est,
+                sandblasting: precioSandblasting,
                 ganancia: ganancia,
                 descuento: descuentoAdicional,
                 espesorLabel: esEspejo ? 'Espejo' : (vidrioDescripcion || espesor),
@@ -1413,6 +1652,8 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             addRow("Insumos (Silicona/Tornillos)", d.insumos);
 
             addRow("Aporte Estructura (Fijo)", d.estructura);
+            // B8: precio al cliente de la ficha; su costo en el proveedor sigue sin dato.
+            if (d.sandblasting > 0) addRow("Diseño sandblasting (precio al cliente, su costo sin dato)", d.sandblasting);
 
             if (d.descuento > 0 && !d.promoDescuentoIgnorado) {
                 const row = document.createElement('div');
@@ -1632,10 +1873,25 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             localStorage.setItem('vidrios_config', JSON.stringify(currentConfig));
             // Guardar = alguien revisó los valores: el aviso del kit premium ya no sale.
             try { localStorage.setItem(KIT_PREMIUM.marca, 'revisado'); } catch (_) { /* no bloquea */ }
+            // B8: lo distinto de las fichas queda revisado; se vuelve a avisar si la ficha cambia.
+            marcarFichasRevisadas(DEFAULT_CONFIG, localStorage);
             toast('Configuración guardada', 'success');
             cerrarConfig();
             document.getElementById('lbl-desmonte-val').innerText = fmtMoney(currentConfig.globales.desmonte);
             // Recargar para aplicar cambios en selects si hubo cambios
+            location.reload();
+        }
+
+        // B8: vuelve a las fichas solo lo que este teléfono tenía distinto; lo demás no cambia.
+        function usarValoresDeFichas() {
+            const distintos = (avisoFichas && avisoFichas.distintos) || [];
+            if (!distintos.length) return;
+            const lista = distintos.map(d => `• ${etiquetaConfig(d.clave)}: ${fmtValorConfig(d.valor)} → ${fmtValorConfig(d.ficha)}`).join('\n');
+            if (!confirm(`¿Usar los valores de las fichas en este teléfono?\n\n${lista}`)) return;
+            distintos.forEach(({ seccion, clave, ficha }) => { currentConfig[seccion][clave] = ficha; });
+            localStorage.setItem('vidrios_config', JSON.stringify(currentConfig));
+            marcarFichasRevisadas(DEFAULT_CONFIG, localStorage);
+            toast('Valores de las fichas puestos en este teléfono', 'success');
             location.reload();
         }
 

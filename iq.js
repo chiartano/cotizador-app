@@ -154,6 +154,23 @@ const IQ_PLANTILLAS = [
 // =================================================================
 let iq_ultimaEvaluacion = null;
 
+// B8 (2026-11-23): lo que se ahorra el cliente al pasar de premium a clásica en un
+// vano chico: la diferencia de kits y de estructura, con el margen de la línea
+// controlada. Antes decía una cifra fija de 100 mil; con el kit premium a $280.000 es más.
+function iq_ahorroPremiumAClasica() {
+    try {
+        const g = currentConfig.globales;
+        const p = currentConfig.productos;
+        const costo = (p['División Corrediza Premium'] - p['División Corrediza Clásica'])
+            + ((g.est_premium || g.est_controlada) - g.est_controlada);
+        const ahorro = costo / (1 - g.util_controlada) * 1.05;
+        if (!(ahorro > 0)) return '';
+        return `(unos $${(Math.round(ahorro / 10000) * 10000).toLocaleString('es-CO')})`;
+    } catch (_) {
+        return '';
+    }
+}
+
 // =================================================================
 // 4. API PÚBLICA - ANÁLISIS POST-CÁLCULO
 // =================================================================
@@ -242,7 +259,7 @@ function iq_analizarPrincipal() {
     if (producto === 'División Corrediza Premium' && anchoTotalCm < 100 && altoCm < 200) {
         recommends.push({
             id:'rec-bajar-clasica',
-            txt:`Vano chico para Premium: la Clásica usa los mismos espesores de vidrio y a este tamaño la diferencia visual es mínima. Ahorro real (~$100k) sin perder calidad estructural.`,
+            txt:`Vano chico para Premium: la Clásica usa los mismos espesores de vidrio y a este tamaño la diferencia visual es mínima. Ahorro real ${iq_ahorroPremiumAClasica()} sin perder calidad estructural.`,
             apply: { type:'main_setProducto', value:'División Corrediza Clásica' }
         });
     }

@@ -212,8 +212,10 @@ test('3 la app trae el kit premium a $280.000 y la corrediza premium sube de pre
   h.context.mostrarResultados = (final, ...rest) => { precio = final; return original(final, ...rest); };
   fill(h, { producto: PREMIUM, ancho: 120, alto: 190, espesor: '8mm', color_acc: 'natural', glass_finish: 'transparent' });
   h.run('calcular()');
-  // (1,2 × 1,9 × 135.000 × 1,05 + 280.000 + 70.000 + 70.000 + 15.000 + 100.000) ÷ 0,85 × 1,05
-  assert.equal(Math.round(precio), 1060117); // con $220.000 daba $985.999
+  // (1,2 × 1,9 × 135.000 × 1,05 + 280.000 + 70.000 + 70.000 + 15.000 + 150.000) ÷ 0,85 × 1,05
+  // B8 (2026-11-23): la estructura de la premium es $150.000 (ficha D2); con $100.000 daba
+  // $1.060.117 (v7.32) y con el kit a $220.000, $985.999.
+  assert.equal(Math.round(precio), 1121882);
 });
 
 test('4 un teléfono con $220.000 guardado pasa solo a $280.000 y queda guardado', () => {

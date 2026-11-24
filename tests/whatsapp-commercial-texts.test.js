@@ -62,9 +62,11 @@ function functionsFrom(file, names, prelude, exportsList = names) {
 const money = value => '$' + Math.round(value).toLocaleString('es-CO');
 const main = functionsFrom(
   'app.js',
-  ['main_sharePriceLines', 'buildMainCommercialMessage', 'cartInstallationLabel', 'aluminumColorLabel', 'buildCartCommercialMessage'],
+  ['main_sharePriceLines', 'buildMainCommercialMessage', 'cartInstallationLabel', 'aluminumColorLabel', 'buildCartCommercialMessage',
+    'etiquetaColorHerraje', 'textoGarantia'],
   `const fmtMoney = ${money.toString()};
-   const ALU_COLOR_LABELS = {natural:'Natural', negro:'Negro', blanco:'Blanco'};`
+   const ALU_COLOR_LABELS = {natural:'Natural', negro:'Negro', blanco:'Blanco'};
+   ${extractBetween(read('app.js'), 'const FICHAS =', 'const PRODUCTO_CLASICA =')}`
 );
 const aluminum = functionsFrom(
   'aluminio.js',
@@ -471,10 +473,19 @@ test('fórmulas monetarias permanecen idénticas a 76db88e', () => {
     ['app.js', 'const cfg = currentConfig.globales;', 'const medidasStr ='],
     ['aluminio.js', 'const sysData = aluConfig.sistemas[sys];', '// ---- 11. GUARDAR Y RENDERIZAR ----']
   ];
+  // B8 (2026-11-23): lo que sale de las fichas va en líneas propias marcadas «// ficha».
+  // Único cambio aprobado a una línea vieja (Andrés, 2026-11-23): el sandblasting ya no
+  // sube el vidrio un 30 %; se cobra con el precio de la ficha (V9 y V10).
+  const withoutOldSandblasting = value => value
+    .replace(/\n *\/\/ Aumento por Sandblasting \(Porcentaje sobre el costo del vidrio\)\n *if \(tieneSandblasting\) \{\n *costoVidrioBase = costoVidrioBase \* \(1 \+ cfg\.extra_sandblasting_porc\);\n *\}/, '')
+    .replace(/\n *if \(tieneSandblasting && !esEspejo\) \{\n *costoVidrioTotal \*= \(1 \+ cfg\.extra_sandblasting_porc\);\n *\}/, '');
+  const withoutFichaLines = value => value.split('\n')
+    .filter(line => !/\/\/ ficha\b/.test(line))
+    .join('\n');
   formulaRegions.forEach(([file, start, end]) => {
     // Los productos especiales del 2026-11-19 van en líneas propias marcadas
     // «// especial»; sin ellas, la fórmula de los productos de siempre es idéntica.
-    const withoutSpecialLines = value => value.split('\n')
+    const withoutSpecialLines = value => withoutOldSandblasting(withoutFichaLines(value)).split('\n')
       .filter(line => !/\/\/ especial\b/.test(line))
       .join('\n');
     const normalizeSpecNeutral = value => withoutSpecialLines(normalizeEol(value))
@@ -487,8 +498,8 @@ test('fórmulas monetarias permanecen idénticas a 76db88e', () => {
     );
   });
   assert.equal(
-    normalizeEol(extractFunction(read('comparador.js'), 'cmp_calcularPrincipal')),
-    normalizeEol(extractFunction(atBase('comparador.js'), 'cmp_calcularPrincipal'))
+    withoutOldSandblasting(withoutFichaLines(normalizeEol(extractFunction(read('comparador.js'), 'cmp_calcularPrincipal')))),
+    withoutOldSandblasting(withoutFichaLines(normalizeEol(extractFunction(atBase('comparador.js'), 'cmp_calcularPrincipal'))))
   );
 });
 

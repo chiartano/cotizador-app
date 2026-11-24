@@ -66,10 +66,13 @@ test('3 kit de la plegable de 2 hojas: natural 360.000, negro 410.000 (tubo y ca
   assert.equal(helpers.costoKitPlegable(cfg, 'dorado'), 360000 + cfg.extra_color_dorado);
 });
 
-test('4 perfil U del panel fijo en tiras de 6 m (2 x ancho + alto)', () => {
-  assert.equal(helpers.costoPerfilU(cfg, 0.5, 2.15), 20000);  // 3,15 m → 1 tira
-  assert.equal(helpers.costoPerfilU(cfg, 1.0, 4.0), 20000);   // 6 m justos → 1 tira
-  assert.equal(helpers.costoPerfilU(cfg, 1.2, 4.0), 40000);   // 6,4 m → 2 tiras
+// B8 (2026-11-23): la ficha D7 dice un perfil en cada lado del vidrio, 2 x ancho + 2 x alto
+// (Andrés, 2026-11-20). Antes el Cotizador cobraba 2 x ancho + alto.
+test('4 perfil U del panel fijo en tiras de 6 m (2 x ancho + 2 x alto)', () => {
+  assert.equal(helpers.costoPerfilU(cfg, 0.5, 2.15), 20000);  // 5,3 m → 1 tira
+  assert.equal(helpers.costoPerfilU(cfg, 1.0, 2.0), 20000);   // 6 m justos → 1 tira
+  assert.equal(helpers.costoPerfilU(cfg, 1.0, 2.15), 40000);  // 6,3 m → 2 tiras
+  assert.equal(helpers.costoPerfilU(cfg, 2.0, 4.1), 60000);   // 12,2 m → 3 tiras
 });
 
 test('5 vidrios especiales fijan su espesor', () => {
@@ -97,6 +100,9 @@ test('7 los productos especiales no se editan como precio base en Divisiones', (
 
 const texts = Function(`
   const fmtMoney = (n) => '$' + Math.round(n).toLocaleString('es-CO');
+  ${extractBlock('const FICHAS =')};
+  ${extractBlock('function etiquetaColorHerraje')}
+  ${extractBlock('function textoGarantia')}
   ${extractBlock('function main_sharePriceLines')}
   ${extractBlock('function cartInstallationLabel')}
   ${extractBlock('function aluminumColorLabel')}

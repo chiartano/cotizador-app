@@ -19,8 +19,8 @@ test('1 protocolo controlado de actualización permanece presente', () => {
   assert.match(index, /WILAN_PWA_CLIENT_CAPABILITY_ACK/);
 });
 
-test('2 usa cache versionada v7.32 y shell critico cerrado con product-spec e intake', () => {
-  assert.match(sw, /const CACHE_NAME = 'cotizador-v7\.32'/);
+test('2 usa cache versionada v7.33 y shell critico cerrado con product-spec e intake', () => {
+  assert.match(sw, /const CACHE_NAME = 'cotizador-v7\.33'/);
   for (const asset of ['index.html', 'app.js', 'aluminio.js', 'comparador.js', 'dashboard.js', 'iq.js', 'visual.js', 'styles.css', 'agenda/agenda.css', 'agenda/config.js', 'agenda/productSpec.js', 'agenda/ui.js', 'agenda/quoteToCrm.js', 'agenda/quoteInbox.js', 'agenda/intake.js', 'manifest.json', 'icon.png']) assert.match(sw, new RegExp(asset.replace('.', '\\.')));
 });
 
@@ -69,8 +69,10 @@ test('8 integracion no agrega escrituras runtime ni CDN al shell', () => {
 });
 
 test('9 archivos ajenos a la corrección no cambian', () => {
+  // B8 (2026-11-23): iq.js sale de la lista para calcular el ahorro de premium a
+  // clásica con el kit y la estructura de las fichas (antes decía «~$100k» fijo).
   const protectedFiles = [
-    'dashboard.js', 'iq.js', 'styles.css',
+    'dashboard.js', 'styles.css',
     'manifest.json', 'icon.png', '_verify_tmp.js'
   ];
   assert.equal(git(['diff', '--name-only', blockedBridgeCandidate, '--', ...protectedFiles]), '');

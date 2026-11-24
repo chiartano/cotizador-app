@@ -108,7 +108,7 @@ function viz_generarParaPrincipal() {
         vidrio: esEspejo ? '' : (r.vidrioDescripcion || r.vidrio),
         vidrioEsDescripcion: !!r.vidrioDescripcion,
         plazoEntrega: r.plazoEntrega || '',
-        color: esEspejo ? '' : raw.color_acc,
+        color: esEspejo ? '' : (typeof etiquetaColorHerraje === 'function' ? etiquetaColorHerraje(raw.color_acc) : raw.color_acc),
         sandblasting: raw.sandblasting,
         led: raw.led,
         precioNeto: r.precio / (1 + ((typeof currentConfig !== 'undefined' ? currentConfig.globales.iva : 0.19) || 0.19)),
