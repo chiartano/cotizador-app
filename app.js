@@ -120,6 +120,8 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 acc_extra_dorado_pieza: 22000.0,
                 // Instalación sola con accesorios del cliente: precio al cliente, IVA incluido (ficha S3)
                 precio_instalacion_sola: 140000.0,
+                // Batiente con chaflán: costo adicional por cada vidrio, dentro de la fórmula (ficha D4; Andrés, 2026-11-26)
+                costo_chaflan_vidrio: 20000.0,
                 // Vidrio de reemplazo (ficha M1): sin kit ni estructura, transporte propio
                 transporte_reemplazo: 50000.0,
                 // Espejo que va con otro trabajo (ficha E1): sin transporte y con este aporte
@@ -230,7 +232,8 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 acc_boquete: 'A27', acc_l_fija: 'A28',
                 transporte_reemplazo: 'M1', est_espejo_con_otro_trabajo: 'E1',
                 // Confirmado en AP3 (2026-11-24)
-                acc_extra_dorado_pieza: 'A§2', precio_instalacion_sola: 'S3'
+                acc_extra_dorado_pieza: 'A§2', precio_instalacion_sola: 'S3',
+                costo_chaflan_vidrio: 'D4'
             },
             // Costo del kit de cada división (02-accesorios.md).
             productos: {
@@ -289,6 +292,9 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
         const PRODUCTO_CLASICA = "División Corrediza Clásica";
         const PRODUCTO_PREMIUM = "División Corrediza Premium";
         const PRODUCTO_NEOANGULAR = "División neoangular";
+        const PRODUCTO_BATIENTE = "División Batiente (Tradicional)";
+        // La batiente de puerta y fijo tiene 2 vidrios; el chaflán cuesta lo mismo en cada uno.
+        const VIDRIOS_BATIENTE = 2;
         const PRODUCTO_REEMPLAZO = "Vidrio de reemplazo para división";
         const PRODUCTO_L_PREMIUM = "División de baño L - Corrediza premium";
         const PRODUCTO_INSTALACION_SOLA = "Instalación sola de división (accesorios del cliente)";
@@ -508,6 +514,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             acc_extra_negro_pieza: 'ACC EXTRA NEGRO POR PIEZA',
             acc_extra_dorado_pieza: 'ACC EXTRA DORADO U ORO ROSA POR PIEZA',
             precio_instalacion_sola: 'INSTALACIÓN SOLA (PRECIO AL CLIENTE)',
+            costo_chaflan_vidrio: 'CHAFLÁN DE LA BATIENTE (COSTO POR VIDRIO)',
             est_espejo_con_otro_trabajo: 'EST ESPEJO CON OTRO TRABAJO'
         };
         const etiquetaConfig = (clave) => ETIQUETAS_CONFIG[clave] || clave.replace(/_/g, ' ').toUpperCase();
@@ -1185,6 +1192,10 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             // Mostrar/Ocultar opción LED y Espesor según el producto
             document.getElementById('group-espejo-led').style.display = esEspejo ? 'flex' : 'none';
             document.getElementById('group-espejo-otro').style.display = esEspejo ? 'flex' : 'none';
+            // Batiente con chaflán (ficha D4): solo la batiente de puerta y fijo.
+            const esBatiente = prod === PRODUCTO_BATIENTE;
+            if (!esBatiente) document.getElementById('check-chaflan').checked = false;
+            document.getElementById('group-chaflan').style.display = esBatiente ? 'flex' : 'none';
             document.getElementById('group-espesor').style.display = (esEspejo || esAdicional || vidrioEspecial) ? 'none' : 'block';
             document.getElementById('group-color-acc').style.display = (esEspejo || esAdicional) ? 'none' : 'block';
             document.getElementById('group-l-puertas').style.display = esLPremium ? 'block' : 'none';
@@ -1312,6 +1323,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             }
             Object.keys(currentConfig.productos).filter(isDivision).forEach(k => addInputConfig(tDiv, k, currentConfig.productos[k], 'productos'));
             addInputConfig(tDiv, 'kit_clasica_a1b', currentConfig.globales.kit_clasica_a1b, 'globales');
+            addInputConfig(tDiv, 'costo_chaflan_vidrio', currentConfig.globales.costo_chaflan_vidrio, 'globales');
 
             addHeader(tDiv, "Extras y Acabados");
             ['extra_color_negro', 'extra_color_dorado', 'precio_sandblasting_menor_140', 'precio_sandblasting_desde_140'].forEach(k => addInputConfig(tDiv, k, currentConfig.globales[k], 'globales'));
@@ -1409,6 +1421,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 // B8 (2026-11-24): neoangular, espejo con otro trabajo y vidrio de reemplazo
                 ancho3: document.getElementById('ancho3').value,
                 espejoConOtro: document.getElementById('check-espejo-otro').checked,
+                chaflan: document.getElementById('check-chaflan').checked,
                 lPuertas: document.getElementById('producto').value === PRODUCTO_L_PREMIUM ? document.getElementById('l_puertas').value : '',
                 reemplazo: document.getElementById('producto').value === PRODUCTO_REEMPLAZO
                     ? { pieza: document.getElementById('reemplazo_pieza').value, origen: document.getElementById('reemplazo_origen').value, piezas: leerPiezasReemplazo() }
@@ -1453,6 +1466,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 texto += `🔹 *Medidas:* ${medidas}\n`;
                 if (raw.vidrio_descripcion) texto += `🔹 *Vidrio:* ${raw.vidrio_descripcion}\n`;
                 else if (!raw.instalacion_sola) texto += `🔹 *Espesor:* ${raw.espesor}${raw.sandblasting ? ' + sandblasting' : ''}\n`;
+                if (raw.chaflan) texto += `🔹 *Chaflán:* en la puerta y el fijo\n`;
                 if (raw.color_acc) texto += `🔹 *Acabado:* ${etiquetaColorHerraje(raw.color_acc).toUpperCase()}\n`;
                 if (raw.reemplazo) texto += `🔹 *Accesorios:* ${raw.reemplazo.texto || 'sin accesorios'}\n`;
                 if (raw.incluye) texto += `🔹 *Incluye:* ${raw.incluye}\n`;
@@ -1515,6 +1529,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                     if (item.raw?.l_puertas) texto += `   🚪 Puertas: ${item.raw.l_puertas === 2 ? '2 (2 fijos y 2 puertas)' : '1 (2 fijos y 1 puerta)'}\n`;
                     if (item.vidrioDescripcion) texto += `   💎 Vidrio: ${item.vidrioDescripcion}\n`;
                     else if (!item.raw?.instalacion_sola) texto += `   💎 Espesor: ${item.vidrio}${item.sandblasting ? ' + sandblasting' : ''}\n`;
+                    if (item.raw?.chaflan) texto += `   📐 Chaflán: en la puerta y el fijo\n`;
                     if (item.color) texto += `   🎨 Acabado: ${etiquetaColorHerraje(item.color).toUpperCase()}\n`;
                     if (item.raw?.reemplazo) texto += `   🧩 Accesorios: ${item.raw.reemplazo.texto || 'sin accesorios'}\n`;
                     if (item.raw?.incluye) texto += `   ✅ Incluye: ${item.raw.incluye}\n`;
@@ -1609,6 +1624,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             const ancho3CmOriginal = esNeoangular ? (parseFloat(document.getElementById('ancho3').value) || 0) : 0;
             const ancho3 = ancho3CmOriginal / 100;
             const espejoConOtroTrabajo = esEspejoSeleccionado && document.getElementById('check-espejo-otro').checked;
+            const conChaflan = prodNombre === PRODUCTO_BATIENTE && document.getElementById('check-chaflan').checked;
             const reemplazo = esReemplazo ? {
                 pieza: document.getElementById('reemplazo_pieza').value || 'puerta',
                 origen: document.getElementById('reemplazo_origen').value || 'corrediza',
@@ -1729,6 +1745,8 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             if (esPanelFijo) costoAcc = costoPerfilU(cfg, ancho, alto); // especial
             if (esAdicional) costoAcc = 0; // especial
             if (esReemplazo) costoAcc = costoPiezas(cfg, reemplazo.piezasPrecio) + recargoColorPiezas(cfg, reemplazo.piezasPrecio, colorAcc); // ficha M1: pieza por pieza, sin kit
+            const costoChaflan = conChaflan ? VIDRIOS_BATIENTE * cfg.costo_chaflan_vidrio : 0; // ficha D4: costo adicional por vidrio
+            costoAcc += costoChaflan; // ficha D4
             // Sumar extras manuales (bisagras, soportes, etc)
             costoAcc += extraAcc;
 
@@ -1895,6 +1913,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                     // B8 (2026-11-24)
                     ...(esNeoangular ? { ancho3: ancho3CmOriginal } : {}),
                     ...(espejoConOtroTrabajo ? { espejo_con_otro_trabajo: true } : {}),
+                    ...(conChaflan ? { chaflan: true } : {}),
                     ...(reemplazo ? { reemplazo } : {}),
                     ...(esLPremium ? { l_puertas: lPuertas } : {}),
                     ...(esInstalacionSola ? { instalacion_sola: true } : {}),
@@ -1928,7 +1947,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             const detalles = {
                 vidrio: costoVidrioTotal,
                 aluminio: costoAluminio,
-                accesorios: costoAcc,
+                accesorios: costoAcc - costoChaflan, // el chaflán va en su propia fila
                 led: costoLed,
                 instalacion: costoInstalacion,
                 transporte: costoTransporte,
@@ -1937,6 +1956,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
                 desmonte: costoDesmonte,
                 estructura: est,
                 sandblasting: precioSandblasting,
+                chaflan: costoChaflan,
                 ganancia: ganancia,
                 descuento: descuentoAdicional,
                 espesorLabel: esEspejo ? 'Espejo' : (vidrioDescripcion || espesor),
@@ -1987,6 +2007,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             addRow(`Material: ${d.espesorLabel}`, d.vidrio);
             if (d.aluminio > 0) addRow("Perfilería Aluminio", d.aluminio);
             if (d.accesorios > 0) addRow("Accesorios / Kit", d.accesorios);
+            if (d.chaflan > 0) addRow("Chaflán (2 vidrios)", d.chaflan);
             if (d.led > 0) addRow("Sistema LED", d.led);
 
             addRow("Instalación", d.instalacion);
@@ -2154,6 +2175,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             document.getElementById('check-desmonte').checked = false;
             document.getElementById('check-espejo-led').checked = false;
             document.getElementById('check-espejo-otro').checked = false;
+            document.getElementById('check-chaflan').checked = false;
             verificarProducto();
         }
 
@@ -2515,6 +2537,7 @@ function toast(mensaje, tipo = 'info', duracion = 3000) {
             // B8 (2026-11-24): neoangular, espejo con otro trabajo y vidrio de reemplazo
             document.getElementById('ancho3').value = item.raw.ancho3 || '';
             document.getElementById('check-espejo-otro').checked = !!item.raw.espejo_con_otro_trabajo;
+            document.getElementById('check-chaflan').checked = !!item.raw.chaflan;
             if (item.raw.reemplazo) {
                 document.getElementById('reemplazo_pieza').value = item.raw.reemplazo.pieza || 'puerta';
                 document.getElementById('reemplazo_origen').value = item.raw.reemplazo.origen || 'corrediza';

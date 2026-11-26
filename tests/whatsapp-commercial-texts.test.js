@@ -422,7 +422,7 @@ test('protección de resultado anterior compara todos los inputs relevantes', ()
     'check-espejo-led':{checked:false}, 'cantidad-item':{value:'1'},
     descuento_adicional:{value:''}, recargo_transporte:{value:''},
     // B8 (2026-11-24): neoangular, espejo con otro trabajo y vidrio de reemplazo
-    ancho3:{value:''}, 'check-espejo-otro':{checked:false},
+    ancho3:{value:''}, 'check-espejo-otro':{checked:false}, 'check-chaflan':{checked:false},
     reemplazo_pieza:{value:'puerta'}, reemplazo_origen:{value:'otra'}
   };
   const result = {shareInputSnapshot:snapshotFns.main_getShareInputSnapshot()};
@@ -433,6 +433,9 @@ test('protección de resultado anterior compara todos los inputs relevantes', ()
   globalThis.values['check-espejo-otro'].checked = true;
   assert.equal(snapshotFns.main_isShareSnapshotCurrent(result), false);
   globalThis.values['check-espejo-otro'].checked = false;
+  globalThis.values['check-chaflan'].checked = true;
+  assert.equal(snapshotFns.main_isShareSnapshotCurrent(result), false);
+  globalThis.values['check-chaflan'].checked = false;
   // Con el vidrio de reemplazo, cambiar una pieza también cuenta.
   globalThis.values.producto.value = 'Vidrio de reemplazo para división';
   const conReemplazo = {shareInputSnapshot:snapshotFns.main_getShareInputSnapshot()};

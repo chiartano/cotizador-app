@@ -215,6 +215,7 @@ function cmp_calcularPrincipal(productoAlt) {
         costoAcc = baseAcc;
     }
     costoAcc += extraColor + extraAcc;
+    if (s.chaflan && productoAlt === 'División Batiente (Tradicional)') costoAcc += 2 * cfg.costo_chaflan_vidrio; // ficha D4: chaflán en los 2 vidrios
 
     // ---- LED para espejo ----
     let costoLed = 0;

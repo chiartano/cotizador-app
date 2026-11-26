@@ -113,7 +113,7 @@ function fill(h, values) {
   };
   const { piezas = {}, ...campos } = values;
   Object.entries({ ...defaults, ...campos }).forEach(([id, value]) => { h.el(id).value = String(value); });
-  ['check-desmonte', 'check-espejo-led', 'check-espejo-otro'].forEach((id) => { h.el(id).checked = !!values[id]; });
+  ['check-desmonte', 'check-espejo-led', 'check-espejo-otro', 'check-chaflan'].forEach((id) => { h.el(id).checked = !!values[id]; });
   ['bisagra', 'bisagra_vv', 'boton', 'mariposa', 'manija', 'deslizantes', 'deslizantes_sup', 'medias_lunas', 'terminales',
     'tubo', 'riel', 'guia', 'burbuja', 'barredor', 'boquete', 'l_fija'].forEach((p) => { h.el(`pieza_${p}`).value = piezas[p] ? String(piezas[p]) : ''; });
 }
@@ -819,4 +819,61 @@ test('29 la bandeja del CRM acepta los productos nuevos (identidad y atributos p
   // solo si no reconoce la L por «L -»).
   assert.doesNotMatch(INSTALACION, /corrediza|batiente|plegable|premium/i);
   assert.match(L_PREMIUM, /\bL\s*-/);
+});
+
+// ================= Batiente con chaflán (2026-11-26) =================
+test('30 batiente con chaflán: $20.000 de costo adicional por cada vidrio (puerta y fijo), dentro de la fórmula', () => {
+  const h = makeHarness();
+  const caso = { producto: BATIENTE, ancho: 90, alto: 190, espesor: '8mm', color_acc: 'natural', glass_finish: 'transparent' };
+  const sin = cotizar(h, caso);
+  const con = cotizar(h, { ...caso, 'check-chaflan': true });
+  assert.equal(con.d.chaflan, 40000);
+  assert.equal(con.d.accesorios, sin.d.accesorios, 'el kit no cambia; el chaflán va en su propia fila');
+  assert.equal(Math.round(con.precio - sin.precio), Math.round(40000 / 0.85 * 1.05));
+  assert.ok(h.el('desglose-lista').children.some((row) => /Chaflán \(2 vidrios\)/.test(row.innerHTML)));
+  // Sin la casilla, igual que la v7.34 en vivo.
+  const viejo = makeHarness({ app: readAt('9abb680', 'app.js'), visual: null });
+  assert.equal(Math.round(sin.precio), Math.round(cotizar(viejo, caso).precio));
+  // Mensaje y presupuesto: dicen el chaflán, sin el costo.
+  cotizar(h, { ...caso, 'check-chaflan': true });
+  h.run('compartir()');
+  const texto = h.opened[h.opened.length - 1];
+  assert.match(texto, /\*Chaflán:\* en la puerta y el fijo/);
+  assert.doesNotMatch(texto, COST_WORDS);
+  const sinVisita = texto.replace(/Visita de medidas:\*? \$20\.000/g, '');
+  assert.ok(!sinVisita.includes(fmt(40000)) && !sinVisita.includes(fmt(20000)));
+  h.run('agregarItem()');
+  h.run('compartirCompleto()');
+  assert.match(h.opened[h.opened.length - 1], /📐 Chaflán: en la puerta y el fijo/);
+  // Editar desde el carrito la recupera.
+  fill(h, {});
+  h.run('editarItem(0)');
+  assert.equal(h.el('check-chaflan').checked, true);
+  assert.equal(Math.round(h.run('lastCalculation.precio')), Math.round(con.precio));
+});
+
+test('31 el chaflán es solo de la batiente: en otro producto la casilla se apaga y no suma', () => {
+  const h = makeHarness();
+  h.el('check-chaflan').checked = true;
+  h.el('producto').value = CLASICA;
+  h.run('verificarProducto()');
+  assert.equal(h.el('check-chaflan').checked, false);
+  assert.equal(h.el('group-chaflan').style.display, 'none');
+  h.el('producto').value = BATIENTE;
+  h.run('verificarProducto()');
+  assert.equal(h.el('group-chaflan').style.display, 'flex');
+  const r = cotizar(h, { producto: CLASICA, ancho: 100, alto: 190, espesor: '8mm', color_acc: 'natural', glass_finish: 'transparent', 'check-chaflan': true });
+  assert.equal(r.d.chaflan, 0);
+  assert.equal(r.calc.raw.chaflan, undefined);
+  // Configuración: el costo por vidrio sale de la ficha.
+  assert.equal(h.run('currentConfig.globales.costo_chaflan_vidrio'), 20000);
+  assert.equal(h.run('FICHAS.globales.costo_chaflan_vidrio'), 'D4');
+});
+
+test('32 el comparador cobra el chaflán igual que el cálculo principal', () => {
+  const h = makeHarness();
+  vm.runInContext(read('comparador.js'), h.context, { filename: 'comparador.js' });
+  const r = cotizar(h, { producto: BATIENTE, ancho: 90, alto: 190, espesor: '8mm', color_acc: 'natural', glass_finish: 'transparent', 'check-chaflan': true });
+  h.run('cmp_baseSnapshot = JSON.parse(JSON.stringify(lastCalculation.raw))');
+  assert.equal(Math.round(h.run(`cmp_calcularPrincipal(${JSON.stringify(BATIENTE)})`).precioFinal), Math.round(r.precio));
 });
